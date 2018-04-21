@@ -1,0 +1,137 @@
+
+bootblock.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00007c00 <start>:
+# with %cs=0 %ip=7c00.
+
+.code16                       # Assemble for 16-bit mode
+.globl start
+start:
+  cli                         # BIOS enabled interrupts; disable
+    7c00:	fa                   	cli    
+
+  # Zero data segment registers DS, ES, and SS.
+  xorw    %ax,%ax             # Set %ax to zero
+    7c01:	31 c0                	xor    %eax,%eax
+  movw    %ax,%ds             # -> Data Segment
+    7c03:	8e d8                	mov    %eax,%ds
+  movw    %ax,%es             # -> Extra Segment
+    7c05:	8e c0                	mov    %eax,%es
+  movw    %ax,%ss             # -> Stack Segment
+    7c07:	8e d0                	mov    %eax,%ss
+
+00007c09 <seta20.1>:
+
+  # Physical address line A20 is tied to zero so that the first PCs 
+  # with 2 MB would run software that assumed 1 MB.  Undo that.
+seta20.1:
+  inb     $0x64,%al               # Wait for not busy
+    7c09:	e4 64                	in     $0x64,%al
+  testb   $0x2,%al
+    7c0b:	a8 02                	test   $0x2,%al
+  jnz     seta20.1
+    7c0d:	75 fa                	jne    7c09 <seta20.1>
+
+  movb    $0xd1,%al               # 0xd1 -> port 0x64
+    7c0f:	b0 d1                	mov    $0xd1,%al
+  outb    %al,$0x64
+    7c11:	e6 64                	out    %al,$0x64
+
+00007c13 <seta20.2>:
+
+seta20.2:
+  inb     $0x64,%al               # Wait for not busy
+    7c13:	e4 64                	in     $0x64,%al
+  testb   $0x2,%al
+    7c15:	a8 02                	test   $0x2,%al
+  jnz     seta20.2
+    7c17:	75 fa                	jne    7c13 <seta20.2>
+
+  movb    $0xdf,%al               # 0xdf -> port 0x60
+    7c19:	b0 df                	mov    $0xdf,%al
+  outb    %al,$0x60
+    7c1b:	e6 60                	out    %al,$0x60
+
+  # Switch from real to protected mode.  Use a bootstrap GDT that makes
+  # virtual addresses map directly to physical addresses so that the
+  # effective memory map doesn't change during the transition.
+  lgdt    gdtdesc
+    7c1d:	0f 01 16             	lgdtl  (%esi)
+    7c20:	74 7c                	je     7c9e <_end+0x22>
+  movl    %cr0, %eax
+    7c22:	0f 20 c0             	mov    %cr0,%eax
+  orl     $CR0_PE, %eax
+    7c25:	66 83 c8 01          	or     $0x1,%ax
+  movl    %eax, %cr0
+    7c29:	0f 22 c0             	mov    %eax,%cr0
+
+  # Complete the transition to 32-bit protected mode by using a long jmp
+  # to reload %cs and %eip.  The segment descriptors are set up with no
+  # translation, so that the mapping is still the identity mapping.
+  ljmp    $(SEG_KCODE<<3), $start32
+    7c2c:	ea                   	.byte 0xea
+    7c2d:	31 7c 08 00          	xor    %edi,0x0(%eax,%ecx,1)
+
+00007c31 <start32>:
+
+.code32  # Tell assembler to generate 32-bit code now.
+start32:
+  # Set up the protected-mode data segment registers
+  movw    $(SEG_KDATA<<3), %ax    # Our data segment selector
+    7c31:	66 b8 10 00          	mov    $0x10,%ax
+  movw    %ax, %ds                # -> DS: Data Segment
+    7c35:	8e d8                	mov    %eax,%ds
+  movw    %ax, %es                # -> ES: Extra Segment
+    7c37:	8e c0                	mov    %eax,%es
+  movw    %ax, %ss                # -> SS: Stack Segment
+    7c39:	8e d0                	mov    %eax,%ss
+  movw    $0, %ax                 # Zero segments not ready for use
+    7c3b:	66 b8 00 00          	mov    $0x0,%ax
+  movw    %ax, %fs                # -> FS
+    7c3f:	8e e0                	mov    %eax,%fs
+  movw    %ax, %gs                # -> GS
+    7c41:	8e e8                	mov    %eax,%gs
+
+  # Set up the stack pointer and call into C.
+  movl    $start, %esp
+    7c43:	bc 00 7c 00 00       	mov    $0x7c00,%esp
+  # TODO: call rust code
+  # call    bootmain
+
+  # If bootmain returns (it shouldn't), trigger a Bochs
+  # breakpoint if running under Bochs, then loop.
+  movw    $0x8a00, %ax            # 0x8a00 -> port 0x8a00
+    7c48:	66 b8 00 8a          	mov    $0x8a00,%ax
+  movw    %ax, %dx
+    7c4c:	66 89 c2             	mov    %ax,%dx
+  outw    %ax, %dx
+    7c4f:	66 ef                	out    %ax,(%dx)
+  movw    $0x8ae0, %ax            # 0x8ae0 -> port 0x8a00
+    7c51:	66 b8 e0 8a          	mov    $0x8ae0,%ax
+  outw    %ax, %dx
+    7c55:	66 ef                	out    %ax,(%dx)
+
+00007c57 <spin>:
+spin:
+  jmp     spin
+    7c57:	eb fe                	jmp    7c57 <spin>
+    7c59:	8d 76 00             	lea    0x0(%esi),%esi
+
+00007c5c <gdt>:
+	...
+    7c64:	ff                   	(bad)  
+    7c65:	ff 00                	incl   (%eax)
+    7c67:	00 00                	add    %al,(%eax)
+    7c69:	9a cf 00 ff ff 00 00 	lcall  $0x0,$0xffff00cf
+    7c70:	00                   	.byte 0x0
+    7c71:	92                   	xchg   %eax,%edx
+    7c72:	cf                   	iret   
+	...
+
+00007c74 <gdtdesc>:
+    7c74:	17                   	pop    %ss
+    7c75:	00 5c 7c 00          	add    %bl,0x0(%esp,%edi,2)
+	...
