@@ -1,5 +1,6 @@
 *~
 _*
+*.a
 *.o
 *.d
 *.asm
@@ -15,4 +16,4 @@ kernelmemfs
 mkfs
 .gdbinit
 .gdb_history
-peda-session-unknown.txt
+peda-session-*

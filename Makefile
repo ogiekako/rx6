@@ -1,5 +1,7 @@
 QEMU = qemu-system-i386
 
+ARCH=i686
+
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
 # QEMU's gdb stub command line changed in 0.11
@@ -27,15 +29,18 @@ rx6.img: bootblock
 	dd if=/dev/zero of=rx6.img count=10000
 	dd if=bootblock of=rx6.img conv=notrunc
 
-bootblock: bootasm.S
+bootblock: bootasm.S bootmain/src/lib.rs bootmain/Cargo.toml
 	gcc $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
+	(cd bootmain && xargo build --target $(ARCH)-unknown-linux-gnu)
 	ld $(LDFLAGS) -N \
 		-e start \
 		-Ttext 0x7C00 \
 		-o bootblock.o \
-		bootasm.o
+		bootasm.o bootmain/target/$(ARCH)-unknown-linux-gnu/debug/libbootmain.a
 	objdump -S bootblock.o > bootblock.ast
-	objcopy -S \
-		-O binary -j .text bootblock.o bootblock
+	objcopy -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
 
+clean:
+	(cd bootmain && cargo clean)
+	rm bootblock

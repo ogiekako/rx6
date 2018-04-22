@@ -60,7 +60,7 @@ seta20.2:
   # effective memory map doesn't change during the transition.
   lgdt    gdtdesc
     7c1d:	0f 01 16             	lgdtl  (%esi)
-    7c20:	74 7c                	je     7c9e <_end+0x22>
+    7c20:	78 7c                	js     7c9e <rust_eh_personality+0xe>
   movl    %cr0, %eax
     7c22:	0f 20 c0             	mov    %cr0,%eax
   orl     $CR0_PE, %eax
@@ -98,40 +98,81 @@ start32:
   # Set up the stack pointer and call into C.
   movl    $start, %esp
     7c43:	bc 00 7c 00 00       	mov    $0x7c00,%esp
-  # TODO: call rust code
-  # call    bootmain
+
+  call    bootmain
+    7c48:	e8 33 00 00 00       	call   7c80 <bootmain>
 
   # If bootmain returns (it shouldn't), trigger a Bochs
   # breakpoint if running under Bochs, then loop.
   movw    $0x8a00, %ax            # 0x8a00 -> port 0x8a00
-    7c48:	66 b8 00 8a          	mov    $0x8a00,%ax
+    7c4d:	66 b8 00 8a          	mov    $0x8a00,%ax
   movw    %ax, %dx
-    7c4c:	66 89 c2             	mov    %ax,%dx
+    7c51:	66 89 c2             	mov    %ax,%dx
   outw    %ax, %dx
-    7c4f:	66 ef                	out    %ax,(%dx)
+    7c54:	66 ef                	out    %ax,(%dx)
   movw    $0x8ae0, %ax            # 0x8ae0 -> port 0x8a00
-    7c51:	66 b8 e0 8a          	mov    $0x8ae0,%ax
+    7c56:	66 b8 e0 8a          	mov    $0x8ae0,%ax
   outw    %ax, %dx
-    7c55:	66 ef                	out    %ax,(%dx)
+    7c5a:	66 ef                	out    %ax,(%dx)
 
-00007c57 <spin>:
+00007c5c <spin>:
 spin:
   jmp     spin
-    7c57:	eb fe                	jmp    7c57 <spin>
-    7c59:	8d 76 00             	lea    0x0(%esi),%esi
+    7c5c:	eb fe                	jmp    7c5c <spin>
+    7c5e:	66 90                	xchg   %ax,%ax
 
-00007c5c <gdt>:
+00007c60 <gdt>:
 	...
-    7c64:	ff                   	(bad)  
-    7c65:	ff 00                	incl   (%eax)
-    7c67:	00 00                	add    %al,(%eax)
-    7c69:	9a cf 00 ff ff 00 00 	lcall  $0x0,$0xffff00cf
-    7c70:	00                   	.byte 0x0
-    7c71:	92                   	xchg   %eax,%edx
-    7c72:	cf                   	iret   
+    7c68:	ff                   	(bad)  
+    7c69:	ff 00                	incl   (%eax)
+    7c6b:	00 00                	add    %al,(%eax)
+    7c6d:	9a cf 00 ff ff 00 00 	lcall  $0x0,$0xffff00cf
+    7c74:	00                   	.byte 0x0
+    7c75:	92                   	xchg   %eax,%edx
+    7c76:	cf                   	iret   
 	...
 
-00007c74 <gdtdesc>:
-    7c74:	17                   	pop    %ss
-    7c75:	00 5c 7c 00          	add    %bl,0x0(%esp,%edi,2)
-	...
+00007c78 <gdtdesc>:
+    7c78:	17                   	pop    %ss
+    7c79:	00 60 7c             	add    %ah,0x7c(%eax)
+    7c7c:	00 00                	add    %al,(%eax)
+    7c7e:	66 90                	xchg   %ax,%ax
+
+00007c80 <bootmain>:
+#![feature(lang_items)]
+#![no_std]
+
+#[no_mangle]
+pub extern fn bootmain() {
+    7c80:	55                   	push   %ebp
+    7c81:	89 e5                	mov    %esp,%ebp
+}
+    7c83:	5d                   	pop    %ebp
+    7c84:	c3                   	ret    
+    7c85:	66 90                	xchg   %ax,%ax
+    7c87:	66 90                	xchg   %ax,%ax
+    7c89:	66 90                	xchg   %ax,%ax
+    7c8b:	66 90                	xchg   %ax,%ax
+    7c8d:	66 90                	xchg   %ax,%ax
+    7c8f:	90                   	nop
+
+00007c90 <rust_eh_personality>:
+
+#[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
+    7c90:	55                   	push   %ebp
+    7c91:	89 e5                	mov    %esp,%ebp
+    7c93:	5d                   	pop    %ebp
+    7c94:	c3                   	ret    
+    7c95:	66 90                	xchg   %ax,%ax
+    7c97:	66 90                	xchg   %ax,%ax
+    7c99:	66 90                	xchg   %ax,%ax
+    7c9b:	66 90                	xchg   %ax,%ax
+    7c9d:	66 90                	xchg   %ax,%ax
+    7c9f:	90                   	nop
+
+00007ca0 <rust_begin_unwind>:
+#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt() -> ! {loop{}}
+    7ca0:	55                   	push   %ebp
+    7ca1:	89 e5                	mov    %esp,%ebp
+    7ca3:	eb 00                	jmp    7ca5 <rust_begin_unwind+0x5>
+    7ca5:	eb fe                	jmp    7ca5 <rust_begin_unwind+0x5>
