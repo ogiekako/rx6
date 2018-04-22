@@ -44,3 +44,6 @@ bootblock: bootasm.S bootmain/src/lib.rs bootmain/Cargo.toml
 clean:
 	(cd bootmain && xargo clean)
 	rm -f *.o *.d *.a *.img bootblock
+
+test:
+	(cd bootmain && xargo test) # TODO: test on i386
