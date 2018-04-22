@@ -37,10 +37,10 @@ bootblock: bootasm.S bootmain/src/lib.rs bootmain/Cargo.toml
 		-Ttext 0x7C00 \
 		-o bootblock.o \
 		bootasm.o bootmain/target/$(ARCH)-unknown-linux-gnu/debug/libbootmain.a
-	objdump -S bootblock.o > bootblock.ast
+	objdump -S bootblock.o > bootblock.asm
 	objcopy -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
 
 clean:
-	(cd bootmain && cargo clean)
-	rm bootblock
+	(cd bootmain && xargo clean)
+	rm -f *.o *.d *.a *.img bootblock
