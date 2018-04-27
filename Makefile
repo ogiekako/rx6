@@ -28,15 +28,16 @@ qemu-nox-gdb: rx6.img .gdbinit
 rx6.img: bootblock
 	dd if=/dev/zero of=rx6.img count=10000
 	dd if=bootblock of=rx6.img conv=notrunc
+	dd if=kernel of=xv6.img seek=1 conv=notrunc
 
-bootblock: bootasm.S bootmain/src/lib.rs bootmain/Cargo.toml
+bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	gcc $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
-	(cd bootmain && xargo build --target $(ARCH)-unknown-linux-gnu)
+	(cd bootmain && xargo build --target $(ARCH)-unknown-linux-gnu --release)
 	ld $(LDFLAGS) -N \
 		-e start \
 		-Ttext 0x7C00 \
 		-o bootblock.o \
-		bootasm.o bootmain/target/$(ARCH)-unknown-linux-gnu/debug/libbootmain.a
+		bootasm.o bootmain/target/$(ARCH)-unknown-linux-gnu/release/libbootmain.a
 	objdump -S bootblock.o > bootblock.asm
 	objcopy -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
@@ -46,4 +47,4 @@ clean:
 	rm -f *.o *.d *.a *.img bootblock
 
 test:
-	(cd bootmain && xargo test) # TODO: test on i386
+	(cd bootmain && xargo test) # TODO: test i386
