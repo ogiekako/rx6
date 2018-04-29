@@ -25,3 +25,4 @@ pub unsafe fn stosb(mut addr: *mut u8,  data: i32, mut cnt: i32) {
          "0" (addr), "1" (cnt), "{eax}" (data) :
          "memory", "cc": "volatile");
 }
+
