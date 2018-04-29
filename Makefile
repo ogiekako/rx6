@@ -12,12 +12,12 @@ CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb 
 CFLAGS += $(shell gcc -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 LDFLAGS += -m $(shell ld -V | grep elf_i386 2>/dev/null | head -n 1)
 
-QEMUOPTS = -drive file=rx6.img,index=0,media=disk,format=raw -smp 2 -m 512
+QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=rx6.img,index=0,media=disk,format=raw -smp 2 -m 512
 
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
-qemu-nox: rx6.img
+qemu-nox: rx6.img fs.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
 qemu-nox-gdb: rx6.img .gdbinit
