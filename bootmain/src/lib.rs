@@ -24,10 +24,7 @@ pub unsafe extern fn bootmain() {
     // Load each program segment (ignores ph flags).
     let mut ph = ((elf as *const u8).offset((*elf).phoff as isize)) as *const Proghdr;
     let eph = ph.offset((*elf).phnum as isize);
-    loop {
-        if ph > eph {
-            break;
-        }
+    while ph < eph {
         let pa = (*ph).paddr as *mut u8;
         readseg(pa, (*ph).filesz, (*ph).off);
         if (*ph).memsz > (*ph).filesz {
@@ -38,12 +35,12 @@ pub unsafe extern fn bootmain() {
     }
     // Call the entry point from the ELF header.
     // Does not return!
-    let entry = (*elf).entry as (*const fn() -> ());
-    (*entry)();
+    let entry: extern "C" fn () = core::mem::transmute((*elf).entry);
+    entry();
 }
 
 
-#[inline(never)]
+#[inline(never)] // Avoid boot loader to blow up over 510 bytes.
 // Read ’count’ bytes at ’offset’ from kernel into physical address ’pa’.
 // Might copy more than asked.
 unsafe fn readseg(pa: *mut u8, count: u32, offset: u32) {

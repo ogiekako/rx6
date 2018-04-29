@@ -1,5 +1,6 @@
 pub const ELF_MAGIC:u32 = 0x464C457F; // "\x7FELF" in little endian
 
+#[repr(C)]
 pub struct Elfhdr {
     pub magic: u32,
     pub elf: [u8;12],
@@ -18,6 +19,7 @@ pub struct Elfhdr {
     pub shstrndx: u16,
 }
 
+#[repr(C)]
 pub struct Proghdr {
     pub typ: u32,
     pub off: u32,

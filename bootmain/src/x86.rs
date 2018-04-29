@@ -15,7 +15,7 @@ pub unsafe fn insl(port: i32, mut addr: *mut u8, mut cnt: i32) {
 
 #[inline]
 pub unsafe fn outb(port: u16,  data: u8) {
-    asm!("outb %al, %dx" :: "{dx}"(port), "{al}"(data));
+    asm!("outb %al, %dx" :: "{dx}"(port), "{al}"(data) :: "volatile");
 }
 
 #[inline]

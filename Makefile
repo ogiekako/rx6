@@ -2,8 +2,7 @@ QEMU = qemu-system-i386
 
 ARCH=i686
 
-# try to generate a unique GDB port
-GDBPORT = $(shell expr `id -u` % 5000 + 25000)
+GDBPORT = 26001
 # QEMU's gdb stub command line changed in 0.11
 QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
@@ -19,16 +18,16 @@ QEMUOPTS = -drive file=rx6.img,index=0,media=disk,format=raw -smp 2 -m 512
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
 qemu-nox: rx6.img
-	qemu-system-i386 -nographic $(QEMUOPTS)
+	$(QEMU) -nographic $(QEMUOPTS)
 
 qemu-nox-gdb: rx6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
-rx6.img: bootblock
+rx6.img: bootblock kernel
 	dd if=/dev/zero of=rx6.img count=10000
 	dd if=bootblock of=rx6.img conv=notrunc
-	dd if=kernel of=xv6.img seek=1 conv=notrunc
+	dd if=kernel of=rx6.img seek=1 conv=notrunc
 
 bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	gcc $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
