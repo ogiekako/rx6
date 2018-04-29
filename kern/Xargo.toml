@@ -1,0 +1,7 @@
+[target.x86_64-unknown-linux-gnu.dependencies.std]
+stage = 0
+features = ["panic_unwind", "jemalloc"]
+
+[target.x86_64-unknown-linux-gnu.dependencies.test]
+stage = 1
+std = {}

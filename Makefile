@@ -80,10 +80,13 @@ bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	$(OBJCOPY) -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
 
-kernel: $(OBJS) entry.o kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary
+kernel: entrypgdir.o entry.o kern kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o kern/target/$(ARCH)-unknown-linux-gnu/release/libkern.a  -b binary
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
+
+kern: $(wildcard kern/src/*.rs)
+	(cd kern && xargo build --target $(ARCH)-unknown-linux-gnu --release)
 
 clean:
 	(cd bootmain && xargo clean)

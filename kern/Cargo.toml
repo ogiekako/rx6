@@ -1,0 +1,8 @@
+[package]
+name = "kern"
+version = "0.1.0"
+authors = ["Keigo Oka <ogiekako@gmail.com>"]
+
+[lib]
+crate-type = ["staticlib"]
+

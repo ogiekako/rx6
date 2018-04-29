@@ -15,9 +15,6 @@ typedef unsigned int pde_t;
 
 pde_t entrypgdir[];
 
-int main(void) {
-}
-
 __attribute__((__aligned__(PGSIZE)))
 pde_t entrypgdir[NPDENTRIES] = {
   // Map VA's [0, 4MB) to PA's [0, 4MB)
