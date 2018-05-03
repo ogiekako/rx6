@@ -71,7 +71,7 @@ rx6.img: bootblock kernel
 bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	gcc $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
 	(cd bootmain && xargo build --target $(ARCH)-unknown-linux-gnu --release)
-	ld $(LDFLAGS) -N \
+	$(LD) $(LDFLAGS) -N \
 		-e start \
 		-Ttext 0x7C00 \
 		-o bootblock.o \
@@ -80,16 +80,25 @@ bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	$(OBJCOPY) -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
 
-kernel: entrypgdir.o entry.o kern kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o kern/target/$(ARCH)-unknown-linux-gnu/release/libkern.a  -b binary
+RELEASE = debug
+ifeq ($(RELEASE), debug)
+RELEASEFLAG =
+else
+RELEASEFLAG = --$(RELEASE)
+endif
+KERN = kern/target/$(ARCH)-unknown-linux-gnu/$(RELEASE)/libkern.a
+
+kernel: entry.o entrypgdir.o $(KERN) kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN)  -b binary
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
-kern: $(wildcard kern/src/*.rs)
-	(cd kern && xargo build --target $(ARCH)-unknown-linux-gnu --release)
+$(KERN): $(wildcard kern/src/*.rs)
+	(cd kern && xargo build --target $(ARCH)-unknown-linux-gnu $(RELEASEFLAG))
 
 clean:
 	(cd bootmain && xargo clean)
+	(cd kern && xargo clean)
 	rm -f *.o *.d *.a rx6.img bootblock
 
 test:
