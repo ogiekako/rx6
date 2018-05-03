@@ -57,7 +57,6 @@ unsafe fn freerange(vstart: *mut u8, vend: *mut u8) {
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
 unsafe fn kfree(v: *mut u8) {
-
 //  if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
 //    panic("kfree");
 //
@@ -99,3 +98,41 @@ fn kalloc() -> Option<usize> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use core;
+    use mmu::PGSIZE;
+
+    #[test]
+    fn kfree_kalloc() {
+        unsafe {
+            assert_eq!(super::kalloc(), None);
+            
+            let a = [100u8; PGSIZE as usize * 10];
+            let mut p: *mut u8 = core::mem::transmute(&a);
+            while (p as usize) % (PGSIZE as usize) != 0 {
+                p = p.offset(1);
+            }
+            let one = p;
+            let two = p.offset(PGSIZE as isize);
+
+            super::kfree(two);   // head = two
+            super::kfree(one);   // head = one -> two
+
+            let mut x = super::kalloc().unwrap() as *mut u8; // head = two
+            assert_eq!(one, x);
+            for i in 0..(PGSIZE as usize) {
+                *x = 42;
+                x = x.offset(1);
+            }
+            assert_eq!(a[PGSIZE.wrapping_sub(1) as usize], 42);
+
+            let x = super::kalloc().unwrap() as *mut u8;
+            assert_eq!(two, x);
+            let r: *const super::Run = core::mem::transmute(x);
+            assert!((*r).next.is_none());
+
+            assert_eq!(super::kalloc(), None);
+        }
+    }
+}

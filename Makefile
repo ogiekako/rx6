@@ -102,5 +102,5 @@ clean:
 	rm -f *.o *.d *.a rx6.img bootblock
 
 test:
-	(cd bootmain && xargo test) # TODO: test i386
+	(cd kern && xargo test)
 

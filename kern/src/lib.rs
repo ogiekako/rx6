@@ -19,7 +19,20 @@ pub extern fn _Unwind_Resume() {}
 
 #[no_mangle]
 pub extern fn kernmain() {
+    assert_eq!(core::mem::size_of::<usize>(), 4);
     unsafe {
         kernmain::kernmain();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core;
+    #[test]
+    fn it_works() {
+        assert_eq!(core::mem::size_of::<u8>(), 1);
+        assert_eq!(core::mem::size_of::<u32>(), 4);
+        // FIXME
+        // assert_eq!(core::mem::size_of::<usize>(), 4);
     }
 }
