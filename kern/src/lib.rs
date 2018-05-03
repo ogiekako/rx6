@@ -1,6 +1,5 @@
 #![feature(lang_items, asm)]
 #![no_std]
-
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(unused)]
@@ -12,17 +11,23 @@ pub mod mmu;
 pub mod x86;
 
 #[cfg(not(test))]
-#[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
+#[lang = "eh_personality"]
+#[no_mangle]
+pub extern "C" fn eh_personality() {}
 #[cfg(not(test))]
-#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt() -> ! {loop{}}
+#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern "C" fn panic_fmt() -> ! {
+    loop {}
+}
 
 // For debug binary
 #[cfg(not(test))]
 #[no_mangle]
-pub extern fn _Unwind_Resume() {}
+pub extern "C" fn _Unwind_Resume() {}
 
 #[no_mangle]
-pub extern fn kernmain() {
+pub extern "C" fn kernmain() {
     assert_eq!(core::mem::size_of::<usize>(), 4);
     unsafe {
         kernmain::kernmain();
