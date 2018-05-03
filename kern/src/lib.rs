@@ -1,6 +1,10 @@
 #![feature(lang_items, asm)]
 #![no_std]
 
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
+#![allow(unused)]
+
 pub mod kalloc;
 pub mod kernmain;
 pub mod memlayout;
@@ -31,8 +35,6 @@ mod tests {
     #[test]
     fn it_works() {
         assert_eq!(core::mem::size_of::<u8>(), 1);
-        assert_eq!(core::mem::size_of::<u32>(), 4);
-        // FIXME
         // assert_eq!(core::mem::size_of::<usize>(), 4);
     }
 }

@@ -86,7 +86,8 @@ RELEASEFLAG =
 else
 RELEASEFLAG = --$(RELEASE)
 endif
-KERN = kern/target/$(ARCH)-unknown-linux-gnu/$(RELEASE)/libkern.a
+TARGET = $(ARCH)-unknown-linux-gnu
+KERN = kern/target/$(TARGET)/$(RELEASE)/libkern.a
 
 kernel: entry.o entrypgdir.o $(KERN) kernel.ld
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN)  -b binary
@@ -94,7 +95,7 @@ kernel: entry.o entrypgdir.o $(KERN) kernel.ld
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 $(KERN): $(wildcard kern/src/*.rs)
-	(cd kern && xargo build --target $(ARCH)-unknown-linux-gnu $(RELEASEFLAG))
+	(cd kern && xargo build --target $(TARGET) $(RELEASEFLAG))
 
 clean:
 	(cd bootmain && xargo clean)
@@ -102,5 +103,6 @@ clean:
 	rm -f *.o *.d *.a rx6.img bootblock
 
 test:
-	(cd kern && xargo test)
+	# TODO: run test on 32 bit environment (use docker?)
+	(cd kern && xargo test --verbose)
 
