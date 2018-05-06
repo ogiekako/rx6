@@ -1,6 +1,59 @@
-// // This file contains definitions for the
-// // x86 memory management unit (MMU).
-//
+// This file contains definitions for the
+// x86 memory management unit (MMU).
+
+use core::ops::{Add, AddAssign};
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Debug)]
+pub struct V(pub usize);
+
+impl V {
+    pub fn pgroundup(self) -> V {
+        V(PGROUNDUP(self.0))
+    }
+    pub fn pgrounddown(self) -> V {
+        V(PGROUNDDOWN(self.0))
+    }
+
+    pub fn as_ptr(self) -> *const u8 {
+        self.0 as *const u8
+    }
+
+    pub fn as_mut_ptr(self) -> *mut u8 {
+        self.0 as *mut u8
+    }
+}
+
+impl Add<usize> for V {
+    type Output = V;
+
+    fn add(self, other: usize) -> V {
+        V(self.0 + other)
+    }
+}
+
+impl AddAssign<usize> for V {
+    fn add_assign(&mut self, other: usize) {
+        self.0 += other;
+    }
+}
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Debug)]
+pub struct P(pub usize);
+
+impl Add<usize> for P {
+    type Output = P;
+
+    fn add(self, other: usize) -> P {
+        P(self.0 + other)
+    }
+}
+
+impl AddAssign<usize> for P {
+    fn add_assign(&mut self, other: usize) {
+        self.0 += other;
+    }
+}
+
 // // Eflags register
 // #define FL_CF           0x00000001      // Carry Flag
 // #define FL_PF           0x00000004      // Parity Flag
@@ -103,54 +156,72 @@
 // #define STS_CG32    0xC     // 32-bit Call Gate
 // #define STS_IG32    0xE     // 32-bit Interrupt Gate
 // #define STS_TG32    0xF     // 32-bit Trap Gate
-//
-// // A virtual address 'la' has a three-part structure as follows:
-// //
-// // +--------10------+-------10-------+---------12----------+
-// // | Page Directory |   Page Table   | Offset within Page  |
-// // |      Index     |      Index     |                     |
-// // +----------------+----------------+---------------------+
-// //  \--- PDX(va) --/ \--- PTX(va) --/
-//
-// // page directory index
-// #define PDX(va)         (((uint)(va) >> PDXSHIFT) & 0x3FF)
-//
-// // page table index
-// #define PTX(va)         (((uint)(va) >> PTXSHIFT) & 0x3FF)
-//
-// // construct virtual address from indexes and offset
-// #define PGADDR(d, t, o) ((uint)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
-//
-// // Page directory and page table constants.
-// #define NPDENTRIES      1024    // # directory entries per page directory
-// #define NPTENTRIES      1024    // # PTEs per page table
-pub const PGSIZE: u32 = 4096; // bytes mapped by a page
-                              //
-                              // #define PGSHIFT         12      // log2(PGSIZE)
-                              // #define PTXSHIFT        12      // offset of PTX in a linear address
-                              // #define PDXSHIFT        22      // offset of PDX in a linear address
 
-#[inline]
-pub fn PGROUNDUP(sz: u32) -> u32 {
+// A virtual address 'la' has a three-part structure as follows:
+//
+// +--------10------+-------10-------+---------12----------+
+// | Page Directory |   Page Table   | Offset within Page  |
+// |      Index     |      Index     |                     |
+// +----------------+----------------+---------------------+
+//  \--- PDX(va) --/ \--- PTX(va) --/
+
+impl V {
+// page directory index
+    pub fn pdx(self) -> usize {
+(self.0 >> PDXSHIFT) & 0x3FF
+    }
+// page table index
+ pub fn ptx(self) -> usize {
+(self.0 >> PTXSHIFT) & 0x3FF
+ }
+// construct virtual address from indexes and offset
+ pub fn pgaddr(d:usize, t:usize, o:usize) -> V{
+        V((d << PDXSHIFT) | (t << PTXSHIFT) | o)
+ }
+}
+
+
+// Page directory and page table constants.
+pub const NPDENTRIES :usize =    1024;    // # directory entries per page directory
+pub const NPTENTRIES :usize =    1024;    // # PTEs per page table
+pub const PGSIZE: usize = 4096; // bytes mapped by a page
+
+
+pub const PGSHIFT   :usize =      12;      // log2(PGSIZE)
+pub const PTXSHIFT  :usize =      12;      // offset of PTX in a linear address
+pub const PDXSHIFT  :usize =      22;      // offset of PDX in a linear address
+
+fn PGROUNDUP(sz: usize) -> usize {
     ((sz) + (PGSIZE - 1)) & (!(PGSIZE - 1))
 }
-// #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
-//
-// // Page table/directory entry flags.
-// #define PTE_P           0x001   // Present
-// #define PTE_W           0x002   // Writeable
-// #define PTE_U           0x004   // User
-// #define PTE_PWT         0x008   // Write-Through
-// #define PTE_PCD         0x010   // Cache-Disable
-// #define PTE_A           0x020   // Accessed
-// #define PTE_D           0x040   // Dirty
-// #define PTE_PS          0x080   // Page Size
-// #define PTE_MBZ         0x180   // Bits must be zero
-//
-// // Address in page table or page directory entry
-// #define PTE_ADDR(pte)   ((uint)(pte) & ~0xFFF)
-// #define PTE_FLAGS(pte)  ((uint)(pte) &  0xFFF)
-//
+
+fn PGROUNDDOWN(a: usize) -> usize {
+    a & (!(PGSIZE-1))
+}
+
+// Page table/directory entry flags.
+pub const PTE_P     :usize =      0x001;   // Present
+pub const PTE_W     :usize =      0x002;   // Writeable
+pub const PTE_U     :usize =      0x004;   // User
+pub const PTE_PWT   :usize =      0x008;   // Write-Through
+pub const PTE_PCD   :usize =      0x010;   // Cache-Disable
+pub const PTE_A     :usize =      0x020;   // Accessed
+pub const PTE_D     :usize =      0x040;   // Dirty
+pub const PTE_PS    :usize =      0x080;   // Page Size
+pub const PTE_MBZ   :usize =      0x180;   // Bits must be zero
+
+pub struct PTE(pub usize);
+
+// Address in page table or page directory entry
+impl PTE {
+    pub fn addr(&self) -> P {
+        P(self.0 & (!0xFFF))
+    }
+    fn flags(&self) -> usize {
+        self.0 & 0xFFF
+    }
+}
+
 // #ifndef __ASSEMBLER__
 // typedef uint pte_t;
 //

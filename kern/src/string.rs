@@ -1,7 +1,8 @@
 // #include "types.h"
 // #include "x86.h"
-//  
-// fn memset(void *dst, int c, uint n)
+// 
+// void*
+// memset(void *dst, int c, uint n)
 // {
 //   if ((int)dst%4 == 0 && n%4 == 0){
 //     c &= 0xFF;

@@ -8,7 +8,7 @@ use core;
 // #include "defs.h"
 // #include "param.h"
 // #include "memlayout.h"
-use mmu;
+use mmu::*;
 // #include "spinlock.h"
 //
 // extern char end[]; // first address after kernel loaded from ELF file
@@ -30,7 +30,7 @@ static mut kmem: Option<&'static mut Run> = None;
 // the pages mapped by entrypgdir on free list.
 // 2. main() calls kinit2() with the rest of the physical pages
 // after installing a full page table that maps them on all cores.
-pub unsafe fn kinit1(vstart: *mut u8, vend: *mut u8) {
+pub unsafe fn kinit1(vstart: V, vend: V) {
     assert!(vstart < vend);
     // initlock(&kmem.lock, "kmem");
     // kmem.use_lock = 0;
@@ -44,11 +44,11 @@ pub unsafe fn kinit1(vstart: *mut u8, vend: *mut u8) {
 //   kmem.use_lock = 1;
 // }
 
-unsafe fn freerange(vstart: *mut u8, vend: *mut u8) {
-    let mut p = mmu::PGROUNDUP(vstart as u32) as *mut u8;
-    while p.offset(mmu::PGSIZE as isize) <= vend {
+unsafe fn freerange(vstart: V, vend: V) {
+    let mut p = vstart.pgroundup();
+    while p + PGSIZE <= vend {
         kfree(p);
-        p = p.offset(mmu::PGSIZE as isize);
+        p += PGSIZE;
     }
 }
 
@@ -56,7 +56,7 @@ unsafe fn freerange(vstart: *mut u8, vend: *mut u8) {
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
-unsafe fn kfree(v: *mut u8) {
+unsafe fn kfree(v: V) {
     //  if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
     //    panic("kfree");
     //
@@ -65,7 +65,7 @@ unsafe fn kfree(v: *mut u8) {
     //
     //  if(kmem.use_lock)
     //    acquire(&kmem.lock);
-    let r: *mut Run = core::mem::transmute(v);
+    let r: *mut Run = v.as_ptr() as usize as *mut Run;
     *r = Run { next: kmem.take() };
     kmem = Some(&mut *r);
     // kmem.freelist = r;
@@ -77,7 +77,7 @@ unsafe fn kfree(v: *mut u8) {
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns None if the memory cannot be allocated.
-fn kalloc() -> Option<usize> {
+pub fn kalloc() -> Option<V> {
     unsafe {
         //  if(kmem.use_lock)
         //    acquire(&kmem.lock);
@@ -85,13 +85,13 @@ fn kalloc() -> Option<usize> {
             None
         } else {
             let a = &mut kmem.take().unwrap().next;
-            let p = a as *const Option<&'static mut Run> as usize;
+            let p = V(a as *const Option<&'static mut Run> as usize);
             kmem = a.take();
             Some(p)
         };
         //   if(kmem.use_lock)
         //     release(&kmem.lock);
-        return res;
+        res
     }
 }
 
@@ -106,27 +106,25 @@ mod tests {
             assert_eq!(super::kalloc(), None);
 
             let a = [100u8; PGSIZE as usize * 10];
-            let mut p: *mut u8 = core::mem::transmute(&a);
-            while (p as usize) % (PGSIZE as usize) != 0 {
-                p = p.offset(1);
-            }
-            let one = p;
-            let two = p.offset(PGSIZE as isize);
+            let mut v = V(core::mem::transmute(&a)).pgroundup();
+
+            let one = v;
+            let two = v + PGSIZE;
 
             super::kfree(two); // head = two
             super::kfree(one); // head = one -> two
 
-            let mut x = super::kalloc().unwrap() as *mut u8; // head = two
+            let mut x = super::kalloc().unwrap(); // head = two
             assert_eq!(one, x);
             for i in 0..(PGSIZE as usize) {
-                *x = 42;
-                x = x.offset(1);
+                *(x.0 as *mut u8) = 42;
+                x = x + 1;
             }
             assert_eq!(a[PGSIZE.wrapping_sub(1) as usize], 42);
 
-            let x = super::kalloc().unwrap() as *mut u8;
+            let x = super::kalloc().unwrap();
             assert_eq!(two, x);
-            let r: *const super::Run = core::mem::transmute(x);
+            let r: *const super::Run = core::mem::transmute(x.0);
             assert!((*r).next.is_none());
 
             assert_eq!(super::kalloc(), None);

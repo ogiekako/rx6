@@ -48,6 +48,7 @@ SECTIONS
 	 * symbols, because the convention started before there was a
 	 * read-only rodata section between text and data. */
 	PROVIDE(data = .);
+	PROVIDE(__data = .);
 
 	/* The data segment */
 	.data : {
@@ -61,6 +62,7 @@ SECTIONS
 	}
 
 	PROVIDE(end = .);
+	PROVIDE(__end = .);
 
 	/DISCARD/ : {
 		*(.eh_frame .note.GNU-stack)

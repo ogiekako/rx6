@@ -6,8 +6,10 @@
 
 pub mod kalloc;
 pub mod kernmain;
+pub mod linker;
 pub mod memlayout;
 pub mod mmu;
+pub mod vm;
 pub mod x86;
 
 #[cfg(not(test))]
