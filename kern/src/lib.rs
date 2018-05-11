@@ -16,6 +16,7 @@ pub mod mp;
 pub mod param;
 pub mod process;
 pub mod string;
+pub mod traps;
 pub mod vm;
 pub mod x86;
 
