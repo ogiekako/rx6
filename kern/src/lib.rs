@@ -1,14 +1,21 @@
 #![feature(lang_items, asm)]
+#![feature(const_fn)]
 #![no_std]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
 #![allow(unused)]
 
 pub mod kalloc;
 pub mod kernmain;
+pub mod lapic;
 pub mod linker;
 pub mod memlayout;
 pub mod mmu;
+pub mod mp;
+pub mod param;
+pub mod process;
+pub mod string;
 pub mod vm;
 pub mod x86;
 

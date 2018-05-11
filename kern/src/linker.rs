@@ -7,13 +7,9 @@ extern "C" {
 }
 
 pub fn end() -> V {
-    unsafe {
-        V(&__end as *const u8 as usize)
-    }
+    unsafe { V(&__end as *const u8 as usize) }
 }
 
 pub fn data() -> V {
-    unsafe {
-        V(&__data as *const u8 as usize)
-    }
+    unsafe { V(&__data as *const u8 as usize) }
 }

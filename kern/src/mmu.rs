@@ -101,27 +101,25 @@ impl AddAssign<usize> for P {
 // #define SEG_TSS   6  // this process's task state
 //
 // // cpu->gdt[NSEGS] holds the above segments.
-// #define NSEGS     7
-//
-// //PAGEBREAK!
-// #ifndef __ASSEMBLER__
-// // Segment Descriptor
-// struct segdesc {
-//   uint lim_15_0 : 16;  // Low bits of segment limit
-//   uint base_15_0 : 16; // Low bits of segment base address
-//   uint base_23_16 : 8; // Middle bits of segment base address
-//   uint type : 4;       // Segment type (see STS_ constants)
-//   uint s : 1;          // 0 = system, 1 = application
-//   uint dpl : 2;        // Descriptor Privilege Level
-//   uint p : 1;          // Present
-//   uint lim_19_16 : 4;  // High bits of segment limit
-//   uint avl : 1;        // Unused (available for software use)
-//   uint rsv1 : 1;       // Reserved
-//   uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
-//   uint g : 1;          // Granularity: limit scaled by 4K when set
-//   uint base_31_24 : 8; // High bits of segment base address
-// };
-//
+pub const NSEGS: usize = 7;
+
+// Segment Descriptor
+pub struct segdesc {
+  // uint lim_15_0 : 16;  // Low bits of segment limit
+  // uint base_15_0 : 16; // Low bits of segment base address
+  // uint base_23_16 : 8; // Middle bits of segment base address
+  // uint type : 4;       // Segment type (see STS_ constants)
+  // uint s : 1;          // 0 = system, 1 = application
+  // uint dpl : 2;        // Descriptor Privilege Level
+  // uint p : 1;          // Present
+  // uint lim_19_16 : 4;  // High bits of segment limit
+  // uint avl : 1;        // Unused (available for software use)
+  // uint rsv1 : 1;       // Reserved
+  // uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
+  // uint g : 1;          // Granularity: limit scaled by 4K when set
+  // uint base_31_24 : 8; // High bits of segment base address
+}
+
 // // Normal segment
 // #define SEG(type, base, lim, dpl) (struct segdesc)    \
 // { ((lim) >> 12) & 0xffff, (uint)(base) & 0xffff,      \
@@ -166,49 +164,47 @@ impl AddAssign<usize> for P {
 //  \--- PDX(va) --/ \--- PTX(va) --/
 
 impl V {
-// page directory index
+    // page directory index
     pub fn pdx(self) -> usize {
-(self.0 >> PDXSHIFT) & 0x3FF
+        (self.0 >> PDXSHIFT) & 0x3FF
     }
-// page table index
- pub fn ptx(self) -> usize {
-(self.0 >> PTXSHIFT) & 0x3FF
- }
-// construct virtual address from indexes and offset
- pub fn pgaddr(d:usize, t:usize, o:usize) -> V{
+    // page table index
+    pub fn ptx(self) -> usize {
+        (self.0 >> PTXSHIFT) & 0x3FF
+    }
+    // construct virtual address from indexes and offset
+    pub fn pgaddr(d: usize, t: usize, o: usize) -> V {
         V((d << PDXSHIFT) | (t << PTXSHIFT) | o)
- }
+    }
 }
 
-
 // Page directory and page table constants.
-pub const NPDENTRIES :usize =    1024;    // # directory entries per page directory
-pub const NPTENTRIES :usize =    1024;    // # PTEs per page table
+pub const NPDENTRIES: usize = 1024; // # directory entries per page directory
+pub const NPTENTRIES: usize = 1024; // # PTEs per page table
 pub const PGSIZE: usize = 4096; // bytes mapped by a page
 
-
-pub const PGSHIFT   :usize =      12;      // log2(PGSIZE)
-pub const PTXSHIFT  :usize =      12;      // offset of PTX in a linear address
-pub const PDXSHIFT  :usize =      22;      // offset of PDX in a linear address
+pub const PGSHIFT: usize = 12; // log2(PGSIZE)
+pub const PTXSHIFT: usize = 12; // offset of PTX in a linear address
+pub const PDXSHIFT: usize = 22; // offset of PDX in a linear address
 
 fn PGROUNDUP(sz: usize) -> usize {
     ((sz) + (PGSIZE - 1)) & (!(PGSIZE - 1))
 }
 
 fn PGROUNDDOWN(a: usize) -> usize {
-    a & (!(PGSIZE-1))
+    a & (!(PGSIZE - 1))
 }
 
 // Page table/directory entry flags.
-pub const PTE_P     :usize =      0x001;   // Present
-pub const PTE_W     :usize =      0x002;   // Writeable
-pub const PTE_U     :usize =      0x004;   // User
-pub const PTE_PWT   :usize =      0x008;   // Write-Through
-pub const PTE_PCD   :usize =      0x010;   // Cache-Disable
-pub const PTE_A     :usize =      0x020;   // Accessed
-pub const PTE_D     :usize =      0x040;   // Dirty
-pub const PTE_PS    :usize =      0x080;   // Page Size
-pub const PTE_MBZ   :usize =      0x180;   // Bits must be zero
+pub const PTE_P: usize = 0x001; // Present
+pub const PTE_W: usize = 0x002; // Writeable
+pub const PTE_U: usize = 0x004; // User
+pub const PTE_PWT: usize = 0x008; // Write-Through
+pub const PTE_PCD: usize = 0x010; // Cache-Disable
+pub const PTE_A: usize = 0x020; // Accessed
+pub const PTE_D: usize = 0x040; // Dirty
+pub const PTE_PS: usize = 0x080; // Page Size
+pub const PTE_MBZ: usize = 0x180; // Bits must be zero
 
 pub struct PTE(pub usize);
 
@@ -222,50 +218,49 @@ impl PTE {
     }
 }
 
-// #ifndef __ASSEMBLER__
 // typedef uint pte_t;
-//
-// // Task state segment format
-// struct taskstate {
-//   uint link;         // Old ts selector
-//   uint esp0;         // Stack pointers and segment selectors
-//   ushort ss0;        //   after an increase in privilege level
-//   ushort padding1;
-//   uint *esp1;
-//   ushort ss1;
-//   ushort padding2;
-//   uint *esp2;
-//   ushort ss2;
-//   ushort padding3;
-//   void *cr3;         // Page directory base
-//   uint *eip;         // Saved state from last task switch
-//   uint eflags;
-//   uint eax;          // More saved state (registers)
-//   uint ecx;
-//   uint edx;
-//   uint ebx;
-//   uint *esp;
-//   uint *ebp;
-//   uint esi;
-//   uint edi;
-//   ushort es;         // Even more saved state (segment selectors)
-//   ushort padding4;
-//   ushort cs;
-//   ushort padding5;
-//   ushort ss;
-//   ushort padding6;
-//   ushort ds;
-//   ushort padding7;
-//   ushort fs;
-//   ushort padding8;
-//   ushort gs;
-//   ushort padding9;
-//   ushort ldt;
-//   ushort padding10;
-//   ushort t;          // Trap on task switch
-//   ushort iomb;       // I/O map base address
-// };
-//
+
+// Task state segment format
+pub struct taskstate {
+  // uint link;         // Old ts selector
+  // uint esp0;         // Stack pointers and segment selectors
+  // ushort ss0;        //   after an increase in privilege level
+  // ushort padding1;
+  // uint *esp1;
+  // ushort ss1;
+  // ushort padding2;
+  // uint *esp2;
+  // ushort ss2;
+  // ushort padding3;
+  // void *cr3;         // Page directory base
+  // uint *eip;         // Saved state from last task switch
+  // uint eflags;
+  // uint eax;          // More saved state (registers)
+  // uint ecx;
+  // uint edx;
+  // uint ebx;
+  // uint *esp;
+  // uint *ebp;
+  // uint esi;
+  // uint edi;
+  // ushort es;         // Even more saved state (segment selectors)
+  // ushort padding4;
+  // ushort cs;
+  // ushort padding5;
+  // ushort ss;
+  // ushort padding6;
+  // ushort ds;
+  // ushort padding7;
+  // ushort fs;
+  // ushort padding8;
+  // ushort gs;
+  // ushort padding9;
+  // ushort ldt;
+  // ushort padding10;
+  // ushort t;          // Trap on task switch
+  // ushort iomb;       // I/O map base address
+}
+
 // // PAGEBREAK: 12
 // // Gate descriptors for interrupts and traps
 // struct gatedesc {
