@@ -75,16 +75,17 @@ const MPIOINTR: u8 = 0x03; // One per bus interrupt source
 const MPLINTR: u8 = 0x04; // One per system interrupt source
 
 // TODO: fix
-pub static mut cpus: Option<[Cpu; NCPU as usize]> = unsafe { Some([
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-                                                         Cpu::zero(),
-])
+pub static mut cpus: Option<[Cpu; NCPU as usize]> = unsafe {
+    Some([
+        Cpu::zero(),
+        Cpu::zero(),
+        Cpu::zero(),
+        Cpu::zero(),
+        Cpu::zero(),
+        Cpu::zero(),
+        Cpu::zero(),
+        Cpu::zero(),
+    ])
 };
 pub static mut ismp: bool = true;
 pub static mut ncpu: usize = 0;

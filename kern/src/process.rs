@@ -23,24 +23,23 @@ pub struct Cpu {
 impl Cpu {
     pub const unsafe fn zero() -> Cpu {
         Cpu {
-            apicid:0,
+            apicid: 0,
             scheduler: 0usize as *mut Context,
-            ts: taskstate{},
+            ts: taskstate {},
             gdt: [
-                segdesc{},
-                segdesc{},
-                segdesc{},
-                segdesc{},
-                segdesc{},
-                segdesc{},
-                segdesc{},
+                segdesc {},
+                segdesc {},
+                segdesc {},
+                segdesc {},
+                segdesc {},
+                segdesc {},
+                segdesc {},
             ],
             started: 0,
             ncli: 0,
             intena: 0,
             cpu: 0usize as *const Cpu,
             process: 0usize as *const Proc,
-
         }
     }
 }
