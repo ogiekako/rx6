@@ -1,5 +1,6 @@
 #![feature(lang_items, asm)]
 #![feature(const_fn)]
+#![feature(ptr_offset_from)]
 #![no_std]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -48,8 +49,8 @@ pub extern "C" fn kernmain() {
 mod tests {
     use core;
     #[test]
-    fn it_works() {
+    fn is_32bit() {
         assert_eq!(core::mem::size_of::<u8>(), 1);
-        // assert_eq!(core::mem::size_of::<usize>(), 4);
+        assert_eq!(core::mem::size_of::<usize>(), 4);
     }
 }

@@ -5,4 +5,3 @@ authors = ["Keigo Oka <ogiekako@gmail.com>"]
 
 [lib]
 crate-type = ["staticlib"]
-

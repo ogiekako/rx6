@@ -1,8 +1,8 @@
 #![feature(lang_items, asm)]
 #![no_std]
 
-mod x86;
 mod elf;
+mod x86;
 
 use elf::*;
 use x86::*;
@@ -10,7 +10,7 @@ use x86::*;
 const SECTSIZE: u32 = 512;
 
 #[no_mangle]
-pub unsafe extern fn bootmain() {
+pub unsafe extern "C" fn bootmain() {
     let elf: *const Elfhdr = 0x10000 as *const Elfhdr; // scratch space
 
     // Read 1st page off disk
@@ -28,21 +28,24 @@ pub unsafe extern fn bootmain() {
         let pa = (*ph).paddr as *mut u8;
         readseg(pa, (*ph).filesz, (*ph).off);
         if (*ph).memsz > (*ph).filesz {
-            stosb(pa.offset((*ph).filesz as isize), 0, (*ph).memsz as i32 - (*ph).filesz as i32);
+            stosb(
+                pa.offset((*ph).filesz as isize),
+                0,
+                (*ph).memsz as i32 - (*ph).filesz as i32,
+            );
         }
 
         ph = ph.offset(1);
     }
     // Call the entry point from the ELF header.
     // Does not return!
-    let entry: extern "C" fn () = core::mem::transmute((*elf).entry);
+    let entry: extern "C" fn() = core::mem::transmute((*elf).entry);
     entry();
 }
 
-
 #[inline(never)] // Avoid boot loader to blow up over 510 bytes.
-// Read ’count’ bytes at ’offset’ from kernel into physical address ’pa’.
-// Might copy more than asked.
+                 // Read ’count’ bytes at ’offset’ from kernel into physical address ’pa’.
+                 // Might copy more than asked.
 unsafe fn readseg(pa: *mut u8, count: u32, offset: u32) {
     let mut pa = pa;
     let epa = pa.offset(count as isize);
@@ -58,11 +61,11 @@ unsafe fn readseg(pa: *mut u8, count: u32, offset: u32) {
     // we load in increasing order.
     loop {
         if pa >= epa {
-            break
+            break;
         }
         readsect(pa, offset);
         pa = pa.offset(SECTSIZE as isize);
-        offset+=1;
+        offset += 1;
     }
 }
 
@@ -72,7 +75,6 @@ fn waitdisk() {
         while (inb(0x1F7) & 0xC0) != 0x40 {}
     }
 }
-
 
 // Read a single sector at offset into dst.
 unsafe fn readsect(dst: *mut u8, offset: u32) {
@@ -87,18 +89,24 @@ unsafe fn readsect(dst: *mut u8, offset: u32) {
 
     // Read data.
     waitdisk();
-    insl(0x1F0, dst, (SECTSIZE/4) as i32);
+    insl(0x1F0, dst, (SECTSIZE / 4) as i32);
 }
 
 #[cfg(not(test))]
-#[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
+#[lang = "eh_personality"]
+#[no_mangle]
+pub extern "C" fn eh_personality() {}
 #[cfg(not(test))]
-#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt() -> ! {loop{}}
+#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern "C" fn panic_fmt() -> ! {
+    loop {}
+}
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-#[test]
+    #[test]
     fn elf_size() {
         assert_eq!(52, std::mem::size_of::<super::Elfhdr>());
     }

@@ -97,6 +97,7 @@ pub fn kalloc() -> Option<V> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use core;
     use mmu::PGSIZE;
 

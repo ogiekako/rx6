@@ -28,8 +28,10 @@ pub unsafe fn memcmp(mut v1: *const u8, mut v2: *const u8, n: usize) -> u8 {
 mod tests {
     #[test]
     fn memcmp() {
-        assert!(super::memcmp("hoge".as_ptr(), "piyo".as_ptr(), 4) != 0);
-        assert_eq!(super::memcmp("hoge".as_ptr(), "hoge".as_ptr(), 4), 0);
+        unsafe {
+            assert!(super::memcmp("hoge".as_ptr(), "piyo".as_ptr(), 4) != 0);
+            assert_eq!(super::memcmp("hoge".as_ptr(), "hoge".as_ptr(), 4), 0);
+        }
     }
 }
 

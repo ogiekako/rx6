@@ -54,106 +54,182 @@ impl AddAssign<usize> for P {
     }
 }
 
-// // Eflags register
-// #define FL_CF           0x00000001      // Carry Flag
-// #define FL_PF           0x00000004      // Parity Flag
-// #define FL_AF           0x00000010      // Auxiliary carry Flag
-// #define FL_ZF           0x00000040      // Zero Flag
-// #define FL_SF           0x00000080      // Sign Flag
-// #define FL_TF           0x00000100      // Trap Flag
-// #define FL_IF           0x00000200      // Interrupt Enable
-// #define FL_DF           0x00000400      // Direction Flag
-// #define FL_OF           0x00000800      // Overflow Flag
-// #define FL_IOPL_MASK    0x00003000      // I/O Privilege Level bitmask
-// #define FL_IOPL_0       0x00000000      //   IOPL == 0
-// #define FL_IOPL_1       0x00001000      //   IOPL == 1
-// #define FL_IOPL_2       0x00002000      //   IOPL == 2
-// #define FL_IOPL_3       0x00003000      //   IOPL == 3
-// #define FL_NT           0x00004000      // Nested Task
-// #define FL_RF           0x00010000      // Resume Flag
-// #define FL_VM           0x00020000      // Virtual 8086 mode
-// #define FL_AC           0x00040000      // Alignment Check
-// #define FL_VIF          0x00080000      // Virtual Interrupt Flag
-// #define FL_VIP          0x00100000      // Virtual Interrupt Pending
-// #define FL_ID           0x00200000      // ID flag
-//
-// // Control Register flags
-// #define CR0_PE          0x00000001      // Protection Enable
-// #define CR0_MP          0x00000002      // Monitor coProcessor
-// #define CR0_EM          0x00000004      // Emulation
-// #define CR0_TS          0x00000008      // Task Switched
-// #define CR0_ET          0x00000010      // Extension Type
-// #define CR0_NE          0x00000020      // Numeric Errror
-// #define CR0_WP          0x00010000      // Write Protect
-// #define CR0_AM          0x00040000      // Alignment Mask
-// #define CR0_NW          0x20000000      // Not Writethrough
-// #define CR0_CD          0x40000000      // Cache Disable
-// #define CR0_PG          0x80000000      // Paging
-//
-// #define CR4_PSE         0x00000010      // Page size extension
-//
-// // various segment selectors.
-// #define SEG_KCODE 1  // kernel code
-// #define SEG_KDATA 2  // kernel data+stack
-// #define SEG_KCPU  3  // kernel per-cpu data
-// #define SEG_UCODE 4  // user code
-// #define SEG_UDATA 5  // user data+stack
-// #define SEG_TSS   6  // this process's task state
-//
-// // cpu->gdt[NSEGS] holds the above segments.
-pub const NSEGS: usize = 7;
+// Eflags register
+pub const FL_CF: u32 = 0x00000001; // Carry Flag
+pub const FL_PF: u32 = 0x00000004; // Parity Flag
+pub const FL_AF: u32 = 0x00000010; // Auxiliary carry Flag
+pub const FL_ZF: u32 = 0x00000040; // Zero Flag
+pub const FL_SF: u32 = 0x00000080; // Sign Flag
+pub const FL_TF: u32 = 0x00000100; // Trap Flag
+pub const FL_IF: u32 = 0x00000200; // Interrupt Enable
+pub const FL_DF: u32 = 0x00000400; // Direction Flag
+pub const FL_OF: u32 = 0x00000800; // Overflow Flag
+pub const FL_IOPL_MASK: u32 = 0x00003000; // I/O Privilege Level bitmask
+pub const FL_IOPL_0: u32 = 0x00000000; //   IOPL == 0
+pub const FL_IOPL_1: u32 = 0x00001000; //   IOPL == 1
+pub const FL_IOPL_2: u32 = 0x00002000; //   IOPL == 2
+pub const FL_IOPL_3: u32 = 0x00003000; //   IOPL == 3
+pub const FL_NT: u32 = 0x00004000; // Nested Task
+pub const FL_RF: u32 = 0x00010000; // Resume Flag
+pub const FL_VM: u32 = 0x00020000; // Virtual 8086 mode
+pub const FL_AC: u32 = 0x00040000; // Alignment Check
+pub const FL_VIF: u32 = 0x00080000; // Virtual Interrupt Flag
+pub const FL_VIP: u32 = 0x00100000; // Virtual Interrupt Pending
+pub const FL_ID: u32 = 0x00200000; // ID flag
+
+// Control Register flags
+pub const CR0_PE: usize = 0x00000001; // Protection Enable
+pub const CR0_MP: usize = 0x00000002; // Monitor coProcessor
+pub const CR0_EM: usize = 0x00000004; // Emulation
+pub const CR0_TS: usize = 0x00000008; // Task Switched
+pub const CR0_ET: usize = 0x00000010; // Extension Type
+pub const CR0_NE: usize = 0x00000020; // Numeric Errror
+pub const CR0_WP: usize = 0x00010000; // Write Protect
+pub const CR0_AM: usize = 0x00040000; // Alignment Mask
+pub const CR0_NW: usize = 0x20000000; // Not Writethrough
+pub const CR0_CD: usize = 0x40000000; // Cache Disable
+pub const CR0_PG: usize = 0x80000000; // Paging
+
+pub const CR4_PSE: usize = 0x00000010; // Page size extension
+
+// various segment selectors.
+pub const SEG_KCODE: usize = 1; // kernel code
+pub const SEG_KDATA: usize = 2; // kernel data+stack
+pub const SEG_UCODE: usize = 3; // user code
+pub const SEG_UDATA: usize = 4; // user data+stack
+pub const SEG_TSS: usize = 5; // this process's task state
+
+// cpu->gdt[NSEGS] holds the above segments.
+pub const NSEGS: usize = 6;
 
 // Segment Descriptor
-pub struct segdesc {
-  // uint lim_15_0 : 16;  // Low bits of segment limit
-  // uint base_15_0 : 16; // Low bits of segment base address
-  // uint base_23_16 : 8; // Middle bits of segment base address
-  // uint type : 4;       // Segment type (see STS_ constants)
-  // uint s : 1;          // 0 = system, 1 = application
-  // uint dpl : 2;        // Descriptor Privilege Level
-  // uint p : 1;          // Present
-  // uint lim_19_16 : 4;  // High bits of segment limit
-  // uint avl : 1;        // Unused (available for software use)
-  // uint rsv1 : 1;       // Reserved
-  // uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
-  // uint g : 1;          // Granularity: limit scaled by 4K when set
-  // uint base_31_24 : 8; // High bits of segment base address
+#[repr(C)]
+pub struct Segdesc {
+    lim_15_0: u16,  // Low bits of segment limit
+    base_15_0: u16, // Low bits of segment base address
+    base_23_16: u8, // Middle bits of segment base address
+    typ_s_dpl_p: u8,
+    // uint typ : 4;       // Segment type (see STS_ constants)
+    // uint s : 1;          // 0 = system, 1 = application
+    // uint dpl : 2;        // Descriptor Privilege Level
+    // uint p : 1;          // Present
+    lim_19_16_avl_rsv1_db_g: u8,
+    // uint lim_19_16 : 4;  // High bits of segment limit
+    // uint avl : 1;        // Unused (available for software use)
+    // uint rsv1 : 1;       // Reserved
+    // uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
+    // uint g : 1;          // Granularity: limit scaled by 4K when set
+    base_31_24: u8, // High bits of segment base address
 }
 
-// // Normal segment
-// #define SEG(type, base, lim, dpl) (struct segdesc)    \
-// { ((lim) >> 12) & 0xffff, (uint)(base) & 0xffff,      \
-//   ((uint)(base) >> 16) & 0xff, type, 1, dpl, 1,       \
-//   (uint)(lim) >> 28, 0, 0, 1, 1, (uint)(base) >> 24 }
-// #define SEG16(type, base, lim, dpl) (struct segdesc)  \
-// { (lim) & 0xffff, (uint)(base) & 0xffff,              \
-//   ((uint)(base) >> 16) & 0xff, type, 1, dpl, 1,       \
-//   (uint)(lim) >> 16, 0, 0, 1, 0, (uint)(base) >> 24 }
-// #endif
-//
-// #define DPL_USER    0x3     // User DPL
-//
-// // Application segment type bits
-// #define STA_X       0x8     // Executable segment
-// #define STA_E       0x4     // Expand down (non-executable segments)
-// #define STA_C       0x4     // Conforming code segment (executable only)
-// #define STA_W       0x2     // Writeable (non-executable segments)
-// #define STA_R       0x2     // Readable (executable segments)
-// #define STA_A       0x1     // Accessed
-//
-// // System segment type bits
-// #define STS_T16A    0x1     // Available 16-bit TSS
-// #define STS_LDT     0x2     // Local Descriptor Table
-// #define STS_T16B    0x3     // Busy 16-bit TSS
-// #define STS_CG16    0x4     // 16-bit Call Gate
-// #define STS_TG      0x5     // Task Gate / Coum Transmitions
-// #define STS_IG16    0x6     // 16-bit Interrupt Gate
-// #define STS_TG16    0x7     // 16-bit Trap Gate
-// #define STS_T32A    0x9     // Available 32-bit TSS
-// #define STS_T32B    0xB     // Busy 32-bit TSS
-// #define STS_CG32    0xC     // 32-bit Call Gate
-// #define STS_IG32    0xE     // 32-bit Interrupt Gate
-// #define STS_TG32    0xF     // 32-bit Trap Gate
+impl Segdesc {
+    const fn new(
+        lim_15_0: u16,
+        base_15_0: u16,
+        base_23_16: u8,
+        typ: u8,
+        s: u8,
+        dpl: u8,
+        p: u8,
+        lim_19_16: u8,
+        avl: u8,
+        rsv1: u8,
+        db: u8,
+        g: u8,
+        base_31_24: u8,
+    ) -> Segdesc {
+        // TODO: fix
+        // assert!(typ < 1<<4);
+        // assert!(s   < 1<<1);
+        // assert!(dpl < 1<<2);
+        // assert!(p < 1<<1);
+        // assert!(lim_19_16 < 1<<4);
+        // assert!(avl < 1<<1);
+        // assert!(rsv1 < 1<<1);
+        // assert!(db < 1<<1);
+        // assert!(g < 1<<1);
+
+        Segdesc {
+            lim_15_0,
+            base_15_0,
+            base_23_16,
+            typ_s_dpl_p: typ | s << 4 | dpl << 5 | p << 7,
+            lim_19_16_avl_rsv1_db_g: lim_19_16 | avl << 4 | rsv1 << 5 | db << 6 | g << 7,
+            base_31_24,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core;
+    #[test]
+    fn Segdesc() {
+        assert_eq!(core::mem::size_of::<Segdesc>(), 8);
+    }
+}
+
+// Normal segment
+pub const fn seg(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
+    Segdesc::new(
+        ((lim >> 12) & 0xffff) as u16,
+        (base & 0xffff) as u16,
+        ((base >> 16) & 0xff) as u8,
+        typ,
+        1,
+        dpl,
+        1,
+        (lim >> 28) as u8,
+        0,
+        0,
+        1,
+        1,
+        (base >> 24) as u8,
+    )
+}
+
+pub fn seg16(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
+    Segdesc::new(
+        (lim & 0xffff) as u16,
+        (base & 0xffff) as u16,
+        ((base >> 16) & 0xff) as u8,
+        typ,
+        1,
+        dpl,
+        1,
+        (lim >> 16) as u8,
+        0,
+        0,
+        1,
+        0,
+        (base >> 24) as u8,
+    )
+}
+
+pub const DPL_USER: u8 = 0x3; // User DPL
+
+// Application segment type bits
+pub const STA_X: u8 = 0x8; // Executable segment
+pub const STA_E: u8 = 0x4; // Expand down (non-executable segments)
+pub const STA_C: u8 = 0x4; // Conforming code segment (executable only)
+pub const STA_W: u8 = 0x2; // Writeable (non-executable segments)
+pub const STA_R: u8 = 0x2; // Readable (executable segments)
+pub const STA_A: u8 = 0x1; // Accessed
+
+// System segment type bits
+pub const STS_T16A: usize = 0x1; // Available 16-bit TSS
+pub const STS_LDT: usize = 0x2; // Local Descriptor Table
+pub const STS_T16B: usize = 0x3; // Busy 16-bit TSS
+pub const STS_CG16: usize = 0x4; // 16-bit Call Gate
+pub const STS_TG: usize = 0x5; // Task Gate / Coum Transmitions
+pub const STS_IG16: usize = 0x6; // 16-bit Interrupt Gate
+pub const STS_TG16: usize = 0x7; // 16-bit Trap Gate
+pub const STS_T32A: usize = 0x9; // Available 32-bit TSS
+pub const STS_T32B: usize = 0xB; // Busy 32-bit TSS
+pub const STS_CG32: usize = 0xC; // 32-bit Call Gate
+pub const STS_IG32: usize = 0xE; // 32-bit Interrupt Gate
+pub const STS_TG32: usize = 0xF; // 32-bit Trap Gate
 
 // A virtual address 'la' has a three-part structure as follows:
 //

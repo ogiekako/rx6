@@ -70,12 +70,12 @@ rx6.img: bootblock kernel
 
 bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	gcc $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
-	(cd bootmain && xargo build --target $(ARCH)-unknown-linux-gnu --release)
+	(cd bootmain && cross build --target $(TARGET) --release)
 	$(LD) $(LDFLAGS) -N \
 		-e start \
 		-Ttext 0x7C00 \
 		-o bootblock.o \
-		bootasm.o bootmain/target/$(ARCH)-unknown-linux-gnu/release/libbootmain.a
+		bootasm.o bootmain/target/$(TARGET)/release/libbootmain.a
 	$(OBJDUMP) -S bootblock.o > bootblock.asm
 	$(OBJCOPY) -S -O binary -j .text bootblock.o bootblock
 	./sign.pl bootblock
@@ -90,19 +90,21 @@ TARGET = $(ARCH)-unknown-linux-gnu
 KERN = kern/target/$(TARGET)/$(RELEASE)/libkern.a
 
 kernel: entry.o entrypgdir.o $(KERN) kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN)  -b binary
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) -b binary
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 $(KERN): $(wildcard kern/src/*.rs)
-	(cd kern && xargo build --target $(TARGET) $(RELEASEFLAG))
+	(cd kern && xargo build --target $(TARGET) $(RELEASEFLAG) --verbose)
 
 clean:
-	(cd bootmain && xargo clean)
-	(cd kern && xargo clean)
-	rm -f *.o *.d *.a rx6.img bootblock
+	(cd bootmain && cross clean)
+	(cd kern && cross clean)
+	rm -f *.o *.d *.a *.asm rx6.img bootblock
 
 test:
-	# TODO: run test on 32 bit environment (use docker?)
-	(cd kern && xargo test --verbose)
+	(cd kern && cross test --target $(TARGET))
 
+fmt:
+	(cd bootmain && cargo fmt)
+	(cd kern && cargo fmt)

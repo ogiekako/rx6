@@ -75,8 +75,8 @@ const MPIOINTR: u8 = 0x03; // One per bus interrupt source
 const MPLINTR: u8 = 0x04; // One per system interrupt source
 
 // TODO: fix
-pub static mut cpus: Option<[Cpu; NCPU as usize]> = unsafe {
-    Some([
+pub static mut cpus: [Cpu; NCPU as usize] = unsafe {
+    [
         Cpu::zero(),
         Cpu::zero(),
         Cpu::zero(),
@@ -85,7 +85,7 @@ pub static mut cpus: Option<[Cpu; NCPU as usize]> = unsafe {
         Cpu::zero(),
         Cpu::zero(),
         Cpu::zero(),
-    ])
+    ]
 };
 pub static mut ismp: bool = true;
 pub static mut ncpu: usize = 0;
@@ -186,7 +186,7 @@ pub unsafe fn mpinit() {
             MPPROC => {
                 let process = p as usize as *const Mpproc;
                 if ncpu < NCPU {
-                    cpus.as_mut().unwrap()[ncpu].apicid = (*process).apicid; // apicid may differ from ncpu
+                    cpus[ncpu].apicid = (*process).apicid; // apicid may differ from ncpu
                     ncpu += 1;
                 }
                 p = p.offset(core::mem::size_of::<Mpproc>() as isize);

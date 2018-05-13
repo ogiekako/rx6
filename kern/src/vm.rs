@@ -4,7 +4,9 @@ use kalloc::*;
 use linker;
 use memlayout::*;
 use mmu::*;
-use x86;
+use mp::*;
+use process::*;
+use x86::*;
 
 // #include "param.h"
 // #include "types.h"
@@ -14,34 +16,21 @@ use x86;
 // #include "mmu.h"
 // #include "proc.h"
 // #include "elf.h"
-//
-// // Set up CPU's kernel segment descriptors.
-// // Run once on entry on each CPU.
-// void
-// seginit(void)
-// {
-//   struct cpu *c;
-//
-//   // Map "logical" addresses to virtual addresses using identity map.
-//   // Cannot share a CODE descriptor for both kernel and user
-//   // because it would have to have DPL_USR, but the CPU forbids
-//   // an interrupt from CPL=0 to DPL=3.
-//   c = &cpus[cpunum()];
-//   c->gdt[SEG_KCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, 0);
-//   c->gdt[SEG_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
-//   c->gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
-//   c->gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
-//
-//   // Map cpu and proc -- these are private per cpu.
-//   c->gdt[SEG_KCPU] = SEG(STA_W, &c->cpu, 8, 0);
-//
-//   lgdt(c->gdt, sizeof(c->gdt));
-//   loadgs(SEG_KCPU << 3);
-//
-//   // Initialize cpu-local storage.
-//   cpu = c;
-//   proc = 0;
-// }
+
+// Set up CPU's kernel segment descriptors.
+// Run once on entry on each CPU.
+pub unsafe fn seginit() {
+    // Map "logical" addresses to virtual addresses using identity map.
+    // Cannot share a CODE descriptor for both kernel and user
+    // because it would have to have DPL_USR, but the CPU forbids
+    // an interrupt from CPL=0 to DPL=3.
+    let mut c = &mut cpus[cpuid()];
+    c.gdt[SEG_KCODE] = seg(STA_X | STA_R, 0, 0xffffffff, 0);
+    c.gdt[SEG_KDATA] = seg(STA_W, 0, 0xffffffff, 0);
+    c.gdt[SEG_UCODE] = seg(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
+    c.gdt[SEG_UDATA] = seg(STA_W, 0, 0xffffffff, DPL_USER);
+    lgdt(c.gdt.as_ptr(), core::mem::size_of_val(&c.gdt) as u16);
+}
 
 // for use in scheduler()
 static mut kpgdir: PageDir = PageDir { pd: V(0) };
@@ -204,7 +193,7 @@ pub unsafe fn kvmalloc() {
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
 unsafe fn switchkvm() {
-    x86::lcr3(v2p(kpgdir.pd).0 as u32); // switch to the kernel page table
+    lcr3(v2p(kpgdir.pd).0 as u32); // switch to the kernel page table
 }
 
 // // Switch TSS and h/w page table to correspond to process p.
@@ -219,13 +208,13 @@ unsafe fn switchkvm() {
 //     panic("switchuvm: no pgdir");
 //
 //   pushcli();
-//   cpu->gdt[SEG_TSS] = SEG16(STS_T32A, &cpu->ts, sizeof(cpu->ts)-1, 0);
-//   cpu->gdt[SEG_TSS].s = 0;
-//   cpu->ts.ss0 = SEG_KDATA << 3;
-//   cpu->ts.esp0 = (uint)p->kstack + KSTACKSIZE;
+//   mycpu()->gdt[SEG_TSS] = SEG16(STS_T32A, &mycpu()->ts, sizeof(mycpu()->ts)-1, 0);
+//   mycpu()->gdt[SEG_TSS].s = 0;
+//   mycpu()->ts.ss0 = SEG_KDATA << 3;
+//   mycpu()->ts.esp0 = (uint)p->kstack + KSTACKSIZE;
 //   // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
 //   // forbids I/O instructions (e.g., inb and outb) from user space
-//   cpu->ts.iomb = (ushort) 0xFFFF;
+//   mycpu()->ts.iomb = (ushort) 0xFFFF;
 //   ltr(SEG_TSS << 3);
 //   lcr3(V2P(p->pgdir));  // switch to process's address space
 //   popcli();

@@ -11,6 +11,7 @@
 // #include "x86.h"
 // #include "proc.h"  // ncpu
 use core;
+use mp::*;
 use traps::*;
 
 // Local APIC registers, divided by 4 for use as uint[] indices.
@@ -103,34 +104,23 @@ pub unsafe fn lapicinit() {
     lapicw(TPR, 0);
 }
 
-// int
-// cpunum(void)
-// {
-//   int apicid, i;
-//
-//   // Cannot call cpu when interrupts are enabled:
-//   // result not guaranteed to last long enough to be used!
-//   // Would prefer to panic but even printing is chancy here:
-//   // almost everything, including cprintf and panic, calls cpu,
-//   // often indirectly through acquire and release.
-//   if(readeflags()&FL_IF){
-//     static int n;
-//     if(n++ == 0)
-//       cprintf("cpu called from %x with interrupts enabled\n",
-//         __builtin_return_address(0));
-//   }
-//
-//   if (!lapic)
-//     return 0;
-//
-//   apicid = lapic[ID] >> 24;
-//   for (i = 0; i < ncpu; ++i) {
-//     if (cpus[i].apicid == apicid)
-//       return i;
-//   }
-//   panic("unknown apicid\n");
-// }
-//
+// Should be called with interrupts disabled: the calling thread shouldn't be
+// rescheduled between reading lapic[ID] and checking against cpu array.
+pub unsafe fn lapiccpunum() -> usize {
+    if (lapic as usize == 0) {
+        panic!("cpunum");
+        return 0;
+    }
+
+    let apicid = (lapicr(ID) >> 24) as u8;
+    for i in 0..ncpu {
+        if (cpus[i].apicid == apicid) {
+            return i;
+        }
+    }
+    panic!("unknown apicid");
+}
+
 // // Acknowledge interrupt.
 // void
 // lapiceoi(void)
