@@ -18,7 +18,7 @@ struct Run {
 }
 
 struct Kmem {
-//   struct spinlock lock;
+    //   struct spinlock lock;
 //   int use_lock;
 //   struct run *freelist;
 }

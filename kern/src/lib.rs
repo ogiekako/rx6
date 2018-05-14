@@ -15,6 +15,7 @@ pub mod memlayout;
 pub mod mmu;
 pub mod mp;
 pub mod param;
+pub mod picirq;
 pub mod process;
 pub mod string;
 pub mod traps;
