@@ -1,3 +1,4 @@
+use ioapic;
 /// main.c in xv6
 use kalloc;
 use lapic;
@@ -17,18 +18,18 @@ pub unsafe fn kernmain() {
     lapic::lapicinit(); // interrupt controller
     vm::seginit(); // segment descriptors
     picirq::picinit(); // another interrupt controller
-                       // ioapicinit();    // another interrupt controller
-                       // consoleinit();   // console hardware
-                       // uartinit();      // serial port
-                       // pinit();         // process table
-                       // tvinit();        // trap vectors
-                       // binit();         // buffer cache
-                       // fileinit();      // file table
-                       // ideinit();       // disk
-                       // if(!ismp)
-                       //   timerinit();   // uniprocessor timer
-                       // startothers();   // start other processors
-                       // kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
-                       // userinit();      // first user process
-                       // mpmain();        // finish this processor's setup
+    ioapic::ioapicinit(); // another interrupt controller
+                          // consoleinit();   // console hardware
+                          // uartinit();      // serial port
+                          // pinit();         // process table
+                          // tvinit();        // trap vectors
+                          // binit();         // buffer cache
+                          // fileinit();      // file table
+                          // ideinit();       // disk
+                          // if(!ismp)
+                          //   timerinit();   // uniprocessor timer
+                          // startothers();   // start other processors
+                          // kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
+                          // userinit();      // first user process
+                          // mpmain();        // finish this processor's setup
 }

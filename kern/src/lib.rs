@@ -7,6 +7,8 @@
 #![allow(non_camel_case_types)]
 #![allow(unused)]
 
+pub mod console;
+pub mod ioapic;
 pub mod kalloc;
 pub mod kernmain;
 pub mod lapic;
@@ -19,6 +21,7 @@ pub mod picirq;
 pub mod process;
 pub mod string;
 pub mod traps;
+pub mod uart;
 pub mod vm;
 pub mod x86;
 

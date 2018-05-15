@@ -15,6 +15,6 @@ pub fn v2p(v: V) -> P {
     P(v.0.wrapping_sub(KERNBASE.0))
 }
 
-pub fn p2v(p: P) -> V {
+pub const fn p2v(p: P) -> V {
     V(p.0 + KERNBASE.0)
 }

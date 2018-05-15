@@ -1,10 +1,11 @@
+// Routines to let C code use special x86 instructions.
+
 use mmu::*;
 
-// Routines to let C code use special x86 instructions.
 pub unsafe fn inb(port: u16) -> u8 {
     let data: u8;
     asm!("inb %dx, %al" : "={ax}" (data) : "{dx}"(port) :: "volatile");
-    return data;
+    data
 }
 
 pub unsafe fn insl(port: i32, mut addr: *mut (), mut cnt: i32) {
@@ -41,17 +42,15 @@ pub unsafe fn stosb(mut addr: *mut (), data: i32, mut cnt: i32) {
          "memory", "cc": "volatile");
 }
 
-// static inline void
-// stosl(void *addr, int data, int cnt)
-// {
-//   asm volatile("cld; rep stosl" :
-//                "=D" (addr), "=c" (cnt) :
-//                "0" (addr), "1" (cnt), "a" (data) :
-//                "memory", "cc");
-// }
-//
-// struct segdesc;
+#[allow(unused_assignments)]
+pub unsafe fn stosl(mut addr: *mut (), data: i32, mut cnt: i32) {
+    asm!("cld; rep stosl" :
+         "={di}" (addr), "={ecx}" (cnt) :
+         "0" (addr), "1" (cnt), "{eax}" (data) :
+         "memory", "cc": "volatile");
+}
 
+// TODO: &Segdesc
 pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
     let mut pd = [0u16; 3];
     pd[0] = size - 1;
@@ -92,13 +91,11 @@ pub unsafe fn readeflags() -> u32 {
 // {
 //   asm volatile("movw %0, %%gs" : : "r" (v));
 // }
-//
-// static inline void
-// cli(void)
-// {
-//   asm volatile("cli");
-// }
-//
+
+pub unsafe fn cli() {
+    asm!("cli":::::"volatile");
+}
+
 // static inline void
 // sti(void)
 // {

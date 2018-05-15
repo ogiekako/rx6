@@ -14,11 +14,11 @@ impl V {
         V(PGROUNDDOWN(self.0))
     }
 
-    pub fn as_ptr(self) -> *const u8 {
+    pub const fn as_ptr(self) -> *const u8 {
         self.0 as *const u8
     }
 
-    pub fn as_mut_ptr(self) -> *mut u8 {
+    pub const fn as_mut_ptr(self) -> *mut u8 {
         self.0 as *mut u8
     }
 }

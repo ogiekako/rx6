@@ -128,14 +128,11 @@ pub unsafe fn lapiccpunum() -> usize {
 //   if(lapic)
 //     lapicw(EOI, 0);
 // }
-//
-// // Spin for a given number of microseconds.
-// // On real hardware would want to tune this dynamically.
-// void
-// microdelay(int us)
-// {
-// }
-//
+
+// Spin for a given number of microseconds.
+// On real hardware would want to tune this dynamically.
+pub fn microdelay(us: i32) {}
+
 // #define CMOS_PORT    0x70
 // #define CMOS_RETURN  0x71
 //

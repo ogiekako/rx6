@@ -1,16 +1,17 @@
-// #include "types.h"
-// #include "x86.h"
-//
-// void*
-// memset(void *dst, int c, uint n)
-// {
-//   if ((int)dst%4 == 0 && n%4 == 0){
-//     c &= 0xFF;
-//     stosl(dst, (c<<24)|(c<<16)|(c<<8)|c, n/4);
-//   } else
-//     stosb(dst, c, n);
-//   return dst;
-// }
+use x86::*;
+
+pub unsafe fn memset(dst: *mut u8, mut c: i32, n: u32) {
+    if (dst as usize) % 4 == 0 && n % 4 == 0 {
+        c &= 0xFF;
+        stosl(
+            dst as usize as *mut (),
+            (c << 24) | (c << 16) | (c << 8) | c,
+            n as i32 / 4,
+        );
+    } else {
+        stosb(dst as usize as *mut (), c, n as i32);
+    }
+}
 
 pub unsafe fn memcmp(mut v1: *const u8, mut v2: *const u8, n: usize) -> u8 {
     for i in 0..n {
@@ -20,8 +21,7 @@ pub unsafe fn memcmp(mut v1: *const u8, mut v2: *const u8, n: usize) -> u8 {
         v1 = v1.offset(1);
         v2 = v2.offset(1);
     }
-
-    return 0;
+    0
 }
 
 #[cfg(test)]
@@ -35,26 +35,24 @@ mod tests {
     }
 }
 
-// void*
-// memmove(void *dst, const void *src, uint n)
-// {
-//   const char *s;
-//   char *d;
-//
-//   s = src;
-//   d = dst;
-//   if(s < d && s + n > d){
-//     s += n;
-//     d += n;
-//     while(n-- > 0)
-//       *--d = *--s;
-//   } else
-//     while(n-- > 0)
-//       *d++ = *s++;
-//
-//   return dst;
-// }
-//
+pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) {
+    if src < dst && src.offset(n as isize) > dst {
+        src = src.offset(n as isize);
+        dst = dst.offset(n as isize);
+        for i in 0..n {
+            dst = dst.offset(-1);
+            src = src.offset(-1);
+            *dst = *src;
+        }
+    } else {
+        for i in 0..n {
+            *dst = *src;
+            dst = dst.offset(1);
+            src = src.offset(1);
+        }
+    }
+}
+
 // // memcpy exists to placate GCC.  Use memmove.
 // void*
 // memcpy(void *dst, const void *src, uint n)

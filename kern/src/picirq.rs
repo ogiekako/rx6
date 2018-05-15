@@ -12,13 +12,13 @@ pub const IRQ_SLAVE: u16 = 2; // IRQ at which slave connects to master
 // Initial IRQ mask has interrupt 2 enabled (for slave 8259A).
 static mut irqmask: u16 = 0xffff & !(1 << IRQ_SLAVE);
 
-unsafe fn picsetmask(mask: u16) {
+pub unsafe fn picsetmask(mask: u16) {
     irqmask = mask;
     outb(IO_PIC1 + 1, mask as u8);
     outb(IO_PIC2 + 1, (mask >> 8) as u8);
 }
 
-unsafe fn picenable(irq: i32) {
+pub unsafe fn picenable(irq: i32) {
     picsetmask(irqmask & !(1 << irq));
 }
 
