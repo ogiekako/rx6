@@ -4,9 +4,11 @@
 
 use core;
 
+use ioapic::*;
 use memlayout::*;
 use mmu::*;
 use param::*;
+use picirq::*;
 use process::*;
 use string::*;
 use traps::*;
@@ -309,17 +311,15 @@ unsafe fn consputc(c: u16) {
 //
 //   return n;
 // }
-//
-// void
-// consoleinit(void)
-// {
-//   initlock(&cons.lock, "console");
-//
-//   devsw[CONSOLE].write = consolewrite;
-//   devsw[CONSOLE].read = consoleread;
-//   cons.locking = 1;
-//
-//   picenable(IRQ_KBD);
-//   ioapicenable(IRQ_KBD, 0);
-// }
-//
+
+pub unsafe fn consoleinit() {
+    // TODO: lock
+    // initlock(&cons.lock, "console");
+
+    // devsw[CONSOLE].write = consolewrite;
+    // devsw[CONSOLE].read = consoleread;
+    // cons.locking = 1;
+
+    picenable(IRQ_KBD as i32);
+    ioapicenable(IRQ_KBD, 0);
+}
