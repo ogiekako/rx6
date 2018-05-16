@@ -1,7 +1,7 @@
 use x86::*;
 
-pub unsafe fn memset(dst: *mut u8, mut c: i32, n: u32) {
-    if (dst as usize) % 4 == 0 && n % 4 == 0 {
+pub unsafe fn memset(dst: *mut u8, mut c: i32, n: usize) {
+    if dst as usize % 4 == 0 && n % 4 == 0 {
         c &= 0xFF;
         stosl(
             dst as usize as *mut (),

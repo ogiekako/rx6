@@ -1,5 +1,6 @@
-use console;
 /// main.c in xv6
+
+use console;
 use ioapic;
 use kalloc;
 use lapic;
@@ -34,4 +35,6 @@ pub unsafe fn kernmain() {
                       // kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
                       // userinit();      // first user process
                       // mpmain();        // finish this processor's setup
+    console::cprintf("looping\n", &[]);
+    loop{}
 }

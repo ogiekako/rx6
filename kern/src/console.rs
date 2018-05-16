@@ -176,7 +176,7 @@ unsafe fn cgaputc(c: i32) {
         memset(
             crt.offset(pos) as usize as *mut u8,
             0,
-            core::mem::size_of_val(&*crt) as u32 * ((24 * 80 - pos) as u32),
+            core::mem::size_of_val(&*crt) * ((24 * 80 - pos) as usize),
         );
     }
 

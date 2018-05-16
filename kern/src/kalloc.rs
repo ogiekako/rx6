@@ -3,15 +3,13 @@
 // // and pipe buffers. Allocates 4096-byte pages.
 
 use core;
-
 // #include "types.h"
 // #include "defs.h"
 // #include "param.h"
 // #include "memlayout.h"
 use mmu::*;
+use string::*;
 // #include "spinlock.h"
-//
-// extern char end[]; // first address after kernel loaded from ELF file
 
 struct Run {
     next: Option<&'static mut Run>,
@@ -60,8 +58,8 @@ unsafe fn kfree(v: V) {
     //  if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
     //    panic("kfree");
     //
-    //  // Fill with junk to catch dangling refs.
-    //  memset(v, 1, PGSIZE);
+    // Fill with junk to catch dangling refs.
+    memset(v.as_mut_ptr(), 1, PGSIZE);
     //
     //  if(kmem.use_lock)
     //    acquire(&kmem.lock);
