@@ -20,6 +20,7 @@ pub mod param;
 pub mod picirq;
 pub mod process;
 pub mod string;
+pub mod trap;
 pub mod traps;
 pub mod uart;
 pub mod vm;

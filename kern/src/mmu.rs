@@ -217,19 +217,20 @@ pub const STA_W: u8 = 0x2; // Writeable (non-executable segments)
 pub const STA_R: u8 = 0x2; // Readable (executable segments)
 pub const STA_A: u8 = 0x1; // Accessed
 
-// System segment type bits
-pub const STS_T16A: usize = 0x1; // Available 16-bit TSS
-pub const STS_LDT: usize = 0x2; // Local Descriptor Table
-pub const STS_T16B: usize = 0x3; // Busy 16-bit TSS
-pub const STS_CG16: usize = 0x4; // 16-bit Call Gate
-pub const STS_TG: usize = 0x5; // Task Gate / Coum Transmitions
-pub const STS_IG16: usize = 0x6; // 16-bit Interrupt Gate
-pub const STS_TG16: usize = 0x7; // 16-bit Trap Gate
-pub const STS_T32A: usize = 0x9; // Available 32-bit TSS
-pub const STS_T32B: usize = 0xB; // Busy 32-bit TSS
-pub const STS_CG32: usize = 0xC; // 32-bit Call Gate
-pub const STS_IG32: usize = 0xE; // 32-bit Interrupt Gate
-pub const STS_TG32: usize = 0xF; // 32-bit Trap Gate
+// System segment type bits (u4)
+pub const STS_T16A: u8 = 0x1; // Available 16-bit TSS
+pub const STS_LDT: u8 = 0x2; // Local Descriptor Table
+pub const STS_T16B: u8 = 0x3; // Busy 16-bit TSS
+pub const STS_CG16: u8 = 0x4; // 16-bit Call Gate
+pub const STS_TG: u8 = 0x5; // Task Gate / Coum Transmitions
+
+pub const STS_IG16: u8 = 0x6; // 16-bit Interrupt Gate
+pub const STS_TG16: u8 = 0x7; // 16-bit Trap Gate
+pub const STS_T32A: u8 = 0x9; // Available 32-bit TSS
+pub const STS_T32B: u8 = 0xB; // Busy 32-bit TSS
+pub const STS_CG32: u8 = 0xC; // 32-bit Call Gate
+pub const STS_IG32: u8 = 0xE; // 32-bit Interrupt Gate
+pub const STS_TG32: u8 = 0xF; // 32-bit Trap Gate
 
 // A virtual address 'la' has a three-part structure as follows:
 //
@@ -337,39 +338,53 @@ pub struct taskstate {
 // ushort iomb;       // I/O map base address
 }
 
-// // PAGEBREAK: 12
-// // Gate descriptors for interrupts and traps
-// struct gatedesc {
-//   uint off_15_0 : 16;   // low 16 bits of offset in segment
-//   uint cs : 16;         // code segment selector
-//   uint args : 5;        // # args, 0 for interrupt/trap gates
-//   uint rsv1 : 3;        // reserved(should be zero I guess)
-//   uint type : 4;        // type(STS_{TG,IG32,TG32})
-//   uint s : 1;           // must be 0 (system)
-//   uint dpl : 2;         // descriptor(meaning new) privilege level
-//   uint p : 1;           // Present
-//   uint off_31_16 : 16;  // high bits of offset in segment
-// };
-//
-// // Set up a normal interrupt/trap gate descriptor.
-// // - istrap: 1 for a trap (= exception) gate, 0 for an interrupt gate.
-// //   interrupt gate clears FL_IF, trap gate leaves FL_IF alone
-// // - sel: Code segment selector for interrupt/trap handler
-// // - off: Offset in code segment for interrupt/trap handler
-// // - dpl: Descriptor Privilege Level -
-// //        the privilege level required for software to invoke
-// //        this interrupt/trap gate explicitly using an int instruction.
-// #define SETGATE(gate, istrap, sel, off, d)                \
-// {                                                         \
-//   (gate).off_15_0 = (uint)(off) & 0xffff;                \
-//   (gate).cs = (sel);                                      \
-//   (gate).args = 0;                                        \
-//   (gate).rsv1 = 0;                                        \
-//   (gate).type = (istrap) ? STS_TG32 : STS_IG32;           \
-//   (gate).s = 0;                                           \
-//   (gate).dpl = (d);                                       \
-//   (gate).p = 1;                                           \
-//   (gate).off_31_16 = (uint)(off) >> 16;                  \
-// }
-//
-// #endif
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct Gatedesc {
+    off_15_0: u16, // low 16 bits of offset in segment
+    cs: u16,       // code segment selector
+    args_rsv1: u8,
+    // args : u5;        // # args, 0 for interrupt/trap gates
+    // rsv1 : u3;        // reserved(should be zero I guess)
+    type_s_dpl_p: u8,
+    // type : u4;        // type(STS_{TG,IG32,TG32})
+    // s : u1;           // must be 0 (system)
+    // dpl : u2;         // descriptor(meaning new) privilege level
+    // p : u1;           // Present
+    off_31_16: u16, // high bits of offset in segment
+}
+
+impl Gatedesc {
+    pub const fn zero() -> Gatedesc {
+        Gatedesc {
+            off_15_0: 0,
+            cs: 0,
+            args_rsv1: 0,
+            type_s_dpl_p: 0,
+            off_31_16: 0,
+        }
+    }
+
+    // Set up a normal interrupt/trap gate descriptor.
+    // - istrap: 1 for a trap (= exception) gate, 0 for an interrupt gate.
+    //   interrupt gate clears FL_IF, trap gate leaves FL_IF alone
+    // - sel: Code segment selector for interrupt/trap handler
+    // - off: Offset in code segment for interrupt/trap handler
+    // - dpl: Descriptor Privilege Level -
+    //        the privilege level required for software to invoke
+    //        this interrupt/trap gate explicitly using an int instruction.
+    pub fn setgate(&mut self, istrap: bool, sel: u16, off: usize, dpl: u8) {
+        assert!(dpl < 1 << 2);
+        self.off_15_0 = (off & 0xffff) as u16;
+        self.cs = sel;
+        let args = 0;
+        let rsv1 = 0;
+        self.args_rsv1 = 0 | 0 << 5;
+        let typ = if istrap { STS_TG32 } else { STS_IG32 };
+        let s = 0;
+        let dpl = dpl;
+        let p = 1;
+        self.type_s_dpl_p = typ | s << 4 | dpl << 5 | p << 7;
+        self.off_31_16 = (off >> 16) as u16;
+    }
+}

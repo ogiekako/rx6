@@ -107,11 +107,10 @@ pub struct Proc {
 //
 // static void wakeup1(void *chan);
 //
-// void
-// pinit(void)
-// {
-//   initlock(&ptable.lock, "ptable");
-// }
+pub fn pinit() {
+    // TODO: lock
+    // initlock(&ptable.lock, "ptable");
+}
 
 // Must be called with interrupts disabled
 pub unsafe fn cpuid() -> usize {

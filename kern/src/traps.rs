@@ -24,8 +24,8 @@ pub const T_SIMDERR: u32 = 19; // SIMD floating point error
 
 // These are arbitrarily chosen, but with care not to overlap
 // processor defined exceptions or interrupt vectors.
-pub const T_SYSCALL: u32 = 64; // system call
-pub const T_DEFAULT: u32 = 500; // catchall
+pub const T_SYSCALL: usize = 64; // system call
+pub const T_DEFAULT: usize = 500; // catchall
 
 pub const T_IRQ0: u32 = 32; // IRQ 0 corresponds to int T_IRQ
 

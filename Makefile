@@ -1,34 +1,5 @@
-OBJS = main.o \
-#	bio.o\
-#	console.o\
-#	exec.o\
-#	file.o\
-#	fs.o\
-#	ide.o\
-#	ioapic.o\
-#	kalloc.o\
-#	kbd.o\
-#	lapic.o\
-#	log.o\
-#	main.o\
-#	mp.o\
-#	picirq.o\
-#	pipe.o\
-#	proc.o\
-#	sleeplock.o\
-#	spinlock.o\
-#	string.o\
-#	swtch.o\
-#	syscall.o\
-#	sysfile.o\
-#	sysproc.o\
-#	timer.o\
-#	trapasm.o\
-#	trap.o\
-#	uart.o\
-#	vectors.o\
-#	vm.o\
-
+OBJS = trapasm.o \
+  vectors.o
 
 QEMU = qemu-system-i386
 
@@ -89,18 +60,21 @@ endif
 TARGET = $(ARCH)-unknown-linux-gnu
 KERN = kern/target/$(TARGET)/$(RELEASE)/libkern.a
 
-kernel: entry.o entrypgdir.o $(KERN) kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) -b binary
+kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) $(OBJS) -b binary
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 $(KERN): $(wildcard kern/src/*.rs)
 	(cd kern && xargo build --target $(TARGET) $(RELEASEFLAG) --verbose)
 
+vectors.S: vectors.pl
+	perl vectors.pl > vectors.S
+
 clean:
 	(cd bootmain && cross clean)
 	(cd kern && cross clean)
-	rm -f *.o *.d *.a *.asm rx6.img bootblock
+	rm -f *.o *.d *.a *.asm rx6.img bootblock kernel vectors.S
 
 test:
 	(cd kern && cross test --target $(TARGET))

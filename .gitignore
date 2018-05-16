@@ -6,6 +6,7 @@ _*
 *.asm
 *.sym
 *.img
+*.iml
 vectors.S
 bootblock
 entryother
@@ -18,3 +19,5 @@ mkfs
 .gdb_history
 peda-session-*
 core
+.idea
+
