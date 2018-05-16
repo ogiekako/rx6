@@ -5,6 +5,9 @@ use core;
 use lapic::*;
 use mmu::*;
 use mp::*;
+use spinlock::*;
+use sysfile::*;
+use types::*;
 use x86::*;
 
 // Per-CPU state
@@ -14,10 +17,10 @@ pub struct Cpu {
     pub ts: taskstate,           // Used by x86 to find stack for interrupt
     pub gdt: [Segdesc; NSEGS],   // x86 global descriptor table
     // TODO volatile
-    pub started: u32,         // Has the CPU started?
-    pub ncli: i32,            // Depth of pushcli nesting.
-    pub intena: i32,          // Were interrupts enabled before pushcli?
-    pub process: *const Proc, // The process running on this cpu or null
+    pub started: u32,       // Has the CPU started?
+    pub ncli: i32,          // Depth of pushcli nesting.
+    pub intena: i32,        // Were interrupts enabled before pushcli?
+    pub process: *mut Proc, // The process running on this cpu or null
 }
 
 impl Cpu {
@@ -37,47 +40,54 @@ impl Cpu {
             started: 0,
             ncli: 0,
             intena: 0,
-            process: 0usize as *const Proc,
+            process: 0usize as *mut Proc,
         }
     }
 }
 
-// //PAGEBREAK: 17
-// // Saved registers for kernel context switches.
-// // Don't need to save all the segment registers (%cs, etc),
-// // because they are constant across kernel contexts.
-// // Don't need to save %eax, %ecx, %edx, because the
-// // x86 convention is that the caller has saved them.
-// // Contexts are stored at the bottom of the stack they
-// // describe; the stack pointer is the address of the context.
-// // The layout of the context matches the layout of the stack in swtch.S
-// // at the "Switch stacks" comment. Switch doesn't save eip explicitly,
-// // but it is on the stack and allocproc() manipulates it.
+// Saved registers for kernel context switches.
+// Don't need to save all the segment registers (%cs, etc),
+// because they are constant across kernel contexts.
+// Don't need to save %eax, %ecx, %edx, because the
+// x86 convention is that the caller has saved them.
+// Contexts are stored at the bottom of the stack they
+// describe; the stack pointer is the address of the context.
+// The layout of the context matches the layout of the stack in swtch.S
+// at the "Switch stacks" comment. Switch doesn't save eip explicitly,
+// but it is on the stack and allocproc() manipulates it.
 pub struct Context {
-    // uint edi;
-// uint esi;
-// uint ebx;
-// uint ebp;
-// uint eip;
+    pub edi: u32,
+    pub esi: u32,
+    pub ebx: u32,
+    pub ebp: u32,
+    pub eip: u32,
 }
 
-// enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+pub enum Procstate {
+    UNUSED,
+    EMBRYO,
+    SLEEPING,
+    RUNNABLE,
+    RUNNING,
+    ZOMBIE,
+}
 
 // Per-process state
 pub struct Proc {
-    // uint sz;                     // Size of process memory (bytes)
-// pde_t* pgdir;                // Page table
-// char *kstack;                // Bottom of kernel stack for this process
-// enum procstate state;        // Process state
-// int pid;                     // Process ID
-// struct proc *parent;         // Parent process
-// struct trapframe *tf;        // Trap frame for current syscall
-// struct context *context;     // swtch() here to run process
-// void *chan;                  // If non-zero, sleeping on chan
-// int killed;                  // If non-zero, have been killed
-// struct file *ofile[NOFILE];  // Open files
-// struct inode *cwd;           // Current directory
-// char name[16];               // Process name (debugging)
+    pub sz: u32,               // Size of process memory (bytes)
+    pub pgdir: *mut pde_t,     // Page table
+    pub kstack: *mut u8,       // Bottom of kernel stack for this process
+    pub state: Procstate,      // Process state
+    pub pid: i32,              // Process ID
+    pub parent: *mut Proc,     // Parent process
+    pub tf: *mut Trapframe,    // Trap frame for current syscall
+    pub context: *mut Context, // swtch() here to run process
+    pub chan: *const (),       // If non-zero, sleeping on chan
+    pub killed: bool,          // If non-zero, have been killed
+    // TODO:fix
+    // pub ofile: [File; NOFILE],  // Open files
+    // pub cwd: *const Inode,           // Current directory
+    pub name: [u8; 16], // Process name (debugging)
 }
 
 // // Process memory is laid out contiguously, low addresses first:
@@ -107,7 +117,7 @@ pub struct Proc {
 //
 // static void wakeup1(void *chan);
 //
-pub fn pinit() {
+pub unsafe fn pinit() {
     // TODO: lock
     // initlock(&ptable.lock, "ptable");
 }
@@ -121,7 +131,7 @@ pub unsafe fn cpuid() -> usize {
 
 static mut n: i32 = 0;
 // Must be called with interrupts disabled
-unsafe fn mycpu() -> *const Cpu {
+pub unsafe fn mycpu() -> *mut Cpu {
     // Would prefer to panic but even printing is chancy here: almost everything,
     // including cprintf and panic, calls mycpu(), often indirectly through
     // acquire and release.
@@ -134,22 +144,19 @@ unsafe fn mycpu() -> *const Cpu {
         }
     }
 
-    return &cpus[lapiccpunum()] as *const Cpu;
+    return &mut cpus[lapiccpunum()] as *mut Cpu;
 }
 
-// // Disable interrupts so that we are not rescheduled
-// // while reading proc from the cpu structure
-// struct proc*
-// myproc(void) {
-//   struct cpu *c;
-//   struct proc *p;
-//   pushcli();
-//   c = mycpu();
-//   p = c->proc;
-//   popcli();
-//   return p;
-// }
-//
+// Disable interrupts so that we are not rescheduled
+// while reading proc from the cpu structure
+pub unsafe fn myproc() -> *mut Proc {
+    pushcli();
+    let c = mycpu();
+    let p = (*c).process;
+    popcli();
+    return p;
+}
+
 //
 // //PAGEBREAK: 32
 // // Look in the process table for an UNUSED proc.
@@ -306,53 +313,52 @@ unsafe fn mycpu() -> *const Cpu {
 //
 //   return pid;
 // }
-//
-// // Exit the current process.  Does not return.
-// // An exited process remains in the zombie state
-// // until its parent calls wait() to find out it exited.
-// void
-// exit(void)
-// {
-//   struct proc *curproc = myproc();
-//   struct proc *p;
-//   int fd;
-//
-//   if(curproc == initproc)
-//     panic("init exiting");
-//
-//   // Close all open files.
-//   for(fd = 0; fd < NOFILE; fd++){
-//     if(curproc->ofile[fd]){
-//       fileclose(curproc->ofile[fd]);
-//       curproc->ofile[fd] = 0;
-//     }
-//   }
-//
-//   begin_op();
-//   iput(curproc->cwd);
-//   end_op();
-//   curproc->cwd = 0;
-//
-//   acquire(&ptable.lock);
-//
-//   // Parent might be sleeping in wait().
-//   wakeup1(curproc->parent);
-//
-//   // Pass abandoned children to init.
-//   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-//     if(p->parent == curproc){
-//       p->parent = initproc;
-//       if(p->state == ZOMBIE)
-//         wakeup1(initproc);
-//     }
-//   }
-//
-//   // Jump into the scheduler, never to return.
-//   curproc->state = ZOMBIE;
-//   sched();
-//   panic("zombie exit");
-// }
-//
+
+// Exit the current process.  Does not return.
+// An exited process remains in the zombie state
+// until its parent calls wait() to find out it exited.
+pub unsafe fn exit() {
+    // TODO: fix
+    let curproc = myproc();
+
+    //  if(curproc == initproc) {
+    //    panic!("init exiting");
+    //  }
+    //
+    // // Close all open files.
+    // for fd in 0..NOFILE {
+    //   if (*curproc).ofile[fd] {
+    //     fileclose(curproc->ofile[fd]);
+    //     (*curproc).ofile[fd] = 0;
+    //   }
+    // }
+    //
+    // begin_op();
+    // iput(curproc->cwd);
+    // end_op();
+    // curproc->cwd = 0;
+    //
+    // acquire(&ptable.lock);
+    //
+    // // Parent might be sleeping in wait().
+    //
+    // wakeup1(curproc->parent);
+    //
+    // // Pass abandoned children to init.
+    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    //   if(p->parent == curproc){
+    //     p->parent = initproc;
+    //     if(p->state == ZOMBIE)
+    //       wakeup1(initproc);
+    //   }
+    // }
+
+    // Jump into the scheduler, never to return.
+    // curproc->state = ZOMBIE;
+    // sched();
+    // panic("zombie exit");
+}
+
 // // Wait for a child process to exit and return its pid.
 // // Return -1 if this process has no children.
 // int

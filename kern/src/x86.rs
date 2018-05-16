@@ -8,6 +8,7 @@ pub unsafe fn inb(port: u16) -> u8 {
     data
 }
 
+#[allow(unused_assignments)]
 pub unsafe fn insl(port: i32, mut addr: *mut (), mut cnt: i32) {
     asm!("cld; rep insl" :
          "={di}" (addr), "={ecx}" (cnt) :
@@ -96,12 +97,10 @@ pub unsafe fn cli() {
     asm!("cli":::::"volatile");
 }
 
-// static inline void
-// sti(void)
-// {
-//   asm volatile("sti");
-// }
-//
+pub unsafe fn sti() {
+    asm!("sti":::::"volatile");
+}
+
 // static inline uint
 // xchg(volatile uint *addr, uint newval)
 // {
@@ -127,40 +126,39 @@ pub unsafe fn lcr3(val: u32) {
     asm!("mov $0, %cr3"::"r"(val):"memory":"volatile");
 }
 
-// //PAGEBREAK: 36
-// // Layout of the trap frame built on the stack by the
-// // hardware and by trapasm.S, and passed to trap().
-// struct trapframe {
-//   // registers as pushed by pusha
-//   uint edi;
-//   uint esi;
-//   uint ebp;
-//   uint oesp;      // useless & ignored
-//   uint ebx;
-//   uint edx;
-//   uint ecx;
-//   uint eax;
-//
-//   // rest of trap frame
-//   ushort gs;
-//   ushort padding1;
-//   ushort fs;
-//   ushort padding2;
-//   ushort es;
-//   ushort padding3;
-//   ushort ds;
-//   ushort padding4;
-//   uint trapno;
-//
-//   // below here defined by x86 hardware
-//   uint err;
-//   uint eip;
-//   ushort cs;
-//   ushort padding5;
-//   uint eflags;
-//
-//   // below here only when crossing rings, such as from user to kernel
-//   uint esp;
-//   ushort ss;
-//   ushort padding6;
-// };
+// Layout of the trap frame built on the stack by the
+// hardware and by trapasm.S, and passed to trap().
+pub struct Trapframe {
+    // registers as pushed by pusha
+    pub edi: u32,
+    pub esi: u32,
+    pub ebp: u32,
+    pub oesp: u32, // useless & ignored
+    pub ebx: u32,
+    pub edx: u32,
+    pub ecx: u32,
+    pub eax: u32,
+
+    // rest of trap frame
+    pub gs: u16,
+    pub padding1: u16,
+    pub fs: u16,
+    pub padding2: u16,
+    pub es: u16,
+    pub padding3: u16,
+    pub ds: u16,
+    pub padding4: u16,
+    pub trapno: u32,
+
+    // below here defined by x86 hardware
+    pub err: u32,
+    pub eip: u32,
+    pub cs: u16,
+    pub padding5: u16,
+    pub eflags: u32,
+
+    // below here only when crossing rings, such as from user to kernel
+    pub esp: u32,
+    pub ss: u16,
+    pub padding6: u16,
+}

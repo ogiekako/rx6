@@ -131,7 +131,7 @@ pub unsafe fn lapiccpunum() -> usize {
 
 // Spin for a given number of microseconds.
 // On real hardware would want to tune this dynamically.
-pub fn microdelay(us: i32) {}
+pub unsafe fn microdelay(us: i32) {}
 
 // #define CMOS_PORT    0x70
 // #define CMOS_RETURN  0x71

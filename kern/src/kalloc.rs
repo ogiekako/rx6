@@ -75,7 +75,7 @@ unsafe fn kfree(v: V) {
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns None if the memory cannot be allocated.
-pub fn kalloc() -> Option<V> {
+pub unsafe fn kalloc() -> Option<V> {
     unsafe {
         //  if(kmem.use_lock)
         //    acquire(&kmem.lock);

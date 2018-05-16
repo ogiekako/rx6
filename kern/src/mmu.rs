@@ -7,10 +7,10 @@ use core::ops::{Add, AddAssign};
 pub struct V(pub usize);
 
 impl V {
-    pub fn pgroundup(self) -> V {
+    pub unsafe fn pgroundup(self) -> V {
         V(PGROUNDUP(self.0))
     }
-    pub fn pgrounddown(self) -> V {
+    pub unsafe fn pgrounddown(self) -> V {
         V(PGROUNDDOWN(self.0))
     }
 
@@ -189,7 +189,7 @@ pub const fn seg(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
     )
 }
 
-pub fn seg16(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
+pub unsafe fn seg16(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
     Segdesc::new(
         (lim & 0xffff) as u16,
         (base & 0xffff) as u16,
@@ -242,15 +242,15 @@ pub const STS_TG32: u8 = 0xF; // 32-bit Trap Gate
 
 impl V {
     // page directory index
-    pub fn pdx(self) -> usize {
+    pub unsafe fn pdx(self) -> usize {
         (self.0 >> PDXSHIFT) & 0x3FF
     }
     // page table index
-    pub fn ptx(self) -> usize {
+    pub unsafe fn ptx(self) -> usize {
         (self.0 >> PTXSHIFT) & 0x3FF
     }
     // construct virtual address from indexes and offset
-    pub fn pgaddr(d: usize, t: usize, o: usize) -> V {
+    pub unsafe fn pgaddr(d: usize, t: usize, o: usize) -> V {
         V((d << PDXSHIFT) | (t << PTXSHIFT) | o)
     }
 }
@@ -287,7 +287,7 @@ pub struct PTE(pub usize);
 
 // Address in page table or page directory entry
 impl PTE {
-    pub fn addr(&self) -> P {
+    pub unsafe fn addr(&self) -> P {
         P(self.0 & (!0xFFF))
     }
     fn flags(&self) -> usize {
@@ -373,7 +373,7 @@ impl Gatedesc {
     // - dpl: Descriptor Privilege Level -
     //        the privilege level required for software to invoke
     //        this interrupt/trap gate explicitly using an int instruction.
-    pub fn setgate(&mut self, istrap: bool, sel: u16, off: usize, dpl: u8) {
+    pub unsafe fn setgate(&mut self, istrap: bool, sel: u16, off: usize, dpl: u8) {
         assert!(dpl < 1 << 2);
         self.off_15_0 = (off & 0xffff) as u16;
         self.cs = sel;
