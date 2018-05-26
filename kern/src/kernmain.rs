@@ -1,13 +1,17 @@
+use bio;
 /// main.c in xv6
 use console;
+use file;
+use ide;
 use ioapic;
 use kalloc;
 use lapic;
 use linker;
 use memlayout;
-use memlayout::p2v;
+use memlayout::*;
 use mmu::P;
 use mp;
+use mp::*;
 use picirq;
 use process;
 use trap;
@@ -27,15 +31,20 @@ pub unsafe fn kernmain() {
     uart::uartinit(); // serial port
     process::pinit(); // process table
     trap::tvinit(); // trap vectors
-                    // binit();         // buffer cache
-                    // fileinit();      // file table
-                    // ideinit();       // disk
-                    // if(!ismp)
-                    //   timerinit();   // uniprocessor timer
-                    // startothers();   // start other processors
-                    // kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
-                    // userinit();      // first user process
-                    // mpmain();        // finish this processor's setup
+    bio::binit(); // buffer cache (TODO)
+    file::fileinit(); // file table (TODO)
+    ide::ideinit(); // disk (TODO)
+    assert!(ismp);
+    // if(!ismp)
+    //   timerinit();   // uniprocessor timer (TODO)
+    startothers(); // start other processors
+    kalloc::kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers() (TODO)
+    userinit(); // first user process (TODO)
+    mpmain(); // finish this processor's setup (TODO)
     console::cprintf("looping\n", &[]);
     loop {}
 }
+
+fn startothers() {}
+fn userinit() {}
+fn mpmain() {}

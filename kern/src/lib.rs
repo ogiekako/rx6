@@ -7,7 +7,10 @@
 #![allow(non_camel_case_types)]
 #![allow(unused)]
 
+pub mod bio;
 pub mod console;
+pub mod file;
+pub mod ide;
 pub mod ioapic;
 pub mod kalloc;
 pub mod kernmain;

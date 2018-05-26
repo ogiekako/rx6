@@ -35,12 +35,11 @@ pub unsafe fn kinit1(vstart: V, vend: V) {
     freerange(vstart, vend);
 }
 
-// void
-// kinit2(void *vstart, void *vend)
-// {
-//   freerange(vstart, vend);
-//   kmem.use_lock = 1;
-// }
+pub unsafe fn kinit2(vstart: V, vend: V) {
+    freerange(vstart, vend);
+    // TODO: lock
+    // kmem.use_lock = 1;
+}
 
 unsafe fn freerange(vstart: V, vend: V) {
     let mut p = vstart.pgroundup();

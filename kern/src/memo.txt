@@ -1,7 +1,17 @@
-cpus: static mp.rs
+exit
 
-mycpu -> myproc
+trap を実装しようとしていたけど、実際は、kernmain から呼ばれるのは、tvinit だけで、trap 自体は今の所実行されない。
+なので、trap を実装するのは一旦おいておいて、kernmain から実行される本筋のところを実装していこう。
 
-Cpu doesn't own process.
-processes are owned by kernel
-Lifetime of processes are less than CPU (which is static)
+
+TODO: lock
+はあとまわし。
+
+bio::binit は、buffer cache の実装
+これは、disk への書き込みが遅いので、それを隠蔽するためのインメモリキャッシュである。
+
+bread()
+
+memide.c は、インメモリファイルシステムを構成する。
+qemu-nox では、ide.c を使っている。いまのところ、ide.c に準拠することにする。
+
