@@ -1,0 +1,7 @@
+cpus: static mp.rs
+
+mycpu -> myproc
+
+Cpu doesn't own process.
+processes are owned by kernel
+Lifetime of processes are less than CPU (which is static)

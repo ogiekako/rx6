@@ -65,6 +65,8 @@ kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
+kern: $(KERN)
+
 $(KERN): $(wildcard kern/src/*.rs)
 	(cd kern && xargo build --target $(TARGET) $(RELEASEFLAG) --verbose)
 

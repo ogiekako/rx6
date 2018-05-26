@@ -106,21 +106,21 @@ use x86::*;
 pub unsafe fn pushcli() {
     let eflags = readeflags();
     cli();
-    if ((*mycpu()).ncli == 0) {
-        (*mycpu()).intena = (eflags & FL_IF) as i32;
+    if (mycpu().ncli == 0) {
+        mycpu().intena = (eflags & FL_IF) as i32;
     }
-    (*mycpu()).ncli += 1;
+    mycpu().ncli += 1;
 }
 
 pub unsafe fn popcli() {
     if (readeflags() & FL_IF > 0) {
         panic!("popcli - interruptible");
     }
-    (*mycpu()).ncli -= 1;
-    if ((*mycpu()).ncli < 0) {
+    (mycpu()).ncli -= 1;
+    if ((mycpu()).ncli < 0) {
         panic!("popcli");
     }
-    if ((*mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
+    if ((mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
         sti();
     }
 }

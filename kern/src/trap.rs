@@ -39,12 +39,12 @@ pub unsafe fn tvinit() {
 #[no_mangle]
 pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
     if (*tf).trapno == T_SYSCALL as u32 {
-        if ((*myproc()).killed) {
+        if (myproc().killed) {
             exit();
         }
-        (*myproc()).tf = tf;
+        myproc().tf = tf;
         syscall();
-        if ((*myproc()).killed) {
+        if myproc().killed {
             exit();
         }
         return;
