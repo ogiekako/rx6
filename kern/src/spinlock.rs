@@ -1,103 +1,134 @@
-// // Mutual exclusion spin locks.
-//
+// Mutual exclusion spin locks.
+
+use core::cell::UnsafeCell;
+use core::ops::Deref;
+use core::ops::DerefMut;
+use core::sync::atomic::AtomicBool;
+use core::sync::atomic::Ordering;
+use core::sync::atomic::ATOMIC_BOOL_INIT;
+
 use memlayout::*;
 use mmu::*;
 use process::*;
 use x86::*;
 
-// Mutual exclusion lock.
-// struct spinlock {
-//   uint locked;       // Is the lock held?
-//
-//   // For debugging:
-//   char *name;        // Name of lock.
-//   struct cpu *cpu;   // The cpu holding the lock.
-//   uint pcs[10];      // The call stack (an array of program counters)
-//                      // that locked the lock.
-// };
-//
-// void
-// initlock(struct spinlock *lk, char *name)
-// {
-//   lk->name = name;
-//   lk->locked = 0;
-//   lk->cpu = 0;
-// }
-//
-// // Acquire the lock.
-// // Loops (spins) until the lock is acquired.
-// // Holding a lock for a long time may cause
-// // other CPUs to waste time spinning to acquire it.
-// void
-// acquire(struct spinlock *lk)
-// {
-//   pushcli(); // disable interrupts to avoid deadlock.
-//   if(holding(lk))
-//     panic("acquire");
-//
-//   // The xchg is atomic.
-//   while(xchg(&lk->locked, 1) != 0)
-//     ;
-//
-//   // Tell the C compiler and the processor to not move loads or stores
-//   // past this point, to ensure that the critical section's memory
-//   // references happen after the lock is acquired.
-//   __sync_synchronize();
-//
-//   // Record info about lock acquisition for debugging.
-//   lk->cpu = mycpu();
-//   getcallerpcs(&lk, lk->pcs);
-// }
-//
-// // Release the lock.
-// void
-// release(struct spinlock *lk)
-// {
-//   if(!holding(lk))
-//     panic("release");
-//
-//   lk->pcs[0] = 0;
-//   lk->cpu = 0;
-//
-//   // Tell the C compiler and the processor to not move loads or stores
-//   // past this point, to ensure that all the stores in the critical
-//   // section are visible to other cores before the lock is released.
-//   // Both the C compiler and the hardware may re-order loads and
-//   // stores; __sync_synchronize() tells them both not to.
-//   __sync_synchronize();
-//
-//   // Release the lock, equivalent to lk->locked = 0.
-//   // This code can't use a C assignment, since it might
-//   // not be atomic. A real OS would use C atomics here.
-//   asm volatile("movl $0, %0" : "+m" (lk->locked) : );
-//
-//   popcli();
-// }
-//
-// // Record the current call stack in pcs[] by following the %ebp chain.
-// void
-// getcallerpcs(void *v, uint pcs[])
-// {
-//   uint *ebp;
-//   int i;
-//
-//   ebp = (uint*)v - 2;
-//   for(i = 0; i < 10; i++){
-//     if(ebp == 0 || ebp < (uint*)KERNBASE || ebp == (uint*)0xffffffff)
-//       break;
-//     pcs[i] = ebp[1];     // saved %eip
-//     ebp = (uint*)ebp[0]; // saved %ebp
-//   }
-//   for(; i < 10; i++)
-//     pcs[i] = 0;
-// }
-//
-// // Check whether this cpu is holding the lock.
-// int
-// holding(struct spinlock *lock)
-// {
-//   return lock->locked && lock->cpu == mycpu();
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::sync::Arc;
+    use std::thread;
+
+    #[test]
+    fn spin() {
+        let spin_mutex = Mutex::new(0);
+
+        // Modify the data
+        {
+            let mut data = spin_mutex.lock();
+            *data = 2;
+        }
+
+        // Read the data
+        let answer = {
+            let data = spin_mutex.lock();
+            *data
+        };
+
+        assert_eq!(answer, 2);
+    }
+
+    #[test]
+    fn thread_safe() {
+        let m = Arc::new(Mutex::new(0));
+        let mut handles = vec![];
+        let n = 1000;
+        for _ in 0..n {
+            let m = Arc::clone(&m);
+            let handle = thread::spawn(move || {
+                let mut v = m.lock();
+                *v += 1;
+            });
+            handles.push(handle);
+        }
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        let v = m.lock();
+        assert_eq!(*v, n);
+    }
+}
+
+pub struct Mutex<T> {
+    lock: AtomicBool,
+    val: UnsafeCell<T>,
+}
+
+// For test
+unsafe impl<T> Sync for Mutex<T> {}
+
+pub struct Obj<'a, T: 'a> {
+    lock: &'a AtomicBool,
+    data: &'a mut T,
+}
+
+impl<T> Mutex<T> {
+    pub const fn new(val: T) -> Mutex<T> {
+        Mutex {
+            lock: ATOMIC_BOOL_INIT,
+            val: UnsafeCell::new(val),
+        }
+    }
+    unsafe fn acquire(&self) {
+        // TODO: disable interrupt without breaking test (and the first call scenario)
+        // pushcli(); // disable interrupts to avoid deadlock.
+
+        // The xchg is atomic.
+        while self.lock.swap(true, Ordering::Acquire) {}
+        // TODO: uncomment the following for debugging.
+        //         // Record info about lock acquisition for debugging.
+        //         lk->cpu = mycpu();
+        //         getcallerpcs(&lk, lk->pcs);
+    }
+    pub fn lock(&self) -> Obj<T> {
+        unsafe {
+            self.acquire();
+            Obj {
+                lock: &self.lock,
+                data: &mut *self.val.get(),
+            }
+        }
+    }
+}
+
+impl<'a, T: 'a> Deref for Obj<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &*self.data
+    }
+}
+
+impl<'a, T: 'a> DerefMut for Obj<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut *self.data
+    }
+}
+
+impl<'a, T: 'a> Drop for Obj<'a, T> {
+    // Release the lock.
+    fn drop(&mut self) {
+        // TODO: uncomment the following for debug
+        // if(!holding(lk))
+        //     panic("release");
+        //
+        // lk->pcs[0] = 0;
+        // lk->cpu = 0;
+
+        self.lock.store(false, Ordering::Release);
+        // TODO: enable interrupt.
+        // popcli();
+    }
+}
 
 // Pushcli/popcli are like cli/sti except that they are matched:
 // it takes two popcli to undo two pushcli.  Also, if interrupts
@@ -112,15 +143,17 @@ pub unsafe fn pushcli() {
     mycpu().ncli += 1;
 }
 
-pub unsafe fn popcli() {
-    if (readeflags() & FL_IF > 0) {
-        panic!("popcli - interruptible");
-    }
-    (mycpu()).ncli -= 1;
-    if ((mycpu()).ncli < 0) {
-        panic!("popcli");
-    }
-    if ((mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
-        sti();
+pub fn popcli() {
+    unsafe {
+        if (readeflags() & FL_IF > 0) {
+            panic!("popcli - interruptible");
+        }
+        (mycpu()).ncli -= 1;
+        if ((mycpu()).ncli < 0) {
+            panic!("popcli");
+        }
+        if ((mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
+            sti();
+        }
     }
 }

@@ -58,7 +58,7 @@ SECTIONS
 	PROVIDE(edata = .);
 
 	.bss : {
-		*(.bss)
+		*(.bss .bss.*)
 	}
 
 	PROVIDE(end = .);

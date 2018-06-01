@@ -1,27 +1,22 @@
-// // Physical memory allocator, intended to allocate
-// // memory for user processes, kernel stacks, page table pages,
-// // and pipe buffers. Allocates 4096-byte pages.
+// Physical memory allocator, intended to allocate
+// memory for user processes, kernel stacks, page table pages,
+// and pipe buffers. Allocates 4096-byte pages.
 
 use core;
 // #include "types.h"
 // #include "defs.h"
 // #include "param.h"
-// #include "memlayout.h"
+use linker;
+use memlayout::*;
 use mmu::*;
+use spinlock::*;
 use string::*;
-// #include "spinlock.h"
 
 struct Run {
     next: Option<&'static mut Run>,
 }
 
-struct Kmem {
-    //   struct spinlock lock;
-//   int use_lock;
-//   struct run *freelist;
-}
-
-static mut kmem: Option<&'static mut Run> = None;
+static freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
 
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
@@ -30,15 +25,13 @@ static mut kmem: Option<&'static mut Run> = None;
 // after installing a full page table that maps them on all cores.
 pub unsafe fn kinit1(vstart: V, vend: V) {
     assert!(vstart < vend);
-    // initlock(&kmem.lock, "kmem");
-    // kmem.use_lock = 0;
+    // freelist.use_lock = 0; (TODO)
     freerange(vstart, vend);
 }
 
 pub unsafe fn kinit2(vstart: V, vend: V) {
     freerange(vstart, vend);
-    // TODO: lock
-    // kmem.use_lock = 1;
+    // freelist.use_lock = 1; (TODO)
 }
 
 unsafe fn freerange(vstart: V, vend: V) {
@@ -54,42 +47,32 @@ unsafe fn freerange(vstart: V, vend: V) {
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
 unsafe fn kfree(v: V) {
-    //  if((uint)v % PGSIZE || v < end || V2P(v) >= PHYSTOP)
-    //    panic("kfree");
-    //
+    // TODO: do sensible check for test
+    #[cfg(not(test))]
+    {
+        if (v.0 % PGSIZE != 0 || v < linker::end() || v2p(v) >= PHYSTOP) {
+            panic!("kfree");
+        }
+    }
+
     // Fill with junk to catch dangling refs.
     memset(v.as_mut_ptr(), 1, PGSIZE);
-    //
-    //  if(kmem.use_lock)
-    //    acquire(&kmem.lock);
-    let r: *mut Run = v.as_ptr() as usize as *mut Run;
-    *r = Run { next: kmem.take() };
-    kmem = Some(&mut *r);
-    // kmem.freelist = r;
 
-    //  if(kmem.use_lock)
-    //    release(&kmem.lock);
+    let mut r = v.as_ptr() as usize as *mut Run;
+    let mut head = freelist.lock();
+    *r = Run { next: head.take() };
+    *head = Some(&mut *r);
 }
 
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns None if the memory cannot be allocated.
-pub unsafe fn kalloc() -> Option<V> {
-    unsafe {
-        //  if(kmem.use_lock)
-        //    acquire(&kmem.lock);
-        let res = if (&kmem).is_none() {
-            None
-        } else {
-            let a = &mut kmem.take().unwrap().next;
-            let p = V(a as *const Option<&'static mut Run> as usize);
-            kmem = a.take();
-            Some(p)
-        };
-        //   if(kmem.use_lock)
-        //     release(&kmem.lock);
-        res
-    }
+pub fn kalloc() -> Option<V> {
+    let mut head = freelist.lock();
+    let a = &mut head.take()?.next;
+    let p = V(a as *const Option<&'static mut Run> as usize);
+    *head = a.take();
+    Some(p)
 }
 
 #[cfg(test)]

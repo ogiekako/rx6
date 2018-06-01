@@ -59,6 +59,13 @@ pub extern "C" fn kernmain() {
 }
 
 #[cfg(test)]
+#[macro_use]
+extern crate std;
+
+#[cfg(test)]
+use std::prelude::v1::*;
+
+#[cfg(test)]
 mod tests {
     use core;
     #[test]
