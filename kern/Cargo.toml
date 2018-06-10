@@ -5,3 +5,7 @@ authors = ["Keigo Oka <ogiekako@gmail.com>"]
 
 [lib]
 crate-type = ["staticlib"]
+
+[dependencies.lazy_static]
+version = "0.2.1"
+features = ["spin_no_std"]

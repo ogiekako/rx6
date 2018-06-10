@@ -7,9 +7,14 @@
 #![allow(non_camel_case_types)]
 #![allow(unused)]
 
+#[macro_use]
+extern crate lazy_static;
+
 pub mod bio;
+pub mod buf;
 pub mod console;
 pub mod file;
+pub mod fs;
 pub mod ide;
 pub mod ioapic;
 pub mod kalloc;
