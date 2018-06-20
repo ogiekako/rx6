@@ -30,7 +30,6 @@ pub unsafe fn kernmain() {
     ioapic::ioapicinit(); // another interrupt controller
     console::consoleinit(); // console hardware
     uart::uartinit(); // serial port
-    process::pinit(); // process table
     trap::tvinit(); // trap vectors
     bio::binit(); // buffer cache (TODO)
     file::fileinit(); // file table (TODO)
@@ -38,7 +37,7 @@ pub unsafe fn kernmain() {
     assert!(ismp);
     // if(!ismp)
     //   timerinit();   // uniprocessor timer (TODO)
-    startothers(); // start other processors
+    startothers(); // start other processors (TODO)
     kalloc::kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
     process::userinit(); // first user process (TODO)
     mpmain(); // finish this processor's setup (TODO)

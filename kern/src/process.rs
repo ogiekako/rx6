@@ -5,6 +5,7 @@ use core;
 use lapic::*;
 use mmu::*;
 use mp::*;
+use param::*;
 use spinlock::*;
 use sysfile::*;
 use types::*;
@@ -63,6 +64,7 @@ pub struct Context {
     pub eip: u32,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum Procstate {
     UNUSED,
     EMBRYO,
@@ -72,23 +74,28 @@ pub enum Procstate {
     ZOMBIE,
 }
 
+use self::Procstate::*;
+
 // Per-process state
 pub struct Proc {
     pub sz: u32,               // Size of process memory (bytes)
     pub pgdir: *mut pde_t,     // Page table
-    pub kstack: *mut u8,       // Bottom of kernel stack for this process
+    pub kstack: V,             // Bottom of kernel stack for this process
     pub state: Procstate,      // Process state
     pub pid: i32,              // Process ID
     pub parent: *mut Proc,     // Parent process
     pub tf: *mut Trapframe,    // Trap frame for current syscall
     pub context: *mut Context, // swtch() here to run process
-    pub chan: *const (),       // If non-zero, sleeping on chan
+    pub chan: V,               // If non-zero, sleeping on chan
     pub killed: bool,          // If non-zero, have been killed
     // TODO:fix
     // pub ofile: [File; NOFILE],  // Open files
     // pub cwd: *const Inode,           // Current directory
     pub name: [u8; 16], // Process name (debugging)
 }
+
+// TODO: fix
+unsafe impl Send for Proc {}
 
 // // Process memory is laid out contiguously, low addresses first:
 // //   text
@@ -103,12 +110,21 @@ pub struct Proc {
 // #include "x86.h"
 // #include "proc.h"
 // #include "spinlock.h"
-//
-// struct {
-//   struct spinlock lock;
-//   struct proc proc[NPROC];
-// } ptable;
-//
+
+lazy_static! {
+    static ref ptable: Mutex<[Proc; NPROC]> = Mutex::new(unsafe { core::mem::zeroed() });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn ptable_unused() {
+        let p = ptable.lock();
+        assert_eq!(p[0].state, Procstate::UNUSED);
+    }
+}
+
 // static struct proc *initproc;
 //
 // int nextpid = 1;
@@ -116,11 +132,6 @@ pub struct Proc {
 // extern void trapret(void);
 //
 // static void wakeup1(void *chan);
-//
-pub unsafe fn pinit() {
-    // TODO: lock
-    // initlock(&ptable.lock, "ptable");
-}
 
 // Must be called with interrupts disabled
 pub unsafe fn cpuid() -> usize {
