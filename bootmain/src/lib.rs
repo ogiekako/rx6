@@ -4,6 +4,7 @@
 mod elf;
 mod x86;
 
+use core::panic::PanicInfo;
 use elf::*;
 use x86::*;
 
@@ -97,9 +98,9 @@ unsafe fn readsect(dst: *mut u8, offset: u32) {
 #[no_mangle]
 pub extern "C" fn eh_personality() {}
 #[cfg(not(test))]
-#[lang = "panic_fmt"]
+#[panic_handler]
 #[no_mangle]
-pub extern "C" fn panic_fmt() -> ! {
+pub extern "C" fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 

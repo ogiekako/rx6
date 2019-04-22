@@ -1,20 +1,49 @@
 OBJS = trapasm.o \
   vectors.o
 
-QEMU = qemu-system-i386
+# If the makefile can't find QEMU, specify its path here
+# QEMU = qemu-system-i386
 
-CC = gcc
-AS = gas
-LD = ld
-OBJCOPY = objcopy
-OBJDUMP = objdump
+# Try to infer the correct QEMU
+ifndef QEMU
+QEMU = $(shell if which qemu > /dev/null; \
+	then echo qemu; exit; \
+	elif which qemu-system-i386 > /dev/null; \
+	then echo qemu-system-i386; exit; \
+	elif which qemu-system-x86_64 > /dev/null; \
+	then echo qemu-system-x86_64; exit; \
+	else \
+	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
+	if test -x $$qemu; then echo $$qemu; exit; fi; fi; \
+	echo "***" 1>&2; \
+	echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
+	echo "*** Is the directory containing the qemu binary in your PATH" 1>&2; \
+	echo "*** or have you tried setting the QEMU variable in Makefile?" 1>&2; \
+	echo "***" 1>&2; exit 1)
+endif
+
+TOOLPREFIX =
+
+ifndef TOOLPREFIX
+TOOLPREFIX := $(shell if i386-elf-objdump -i 2>&1 | grep '^elf32-i386$$' > /dev/null 2>&1; \
+	then echo 'i386-elf-'; \
+	elif objdump -i 2>&1 | grep 'elf32-i386' > dev/null 2>&1; \
+	then echo ''; \
+	else echo "*** Error: Couldn't find an i386 version of GCC/binutils." 1>&2; exit 1; fi)
+endif
+
+CC = $(TOOLPREFIX)gcc
+AS = $(TOOLPREFIX)gas
+LD = $(TOOLPREFIX)ld
+OBJCOPY = $(TOOLPREFIX)objcopy
+OBJDUMP = $(TOOLPREFIX)objdump
 
 ARCH=i686
 
 CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
-CFLAGS += $(shell gcc -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
-LDFLAGS += -m $(shell ld -V | grep elf_i386 2>/dev/null | head -n 1)
+LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
 
 GDBPORT = 26001
 # QEMU's gdb stub command line changed in 0.11
@@ -40,7 +69,7 @@ rx6.img: bootblock kernel
 	dd if=kernel of=rx6.img seek=1 conv=notrunc
 
 bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
-	gcc $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
+	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
 	(cd bootmain && cross build --target $(TARGET) --release)
 	$(LD) $(LDFLAGS) -N \
 		-e start \

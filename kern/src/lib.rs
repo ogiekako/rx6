@@ -44,9 +44,9 @@ pub mod x86;
 #[no_mangle]
 pub extern "C" fn eh_personality() {}
 #[cfg(not(test))]
-#[lang = "panic_fmt"]
+#[panic_handler]
 #[no_mangle]
-pub extern "C" fn panic_fmt() -> ! {
+pub extern "C" fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
