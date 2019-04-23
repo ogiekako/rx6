@@ -27,7 +27,7 @@ TOOLPREFIX =
 ifndef TOOLPREFIX
 TOOLPREFIX := $(shell if i386-elf-objdump -i 2>&1 | grep '^elf32-i386$$' > /dev/null 2>&1; \
 	then echo 'i386-elf-'; \
-	elif objdump -i 2>&1 | grep 'elf32-i386' > dev/null 2>&1; \
+	elif objdump -i 2>&1 | grep 'elf32-i386' > /dev/null 2>&1; \
 	then echo ''; \
 	else echo "*** Error: Couldn't find an i386 version of GCC/binutils." 1>&2; exit 1; fi)
 endif
@@ -97,7 +97,7 @@ kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld
 kern: $(KERN)
 
 $(KERN): $(wildcard kern/src/*.rs)
-	(cd kern && xargo build --target $(TARGET) $(RELEASEFLAG) --verbose)
+	(cd kern && cargo xbuild --target $(TARGET) $(RELEASEFLAG) --verbose)
 
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S
