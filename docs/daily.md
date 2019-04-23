@@ -94,12 +94,27 @@ cr3 -
 kernel を、xv6 のものに置き換えたら、ちゃんと起動した。つまり、bootloader は間違っていないということか。
 
 よく見ると、make kernel 時に、
+
+```
 ld: warning: dot moved backwards before `.stab'
+```
+
 という warning がでていた。当然これは、xv6 では出ていない。
 RELEASE = release にして実行してみたら、link の warning は出なくなって、カーネルパニックがもとの場所では起きなくなった。しかし、原因をちゃんと突き止める必要がある。
-- ld のオプションで warning を error する。
+- ld のオプションで warning を error する。 (Done)
 - なぜエラーになったかを調べる。
 
+
+このエラーの意味をかんがえる。まず、dot とはなにか？ これは linker script における概念。[ld manual] によると、dot is a special linker variable.
+. に対して値を代入するのは、output cursor を移動させるという副作用がある。
+  The location counter may never be moved backwards.
+とある。さきの warning はこれに違反していることを示すものだった。
+
+man ld によると、linker script とは、AT&T's Link Editor Command Language syntax で書かれている。
+
+.stab とはなにか？
+
+[ld manual]: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html
 
 
 ## TIL

@@ -95,7 +95,9 @@ KERN = kern/target/$(TARGET)/$(RELEASE)/libkern.a
 kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) $(OBJS) -b binary 2>&1 | tee /tmp/rx6-ld.log
 	if grep "warning" /tmp/rx6-ld.log > /dev/null; then rm kernel; exit 1; fi
+	# -S: Display source code intermixed with disassembly. Implies -d (= --disassemble).
 	$(OBJDUMP) -S kernel > kernel.asm
+	# -t: Print the symbol table entries of the file.
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 kern: $(KERN)
