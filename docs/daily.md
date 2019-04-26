@@ -1,3 +1,74 @@
+2019-04-26
+
+binutils-2.24 OK
+binutils-2.30 NG
+binutils-2.32 NG
+
+この[メール](http://lists.llvm.org/pipermail/llvm-dev/2012-December/057390.html), linux における linker script の使用機能がまとまっていてよい。
+
+PHDRS で、explicit に program header を指定できるっぽいな。なにか問題がおきたら試してみよう。
+
+
+2019-04-25
+
+20:05 - 作業開始。
+bootmain に unittest をつけたいところだ。いまやっちゃっていいかな……。直してからのほうがいい気がする。
+しかしきりわけにやくだつから微妙なところだ。
+
+```
+> $ readelf -l kernel.bad
+
+Elf file type is EXEC (Executable file)
+Entry point 0x10000c
+There are 3 program headers, starting at offset 52
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x001000 0x80100000 0x00100000 0x46c3a 0x46c3a R E 0x1000
+  LOAD           0x047c3a 0x80146c3a 0x80146c3a 0x07b06 0x09336 RW  0x1000
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata .gcc_except_table .debug_gdb_scripts
+   01     .stab .data .got .got.plt .bss
+   02
+```
+
+OK. bootloader は、program header の paddr にかかれている場所を起点としてデータを読み込む。しかし、2 番目の program header の paddr がなぜか、vaddr と同じになっているため、bootloader はその場所からデータを読む。しかし、そこには物理的な実体は存在しないため、すべて 0 を読み込んでしまい、バグる。結局 root cause は、paddr が期待と異なることであった。
+
+なぜこうなるのか. [SECTIONS Command](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/4/html/Using_ld_the_GNU_Linker/sections.html) を読んでみる。
+
+Glossary:
+-  LMA - load address. (physical addr のことか).
+
+The linker will normally set the LMA equal to the VMA. You can change that by using the AT keyword.
+
+Output Seciotn LMA を読んで、AT() を explicit に指定したら、具体的に何がわるいのかわかった。
+
+```
+> $ ld -melf_i386 -T kernel.ld -o kernel entry.o entrypgdir.o kern/target/i686-unknown-linux-gnu/debug/libkern.a trapasm.o vectors.o -b binary                                 [±master ●●]
+ld: section .stab LMA [0000000080146acd,0000000080146acd] overlaps section .gcc_except_table LMA [0000000080146ac8,0000000080146c0f]
+```
+暗黙に追加された .gcc_except_table が、.stab の LMA を侵食しているのだ。
+input section にリストされていない、マッチしなかった section は、自動的に自身と同じ名前で出力に追加されるということか。/DISCARD/ に .gcc_except_table を追加すればなおるのかな。
+-> .gcc_except_table, .debug_gdb_scripts を追加したところなおった……。
+とおもったけど、結局、LMA がおかしいのは治らなかった。SECTIONS Command を参考にして、explicit に >region AT>lma_region を追加したところうまく行った。もう全部 explicit に書いたほうがいいな。そうしないと ld が勝手に解釈してすきあらば VMA, LMA を同じにしてしまう気がする。
+
+libkern.a を readelf -S すると、gcc_except_table が含まれているのが気になるな…　サイズも 0 ではないし、なんなのだろう。おなじ疑問をもった人が[いた](https://users.rust-lang.org/t/exception-tables/19671)。panic を handle するのに使うのかな。
+ちなみに、gcc_except_table は、rust の方の object file にしかない。(C code では生成されない). .debug_gdb_script も同様である。
+
+LD, warning for unlisted input みたいなのないのかな……
+ぐぐぐ、VirtAddr と PhysAddr の offset がずれている…… ぜんぶ一つの領域においてほしいだけなんだが……
+
+これは、Rust でコンパイルしたバイナリが、PIC であることが関係しているのかもしれない [この](https://forum.osdev.org/viewtopic.php?f=1&t=32639) thread によるとそんな気配がする。
+
+cross compiler (i386-elf-ld) を、https://qiita.com/maueki/items/b38d06c7d332d94e2981 を参考にして使うようにしたらなおった……。
+
+2019-04-24
+
+asm file に rust の対応するコードをコメントで埋め込む方法はないのだろうか。これはできたら便利なので早めに調べたい。
+
 2019-04-23
 
 Ubuntu で、make qemu-nox したら、0x100028 で Triple fault を起こすので、勉強しつつ、なぜかを考えていく。
@@ -116,6 +187,121 @@ man ld によると、linker script とは、AT&T's Link Editor Command Language
 
 [ld manual]: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html
 
+.stab と、.stabstr の中身をコメントアウトしたら、急にちゃんと動くようになった。謎すぎる。これをほおっておくとまたへんなバグの原因になりかねないからちゃんと調べよう。
+BYTE(0) が悪さをしているっぽいんだよなあ。
+
+
+- そもそもなぜこれをいれるのが良いと思われていたのか
+- BYTE(0) があることによってなぜおかしくなるのか
+- まえはよかったのになんで急におかしくなりはじめたのか
+- Debug のときだけそれが起きる原因はなにか？
+- Warning の真意はなにか？
+
+
+BYTE(0) を LONG(0) に置き換えても動いた。
+
+BYTE のほうを、kernel.bad, LONG(0) のほうを kernel.good としてコンパイルした。 (kernel.bad のほうは、EIP=0x100028 で落ちる
+
+```
+% readelf -S kernel.bad  
+
+There are 24 section headers, starting at offset 0xa2f30:
+
+ [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+ [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+ [ 1] .text             PROGBITS        80100000 001000 031dd5 00  AX  0   0 16
+ [ 2] .rodata           PROGBITS        80131de0 032de0 014ced 00   A  0   0 16
+ [ 3] .gcc_except_table PROGBITS        80146ad0 047ad0 000148 00   A  0   0  4
+ [ 4] .debug_gdb_script PROGBITS        80146c18 047c18 000022 01 AMS  0   0  1
+ [ 5] .stab             PROGBITS        80146c3a 047c3a 000001 00  WA  0   0  1
+ [ 6] .data             PROGBITS        80147000 048000 0076fc 00  WA  0   0 4096
+ [ 7] .got              PROGBITS        8014e6fc 04f6fc 000038 00  WA  0   0  4
+ [ 8] .got.plt          PROGBITS        8014e734 04f734 00000c 04  WA  0   0  4
+ [ 9] .bss              NOBITS          8014e740 04f740 001830 00  WA  0   0 16
+ [10] .debug_line       PROGBITS        00000000 04f740 007031 00      0   0  1
+ [11] .debug_info       PROGBITS        00000000 056771 00c727 00      0   0  1
+ ...
+ 
+% readelf -S kernel.good
+
+There are 24 section headers, starting at offset 0xa2f30:
+
+Section Headers:
+ [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+ [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+ [ 1] .text             PROGBITS        80100000 001000 031dd5 00  AX  0   0 16
+ [ 2] .rodata           PROGBITS        80131de0 032de0 014ced 00   A  0   0 16
+ [ 3] .gcc_except_table PROGBITS        80146ad0 047ad0 000148 00   A  0   0  4
+ [ 4] .debug_gdb_script PROGBITS        80146c18 047c18 000022 01 AMS  0   0  1
+ [ 5] .stab             PROGBITS        80146c3a 047c3a 000004 00  WA  0   0  1
+ [ 6] .data             PROGBITS        80147000 048000 0076fc 00  WA  0   0 4096
+ [ 7] .got              PROGBITS        8014e6fc 04f6fc 000038 00  WA  0   0  4
+ [ 8] .got.plt          PROGBITS        8014e734 04f734 00000c 04  WA  0   0  4
+ [ 9] .bss              NOBITS          8014e740 04f740 001830 00  WA  0   0 16
+ [10] .debug_line       PROGBITS        00000000 04f740 007031 00      0   0  1
+ ...
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  p (processor specific)
+```
+
+`diff <(readelf -S kernel.good) <(readelf -S kernel.bad) ` としても、stab のサイズ以外の違いはなし。
+`diff <(objdump -s -j .data kernel.good) <(objdump -s -j .data kernel.bad) ` としても、違いはなし。
+
+```
+diff <(readelf -h kernel.good) <(readelf -h kernel.bad)                                                                                   [±master ●●]
+17c17
+<   Number of program headers:         2
+---
+>   Number of program headers:         3
+```
+
+というのはあやしい。プログラムヘッダの数が違う……？
+ELF のプログラムヘッダとはなんだろうか？
+
+それぞれのプログラムヘッダを見てみるとこうだった。
+
+```
+% readelf -l kernel.good
+
+Elf file type is EXEC (Executable file)
+Entry point 0x10000c
+There are 2 program headers, starting at offset 52
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x001000 0x80100000 0x00100000 0x4e740 0x4ff70 RWE 0x1000
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata .gcc_except_table .debug_gdb_scripts .stab .data .got .got.plt .bss
+   01
+
+% readelf -l kernel.bad
+
+Elf file type is EXEC (Executable file)
+Entry point 0x10000c
+There are 3 program headers, starting at offset 52
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x001000 0x80100000 0x00100000 0x46c3a 0x46c3a R E 0x1000
+  LOAD           0x047c3a 0x80146c3a 0x80146c3a 0x07b06 0x09336 RW  0x1000
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata .gcc_except_table .debug_gdb_scripts
+   01     .stab .data .got .got.plt .bss
+   02
+```
+
+ふむ、どうやら、bootmain で kernel を読み込む部分で、program header を一つしか読んでいないようだ。それで kernel.bad の場合は 2つめのものが読まれず、バグっている。
+
+xv6-public の bootblock をコピペしてきてもバグっているので、もともとそこがバグっていたのかな。
 
 ## TIL
 

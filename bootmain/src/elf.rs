@@ -8,7 +8,7 @@ pub struct Elfhdr {
     pub machine: u16,
     pub version: u32,
     pub entry: u32,
-    pub phoff: u32, // physical header offset
+    pub phoff: u32, // program header offset
     pub shoff: u32,
     pub flags: u32,
     pub ehsize: u16,
