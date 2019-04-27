@@ -96,6 +96,7 @@ kern/asm directory でもつくってそこに入れておくか。いれる場�
 TODO: swtch.S, vectors.pl, trapasm.S と対応する Makefile をそこにコピーすればOK.
 trapasm.S, vectors.pl についてはすでにやっていた。
 
+[ここ](https://docs.google.com/spreadsheets/d/1QNyT3kbKktdmjbfZg4R_JPp7AtYYrBqik7Fu3apItEw/edit#gid=0) で進捗を track していくことにした。
 
 # 2019-04-25
 
