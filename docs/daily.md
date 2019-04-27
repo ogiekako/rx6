@@ -93,7 +93,8 @@ xv6-public 以下の `*.h` file 全体が、1182 行ある。ほぼ struct と�
 vectors.S は、vectors.pl によって自動生成されるものなので、まあその perl program 自体をコピーしてくるか。.S に関してはわざわざ rust に変換する必要もなさそう。
 kern/asm directory でもつくってそこに入れておくか。いれる場合は、Makefile も適切にいじらないとわすれてしまうから注意。
 
-swtch.S, vectors.S, trapasm.S をそこにコピーすればOK.
+TODO: swtch.S, vectors.pl, trapasm.S と対応する Makefile をそこにコピーすればOK.
+trapasm.S, vectors.pl についてはすでにやっていた。
 
 
 # 2019-04-25
