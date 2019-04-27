@@ -81,14 +81,14 @@ impl<T> Mutex<T> {
     }
     unsafe fn acquire(&self) {
         // TODO: disable interrupt without breaking test (and the first call scenario)
-//// pushcli(); // disable interrupts to avoid deadlock.
+        //// pushcli(); // disable interrupts to avoid deadlock.
 
         // The xchg is atomic.
         while self.lock.swap(true, Ordering::Acquire) {}
         // TODO: uncomment the following for debugging.
         //         // Record info about lock acquisition for debugging.
-////         lk->cpu = mycpu();
-////         getcallerpcs(&lk, lk->pcs);
+        ////         lk->cpu = mycpu();
+        ////         getcallerpcs(&lk, lk->pcs);
     }
     pub fn lock(&self) -> Obj<T> {
         unsafe {
@@ -118,15 +118,15 @@ impl<'a, T: 'a> Drop for Obj<'a, T> {
     // Release the lock.
     fn drop(&mut self) {
         // TODO: uncomment the following for debug
-//// if(!holding(lk))
-////     panic("release");
-////
-//// lk->pcs[0] = 0;
-//// lk->cpu = 0;
+        //// if(!holding(lk))
+        ////     panic("release");
+        ////
+        //// lk->pcs[0] = 0;
+        //// lk->cpu = 0;
 
         self.lock.store(false, Ordering::Release);
         // TODO: enable interrupt.
-//// popcli();
+        //// popcli();
     }
 }
 

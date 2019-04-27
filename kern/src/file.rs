@@ -58,7 +58,7 @@
 //// } ftable;
 
 pub unsafe fn fileinit() {
-//// initlock(&ftable.lock, "ftable");
+    //// initlock(&ftable.lock, "ftable");
 }
 
 //// // Allocate a file structure.

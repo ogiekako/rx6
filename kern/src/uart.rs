@@ -9,6 +9,7 @@ use process::*;
 use traps::*;
 use x86::*;
 
+// Memory mapped I/O interface is binded here.
 pub const COM1: u16 = 0x3f8;
 
 static mut uart: bool = false; // is there a uart?
@@ -43,6 +44,7 @@ pub unsafe fn uartinit() {
     }
 }
 
+// Put the letter to display.
 pub unsafe fn uartputc(c: u8) {
     if !uart {
         return;

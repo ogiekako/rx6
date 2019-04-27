@@ -25,13 +25,13 @@ static freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
 // after installing a full page table that maps them on all cores.
 pub unsafe fn kinit1(vstart: V, vend: V) {
     assert!(vstart < vend);
-//// freelist.use_lock = 0; (TODO)
+    // TODO: allow not to use lock for sped up. Currently we always take lock for freelist.
+    //// freelist.use_lock = 0;
     freerange(vstart, vend);
 }
 
 pub unsafe fn kinit2(vstart: V, vend: V) {
     freerange(vstart, vend);
-//// freelist.use_lock = 1; (TODO)
 }
 
 unsafe fn freerange(vstart: V, vend: V) {

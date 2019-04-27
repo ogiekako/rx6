@@ -89,8 +89,8 @@ pub struct Proc {
     pub chan: V,               // If non-zero, sleeping on chan
     pub killed: bool,          // If non-zero, have been killed
     // TODO:fix
-//// pub ofile: [File; NOFILE],  // Open files
-//// pub cwd: *const Inode,           // Current directory
+    //// pub ofile: [File; NOFILE],  // Open files
+    //// pub cwd: *const Inode,           // Current directory
     pub name: [u8; 16], // Process name (debugging)
 }
 
@@ -219,37 +219,37 @@ pub unsafe fn myproc() -> &'static mut Proc {
 
 // Set up first user process.
 pub unsafe fn userinit() {
-////  struct proc *p;
-////  extern char _binary_initcode_start[], _binary_initcode_size[];
-////
-////  p = allocproc();
-////
-////  initproc = p;
-////  if((p->pgdir = setupkvm()) == 0)
-////    panic("userinit: out of memory?");
-////  inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
-////  p->sz = PGSIZE;
-////  memset(p->tf, 0, sizeof(*p->tf));
-////  p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
-////  p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
-////  p->tf->es = p->tf->ds;
-////  p->tf->ss = p->tf->ds;
-////  p->tf->eflags = FL_IF;
-////  p->tf->esp = PGSIZE;
-////  p->tf->eip = 0;  // beginning of initcode.S
-////
-////  safestrcpy(p->name, "initcode", sizeof(p->name));
-////  p->cwd = namei("/");
-////
-////  // this assignment to p->state lets other cores
-////  // run this process. the acquire forces the above
-////  // writes to be visible, and the lock is also needed
-////  // because the assignment might not be atomic.
-////  acquire(&ptable.lock);
-////
-////  p->state = RUNNABLE;
-////
-////  release(&ptable.lock);
+    ////  struct proc *p;
+    ////  extern char _binary_initcode_start[], _binary_initcode_size[];
+    ////
+    ////  p = allocproc();
+    ////
+    ////  initproc = p;
+    ////  if((p->pgdir = setupkvm()) == 0)
+    ////    panic("userinit: out of memory?");
+    ////  inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
+    ////  p->sz = PGSIZE;
+    ////  memset(p->tf, 0, sizeof(*p->tf));
+    ////  p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
+    ////  p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
+    ////  p->tf->es = p->tf->ds;
+    ////  p->tf->ss = p->tf->ds;
+    ////  p->tf->eflags = FL_IF;
+    ////  p->tf->esp = PGSIZE;
+    ////  p->tf->eip = 0;  // beginning of initcode.S
+    ////
+    ////  safestrcpy(p->name, "initcode", sizeof(p->name));
+    ////  p->cwd = namei("/");
+    ////
+    ////  // this assignment to p->state lets other cores
+    ////  // run this process. the acquire forces the above
+    ////  // writes to be visible, and the lock is also needed
+    ////  // because the assignment might not be atomic.
+    ////  acquire(&ptable.lock);
+    ////
+    ////  p->state = RUNNABLE;
+    ////
+    ////  release(&ptable.lock);
 }
 
 // // Grow current process's memory by n bytes.
@@ -327,42 +327,42 @@ pub unsafe fn exit() {
     // TODO: fix
     let curproc = myproc();
 
-////  if(curproc == initproc) {
-////    panic!("init exiting");
-////  }
-////
-//// // Close all open files.
-//// for fd in 0..NOFILE {
-////   if (*curproc).ofile[fd] {
-////     fileclose(curproc->ofile[fd]);
-////     (*curproc).ofile[fd] = 0;
-////   }
-//// }
-////
-//// begin_op();
-//// iput(curproc->cwd);
-//// end_op();
-//// curproc->cwd = 0;
-////
-//// acquire(&ptable.lock);
-////
-//// // Parent might be sleeping in wait().
-////
-//// wakeup1(curproc->parent);
-////
-//// // Pass abandoned children to init.
-//// for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-////   if(p->parent == curproc){
-////     p->parent = initproc;
-////     if(p->state == ZOMBIE)
-////       wakeup1(initproc);
-////   }
-//// }
+    ////  if(curproc == initproc) {
+    ////    panic!("init exiting");
+    ////  }
+    ////
+    //// // Close all open files.
+    //// for fd in 0..NOFILE {
+    ////   if (*curproc).ofile[fd] {
+    ////     fileclose(curproc->ofile[fd]);
+    ////     (*curproc).ofile[fd] = 0;
+    ////   }
+    //// }
+    ////
+    //// begin_op();
+    //// iput(curproc->cwd);
+    //// end_op();
+    //// curproc->cwd = 0;
+    ////
+    //// acquire(&ptable.lock);
+    ////
+    //// // Parent might be sleeping in wait().
+    ////
+    //// wakeup1(curproc->parent);
+    ////
+    //// // Pass abandoned children to init.
+    //// for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    ////   if(p->parent == curproc){
+    ////     p->parent = initproc;
+    ////     if(p->state == ZOMBIE)
+    ////       wakeup1(initproc);
+    ////   }
+    //// }
 
-//// Jump into the scheduler, never to return.
-//// curproc->state = ZOMBIE;
-//// sched();
-//// panic("zombie exit");
+    //// Jump into the scheduler, never to return.
+    //// curproc->state = ZOMBIE;
+    //// sched();
+    //// panic("zombie exit");
 }
 
 // // Wait for a child process to exit and return its pid.

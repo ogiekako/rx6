@@ -1,6 +1,7 @@
 // Multiprocessor support
 // Search memory for MP description structures.
 // http://developer.intel.com/design/pentium/datashts/24201606.pdf
+// https://pdos.csail.mit.edu/6.828/2016/readings/ia32/MPspec.pdf
 
 use lapic::*;
 use memlayout::*;

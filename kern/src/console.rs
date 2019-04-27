@@ -61,9 +61,9 @@ pub enum Arg<'a> {
 // Print to the console. only understands %d, %x, %p, %s.
 pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     // TOOD: use lock.
-//// locking = cons.locking;
-//// if(locking)
-//// acquire(&cons.lock);
+    //// locking = cons.locking;
+    //// if(locking)
+    //// acquire(&cons.lock);
 
     let mut fmtit = fmt.chars();
     let mut argit = args.iter();
@@ -115,8 +115,8 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
             }
         }
 
-//// if(locking)
-//// release(&cons.lock);
+        //// if(locking)
+        //// release(&cons.lock);
     }
 }
 
@@ -314,11 +314,11 @@ unsafe fn consputc(c: u16) {
 
 pub unsafe fn consoleinit() {
     // TODO: lock
-//// initlock(&cons.lock, "console");
+    //// initlock(&cons.lock, "console");
 
-//// devsw[CONSOLE].write = consolewrite;
-//// devsw[CONSOLE].read = consoleread;
-//// cons.locking = 1;
+    //// devsw[CONSOLE].write = consolewrite;
+    //// devsw[CONSOLE].read = consoleread;
+    //// cons.locking = 1;
 
     picenable(IRQ_KBD as i32);
     ioapicenable(IRQ_KBD, 0);

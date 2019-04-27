@@ -1,5 +1,41 @@
 # 2019-04-26
 
+## 午後
+
+内容を理解するのと、数値てきな進捗を出すのを同時にやったほうがいい。最悪でもむりやり書き換えすすめれば進捗はでる。いっぽう何も考えずやるだけも考えもの。何も考えずやる時間を記録して、その進み方でどれくらいでできるのかを押さえる。
+
+kernmain をみたところの、現在の状況をまとめていく。
+
+freelist (ページを管理するやつ) の `use_lock` はないが、page 管理はすでに実装されている。
+- kfree, kalloc は実装済み. lock も存在する。
+
+kernmain のなかに TODO と書いてあるのが未実装ということかな。
+であれば、概ね以下が未実装である。
+
+- Buffer cache  `bio::binit`
+- File table    `file::fileinit`
+- Disk initialization `ide::ideinit`
+- Uniprocessor timer initialization.
+  - これは非 multiprocessor ではとおらないので優先度は低い
+- Starting other processors `startothers`
+- Running first user process `process::usertinit`
+- Mpmain (finish setup)  `mpmain`
+
+その他、システムコールの実装は別でやらないといけないと思う。
+
+すでに実装してあるものも興味深いけど、学ぶ優先度としては未実装のもののほうが高い。
+
+まず、buffer cache は sleep lock を使用しているので、sleep lock ができるために、割り込みを実装する必要がある。
+
+## Twitter
+
+PとVについて、into<u32>() を実装するといいのではないだろうか？
+Physical address と Virtual address をくべつできるとよい。
+
+しかし、優先度的には、まだ実装されていないもののほうが優先度は高い。リファクタリングもいいけど、機能実装をスピードアップしないのならば後回しでよい。なので、現状をまとめておくのがひとまずは最優先だろう。
+
+## 午前
+
 binutils-2.24 OK
 binutils-2.30 NG
 binutils-2.32 NG
