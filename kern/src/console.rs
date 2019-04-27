@@ -1,6 +1,6 @@
-// // Console input and output.
-// // Input is from the keyboard or serial port.
-// // Output is written to the screen and serial port.
+// Console input and output.
+// Input is from the keyboard or serial port.
+// Output is written to the screen and serial port.
 
 use core;
 
@@ -17,10 +17,10 @@ use x86::*;
 
 static mut panicked: bool = false;
 
-// static struct {
-//   struct spinlock lock;
-//   int locking;
-// } cons;
+//// static struct {
+////   struct spinlock lock;
+////   int locking;
+//// } cons;
 
 unsafe fn printint(xx: i32, base: u32, sign: bool) {
     let mut negative = false;
@@ -61,9 +61,9 @@ pub enum Arg<'a> {
 // Print to the console. only understands %d, %x, %p, %s.
 pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     // TOOD: use lock.
-    // locking = cons.locking;
-    // if(locking)
-    // acquire(&cons.lock);
+//// locking = cons.locking;
+//// if(locking)
+//// acquire(&cons.lock);
 
     let mut fmtit = fmt.chars();
     let mut argit = args.iter();
@@ -115,29 +115,29 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
             }
         }
 
-        // if(locking)
-        // release(&cons.lock);
+//// if(locking)
+//// release(&cons.lock);
     }
 }
 
 // void
-// panic(char *s)
-// {
-//   int i;
-//   uint pcs[10];
-//
-//   cli();
-//   cons.locking = 0;
-//   cprintf("cpu %d: panic: ", cpuid());
-//   cprintf(s);
-//   cprintf("\n");
-//   getcallerpcs(&s, pcs);
-//   for(i=0; i<10; i++)
-//     cprintf(" %p", pcs[i]);
-//   panicked = true; // freeze other CPU
-//   for(;;)
-//     ;
-// }
+//// panic(char *s)
+//// {
+////   int i;
+////   uint pcs[10];
+////
+////   cli();
+////   cons.locking = 0;
+////   cprintf("cpu %d: panic: ", cpuid());
+////   cprintf(s);
+////   cprintf("\n");
+////   getcallerpcs(&s, pcs);
+////   for(i=0; i<10; i++)
+////     cprintf(" %p", pcs[i]);
+////   panicked = true; // freeze other CPU
+////   for(;;)
+////     ;
+//// }
 
 pub const BACKSPACE: u16 = 0x100;
 pub const CRTPORT: u16 = 0x3d4;
@@ -206,119 +206,119 @@ unsafe fn consputc(c: u16) {
 }
 
 // #define INPUT_BUF 128
-// struct {
-//   char buf[INPUT_BUF];
-//   uint r;  // Read index
-//   uint w;  // Write index
-//   uint e;  // Edit index
-// } input;
-//
-// #define C(x)  ((x)-'@')  // Control-x
-//
-// void
-// consoleintr(int (*getc)(void))
-// {
-//   int c, doprocdump = 0;
-//
-//   acquire(&cons.lock);
-//   while((c = getc()) >= 0){
-//     switch(c){
-//     case C('P'):  // Process listing.
-//       // procdump() locks cons.lock indirectly; invoke later
-//       doprocdump = 1;
-//       break;
-//     case C('U'):  // Kill line.
-//       while(input.e != input.w &&
-//             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
-//         input.e--;
-//         consputc(BACKSPACE);
-//       }
-//       break;
-//     case C('H'): case '\x7f':  // Backspace
-//       if(input.e != input.w){
-//         input.e--;
-//         consputc(BACKSPACE);
-//       }
-//       break;
-//     default:
-//       if(c != 0 && input.e-input.r < INPUT_BUF){
-//         c = (c == '\r') ? '\n' : c;
-//         input.buf[input.e++ % INPUT_BUF] = c;
-//         consputc(c);
-//         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
-//           input.w = input.e;
-//           wakeup(&input.r);
-//         }
-//       }
-//       break;
-//     }
-//   }
-//   release(&cons.lock);
-//   if(doprocdump) {
-//     procdump();  // now call procdump() wo. cons.lock held
-//   }
-// }
-//
-// int
-// consoleread(struct inode *ip, char *dst, int n)
-// {
-//   uint target;
-//   int c;
-//
-//   iunlock(ip);
-//   target = n;
-//   acquire(&cons.lock);
-//   while(n > 0){
-//     while(input.r == input.w){
-//       if(myproc()->killed){
-//         release(&cons.lock);
-//         ilock(ip);
-//         return -1;
-//       }
-//       sleep(&input.r, &cons.lock);
-//     }
-//     c = input.buf[input.r++ % INPUT_BUF];
-//     if(c == C('D')){  // EOF
-//       if(n < target){
-//         // Save ^D for next time, to make sure
-//         // caller gets a 0-byte result.
-//         input.r--;
-//       }
-//       break;
-//     }
-//     *dst++ = c;
-//     --n;
-//     if(c == '\n')
-//       break;
-//   }
-//   release(&cons.lock);
-//   ilock(ip);
-//
-//   return target - n;
-// }
-//
-// int
-// consolewrite(struct inode *ip, char *buf, int n)
-// {
-//   int i;
-//
-//   iunlock(ip);
-//   acquire(&cons.lock);
-//   for(i = 0; i < n; i++)
-//     consputc(buf[i] & 0xff);
-//   release(&cons.lock);
-//   ilock(ip);
-//
-//   return n;
-// }
+//// struct {
+////   char buf[INPUT_BUF];
+////   uint r;  // Read index
+////   uint w;  // Write index
+////   uint e;  // Edit index
+//// } input;
+////
+//// #define C(x)  ((x)-'@')  // Control-x
+////
+//// void
+//// consoleintr(int (*getc)(void))
+//// {
+////   int c, doprocdump = 0;
+////
+////   acquire(&cons.lock);
+////   while((c = getc()) >= 0){
+////     switch(c){
+////     case C('P'):  // Process listing.
+////       // procdump() locks cons.lock indirectly; invoke later
+////       doprocdump = 1;
+////       break;
+////     case C('U'):  // Kill line.
+////       while(input.e != input.w &&
+////             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
+////         input.e--;
+////         consputc(BACKSPACE);
+////       }
+////       break;
+////     case C('H'): case '\x7f':  // Backspace
+////       if(input.e != input.w){
+////         input.e--;
+////         consputc(BACKSPACE);
+////       }
+////       break;
+////     default:
+////       if(c != 0 && input.e-input.r < INPUT_BUF){
+////         c = (c == '\r') ? '\n' : c;
+////         input.buf[input.e++ % INPUT_BUF] = c;
+////         consputc(c);
+////         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
+////           input.w = input.e;
+////           wakeup(&input.r);
+////         }
+////       }
+////       break;
+////     }
+////   }
+////   release(&cons.lock);
+////   if(doprocdump) {
+////     procdump();  // now call procdump() wo. cons.lock held
+////   }
+//// }
+////
+//// int
+//// consoleread(struct inode *ip, char *dst, int n)
+//// {
+////   uint target;
+////   int c;
+////
+////   iunlock(ip);
+////   target = n;
+////   acquire(&cons.lock);
+////   while(n > 0){
+////     while(input.r == input.w){
+////       if(myproc()->killed){
+////         release(&cons.lock);
+////         ilock(ip);
+////         return -1;
+////       }
+////       sleep(&input.r, &cons.lock);
+////     }
+////     c = input.buf[input.r++ % INPUT_BUF];
+////     if(c == C('D')){  // EOF
+////       if(n < target){
+////         // Save ^D for next time, to make sure
+////         // caller gets a 0-byte result.
+////         input.r--;
+////       }
+////       break;
+////     }
+////     *dst++ = c;
+////     --n;
+////     if(c == '\n')
+////       break;
+////   }
+////   release(&cons.lock);
+////   ilock(ip);
+////
+////   return target - n;
+//// }
+////
+//// int
+//// consolewrite(struct inode *ip, char *buf, int n)
+//// {
+////   int i;
+////
+////   iunlock(ip);
+////   acquire(&cons.lock);
+////   for(i = 0; i < n; i++)
+////     consputc(buf[i] & 0xff);
+////   release(&cons.lock);
+////   ilock(ip);
+////
+////   return n;
+//// }
 
 pub unsafe fn consoleinit() {
     // TODO: lock
-    // initlock(&cons.lock, "console");
+//// initlock(&cons.lock, "console");
 
-    // devsw[CONSOLE].write = consolewrite;
-    // devsw[CONSOLE].read = consoleread;
-    // cons.locking = 1;
+//// devsw[CONSOLE].write = consolewrite;
+//// devsw[CONSOLE].read = consoleread;
+//// cons.locking = 1;
 
     picenable(IRQ_KBD as i32);
     ioapicenable(IRQ_KBD, 0);

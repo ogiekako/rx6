@@ -20,20 +20,20 @@ pub unsafe fn outb(port: u16, data: u8) {
     asm!("outb %al, %dx" :: "{dx}"(port), "{al}"(data) :: "volatile");
 }
 
-// static inline void
-// outw(ushort port, ushort data)
-// {
-//   asm volatile("out %0,%1" : : "a" (data), "d" (port));
-// }
+//// static inline void
+//// outw(ushort port, ushort data)
+//// {
+////   asm volatile("out %0,%1" : : "a" (data), "d" (port));
+//// }
 
-// static inline void
-// outsl(int port, const void *addr, int cnt)
-// {
-//   asm volatile("cld; rep outsl" :
-//                "=S" (addr), "=c" (cnt) :
-//                "d" (port), "0" (addr), "1" (cnt) :
-//                "cc");
-// }
+//// static inline void
+//// outsl(int port, const void *addr, int cnt)
+//// {
+////   asm volatile("cld; rep outsl" :
+////                "=S" (addr), "=c" (cnt) :
+////                "d" (port), "0" (addr), "1" (cnt) :
+////                "cc");
+//// }
 
 #[allow(unused_assignments)]
 pub unsafe fn stosb(mut addr: *mut (), data: i32, mut cnt: i32) {
@@ -61,25 +61,25 @@ pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
     asm!("lgdt ($0)" :: "r" (&pd) : "memory":"volatile");
 }
 
-// struct gatedesc;
+//// struct gatedesc;
 //
-// static inline void
-// lidt(struct gatedesc *p, int size)
-// {
-//   volatile ushort pd[3];
+//// static inline void
+//// lidt(struct gatedesc *p, int size)
+//// {
+////   volatile ushort pd[3];
+////
+////   pd[0] = size-1;
+////   pd[1] = (uint)p;
+////   pd[2] = (uint)p >> 16;
+////
+////   asm volatile("lidt (%0)" : : "r" (pd));
+//// }
 //
-//   pd[0] = size-1;
-//   pd[1] = (uint)p;
-//   pd[2] = (uint)p >> 16;
-//
-//   asm volatile("lidt (%0)" : : "r" (pd));
-// }
-//
-// static inline void
-// ltr(ushort sel)
-// {
-//   asm volatile("ltr %0" : : "r" (sel));
-// }
+//// static inline void
+//// ltr(ushort sel)
+//// {
+////   asm volatile("ltr %0" : : "r" (sel));
+//// }
 
 pub unsafe fn readeflags() -> u32 {
     let mut eflags = 0u32;
@@ -87,11 +87,11 @@ pub unsafe fn readeflags() -> u32 {
     eflags
 }
 
-// static inline void
-// loadgs(ushort v)
-// {
-//   asm volatile("movw %0, %%gs" : : "r" (v));
-// }
+//// static inline void
+//// loadgs(ushort v)
+//// {
+////   asm volatile("movw %0, %%gs" : : "r" (v));
+//// }
 
 pub unsafe fn cli() {
     asm!("cli":::::"volatile");
@@ -101,26 +101,26 @@ pub unsafe fn sti() {
     asm!("sti":::::"volatile");
 }
 
-// static inline uint
-// xchg(volatile uint *addr, uint newval)
-// {
-//   uint result;
-//
-//   // The + in "+m" denotes a read-modify-write operand.
-//   asm volatile("lock; xchgl %0, %1" :
-//                "+m" (*addr), "=a" (result) :
-//                "1" (newval) :
-//                "cc");
-//   return result;
-// }
+//// static inline uint
+//// xchg(volatile uint *addr, uint newval)
+//// {
+////   uint result;
+////
+////   // The + in "+m" denotes a read-modify-write operand.
+////   asm volatile("lock; xchgl %0, %1" :
+////                "+m" (*addr), "=a" (result) :
+////                "1" (newval) :
+////                "cc");
+////   return result;
+//// }
 
-// static inline uint
-// rcr2(void)
-// {
-//   uint val;
-//   asm volatile("movl %%cr2,%0" : "=r" (val));
-//   return val;
-// }
+//// static inline uint
+//// rcr2(void)
+//// {
+////   uint val;
+////   asm volatile("movl %%cr2,%0" : "=r" (val));
+////   return val;
+//// }
 
 pub unsafe fn lcr3(val: u32) {
     asm!("mov $0, %cr3"::"r"(val):"memory":"volatile");

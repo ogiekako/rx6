@@ -66,7 +66,7 @@ pub unsafe fn uartgetc() -> Option<u8> {
     Some(inb(COM1 + 0))
 }
 
-// fn uartintr()
-// {
-//   consoleintr(uartgetc);
-// }
+//// fn uartintr()
+//// {
+////   consoleintr(uartgetc);
+//// }

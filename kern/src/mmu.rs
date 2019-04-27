@@ -109,16 +109,16 @@ pub struct Segdesc {
     base_15_0: u16, // Low bits of segment base address
     base_23_16: u8, // Middle bits of segment base address
     typ_s_dpl_p: u8,
-    // uint typ : 4;       // Segment type (see STS_ constants)
-    // uint s : 1;          // 0 = system, 1 = application
-    // uint dpl : 2;        // Descriptor Privilege Level
-    // uint p : 1;          // Present
+//// uint typ : 4;       // Segment type (see STS_ constants)
+//// uint s : 1;          // 0 = system, 1 = application
+//// uint dpl : 2;        // Descriptor Privilege Level
+//// uint p : 1;          // Present
     lim_19_16_avl_rsv1_db_g: u8,
-    // uint lim_19_16 : 4;  // High bits of segment limit
-    // uint avl : 1;        // Unused (available for software use)
-    // uint rsv1 : 1;       // Reserved
-    // uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
-    // uint g : 1;          // Granularity: limit scaled by 4K when set
+//// uint lim_19_16 : 4;  // High bits of segment limit
+//// uint avl : 1;        // Unused (available for software use)
+//// uint rsv1 : 1;       // Reserved
+//// uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
+//// uint g : 1;          // Granularity: limit scaled by 4K when set
     base_31_24: u8, // High bits of segment base address
 }
 
@@ -138,16 +138,16 @@ impl Segdesc {
         g: u8,
         base_31_24: u8,
     ) -> Segdesc {
-        // TODO: fix
-        // assert!(typ < 1<<4);
-        // assert!(s   < 1<<1);
-        // assert!(dpl < 1<<2);
-        // assert!(p < 1<<1);
-        // assert!(lim_19_16 < 1<<4);
-        // assert!(avl < 1<<1);
-        // assert!(rsv1 < 1<<1);
-        // assert!(db < 1<<1);
-        // assert!(g < 1<<1);
+// TODO: fix
+//// assert!(typ < 1<<4);
+//// assert!(s   < 1<<1);
+//// assert!(dpl < 1<<2);
+//// assert!(p < 1<<1);
+//// assert!(lim_19_16 < 1<<4);
+//// assert!(avl < 1<<1);
+//// assert!(rsv1 < 1<<1);
+//// assert!(db < 1<<1);
+//// assert!(g < 1<<1);
 
         Segdesc {
             lim_15_0,
@@ -295,47 +295,47 @@ impl PTE {
     }
 }
 
-// typedef uint pte_t;
+//// typedef uint pte_t;
 
 // Task state segment format
 pub struct taskstate {
-    // uint link;         // Old ts selector
-// uint esp0;         // Stack pointers and segment selectors
-// ushort ss0;        //   after an increase in privilege level
-// ushort padding1;
-// uint *esp1;
-// ushort ss1;
-// ushort padding2;
-// uint *esp2;
-// ushort ss2;
-// ushort padding3;
-// void *cr3;         // Page directory base
-// uint *eip;         // Saved state from last task switch
-// uint eflags;
-// uint eax;          // More saved state (registers)
-// uint ecx;
-// uint edx;
-// uint ebx;
-// uint *esp;
-// uint *ebp;
-// uint esi;
-// uint edi;
-// ushort es;         // Even more saved state (segment selectors)
-// ushort padding4;
-// ushort cs;
-// ushort padding5;
-// ushort ss;
-// ushort padding6;
-// ushort ds;
-// ushort padding7;
-// ushort fs;
-// ushort padding8;
-// ushort gs;
-// ushort padding9;
-// ushort ldt;
-// ushort padding10;
-// ushort t;          // Trap on task switch
-// ushort iomb;       // I/O map base address
+//// uint link;         // Old ts selector
+//// uint esp0;         // Stack pointers and segment selectors
+//// ushort ss0;        //   after an increase in privilege level
+//// ushort padding1;
+//// uint *esp1;
+//// ushort ss1;
+//// ushort padding2;
+//// uint *esp2;
+//// ushort ss2;
+//// ushort padding3;
+//// void *cr3;         // Page directory base
+//// uint *eip;         // Saved state from last task switch
+//// uint eflags;
+//// uint eax;          // More saved state (registers)
+//// uint ecx;
+//// uint edx;
+//// uint ebx;
+//// uint *esp;
+//// uint *ebp;
+//// uint esi;
+//// uint edi;
+//// ushort es;         // Even more saved state (segment selectors)
+//// ushort padding4;
+//// ushort cs;
+//// ushort padding5;
+//// ushort ss;
+//// ushort padding6;
+//// ushort ds;
+//// ushort padding7;
+//// ushort fs;
+//// ushort padding8;
+//// ushort gs;
+//// ushort padding9;
+//// ushort ldt;
+//// ushort padding10;
+//// ushort t;          // Trap on task switch
+//// ushort iomb;       // I/O map base address
 }
 
 #[derive(Clone, Copy)]
@@ -344,13 +344,13 @@ pub struct Gatedesc {
     off_15_0: u16, // low 16 bits of offset in segment
     cs: u16,       // code segment selector
     args_rsv1: u8,
-    // args : u5;        // # args, 0 for interrupt/trap gates
-    // rsv1 : u3;        // reserved(should be zero I guess)
+//// args : u5;        // # args, 0 for interrupt/trap gates
+//// rsv1 : u3;        // reserved(should be zero I guess)
     type_s_dpl_p: u8,
-    // type : u4;        // type(STS_{TG,IG32,TG32})
-    // s : u1;           // must be 0 (system)
-    // dpl : u2;         // descriptor(meaning new) privilege level
-    // p : u1;           // Present
+//// type : u4;        // type(STS_{TG,IG32,TG32})
+//// s : u1;           // must be 0 (system)
+//// dpl : u2;         // descriptor(meaning new) privilege level
+//// p : u1;           // Present
     off_31_16: u16, // high bits of offset in segment
 }
 

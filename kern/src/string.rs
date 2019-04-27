@@ -54,57 +54,56 @@ pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) {
 }
 
 // // memcpy exists to placate GCC.  Use memmove.
-// void*
-// memcpy(void *dst, const void *src, uint n)
-// {
-//   return memmove(dst, src, n);
-// }
+//// void*
+//// memcpy(void *dst, const void *src, uint n)
+//// {
+////   return memmove(dst, src, n);
+//// }
 //
-// int
-// strncmp(const char *p, const char *q, uint n)
-// {
-//   while(n > 0 && *p && *p == *q)
-//     n--, p++, q++;
-//   if(n == 0)
-//     return 0;
-//   return (uchar)*p - (uchar)*q;
-// }
+//// int
+//// strncmp(const char *p, const char *q, uint n)
+//// {
+////   while(n > 0 && *p && *p == *q)
+////     n--, p++, q++;
+////   if(n == 0)
+////     return 0;
+////   return (uchar)*p - (uchar)*q;
+//// }
 //
-// char*
-// strncpy(char *s, const char *t, int n)
-// {
-//   char *os;
-//
-//   os = s;
-//   while(n-- > 0 && (*s++ = *t++) != 0)
-//     ;
-//   while(n-- > 0)
-//     *s++ = 0;
-//   return os;
-// }
+//// char*
+//// strncpy(char *s, const char *t, int n)
+//// {
+////   char *os;
+////
+////   os = s;
+////   while(n-- > 0 && (*s++ = *t++) != 0)
+////     ;
+////   while(n-- > 0)
+////     *s++ = 0;
+////   return os;
+//// }
 //
 // // Like strncpy but guaranteed to NUL-terminate.
-// char*
-// safestrcpy(char *s, const char *t, int n)
-// {
-//   char *os;
+//// char*
+//// safestrcpy(char *s, const char *t, int n)
+//// {
+////   char *os;
+////
+////   os = s;
+////   if(n <= 0)
+////     return os;
+////   while(--n > 0 && (*s++ = *t++) != 0)
+////     ;
+////   *s = 0;
+////   return os;
+//// }
 //
-//   os = s;
-//   if(n <= 0)
-//     return os;
-//   while(--n > 0 && (*s++ = *t++) != 0)
-//     ;
-//   *s = 0;
-//   return os;
-// }
-//
-// int
-// strlen(const char *s)
-// {
-//   int n;
-//
-//   for(n = 0; s[n]; n++)
-//     ;
-//   return n;
-// }
-//
+//// int
+//// strlen(const char *s)
+//// {
+////   int n;
+////
+////   for(n = 0; s[n]; n++)
+////     ;
+////   return n;
+//// }
