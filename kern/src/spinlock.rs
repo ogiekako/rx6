@@ -5,7 +5,6 @@ use core::ops::Deref;
 use core::ops::DerefMut;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering;
-use core::sync::atomic::ATOMIC_BOOL_INIT;
 
 use memlayout::*;
 use mmu::*;
@@ -75,7 +74,7 @@ pub struct Obj<'a, T: 'a> {
 impl<T> Mutex<T> {
     pub const fn new(val: T) -> Mutex<T> {
         Mutex {
-            lock: ATOMIC_BOOL_INIT,
+            lock: AtomicBool::new(false),
             val: UnsafeCell::new(val),
         }
     }

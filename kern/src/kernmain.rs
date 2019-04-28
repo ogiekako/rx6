@@ -11,7 +11,7 @@ pub unsafe fn kernmain() {
     picinit(); // another interrupt controller
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
-    uartinit(); // serial port
+    uartinit(); // serial port (Outputs "xv6...")
     tvinit(); // trap vectors
     binit(); // buffer cache (TODO)
     fileinit(); // file table (TODO)

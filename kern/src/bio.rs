@@ -18,17 +18,7 @@
 // * B_DIRTY: the buffer data has been modified
 //     and needs to be written to disk.
 
-use buf::*;
-use console::*;
-use core;
-use lapic::*;
-use mmu::*;
-use mp::*;
-use param::*;
-use spinlock::*;
-use sysfile::*;
-use types::*;
-use x86::*;
+use super::*;
 
 //// #include "types.h"
 //// #include "defs.h"
