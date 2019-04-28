@@ -1,47 +1,29 @@
-use bio;
 /// main.c in xv6
-use console;
-use console::*;
-use file;
-use ide;
-use ioapic;
-use kalloc;
-use lapic;
-use linker;
-use memlayout;
-use memlayout::*;
-use mmu::P;
-use mp;
-use mp::*;
-use picirq;
-use process;
-use trap;
-use uart;
-use vm;
+use super::*;
 
 // main in main.c
 pub unsafe fn kernmain() {
-    kalloc::kinit1(linker::end(), p2v(P(4 * 1024 * 1024))); // phys page allocator
-    vm::kvmalloc(); // kernel page table
-    mp::mpinit(); // detect other processors
-    lapic::lapicinit(); // interrupt controller
-    vm::seginit(); // segment descriptors
-    picirq::picinit(); // another interrupt controller
-    ioapic::ioapicinit(); // another interrupt controller
-    console::consoleinit(); // console hardware
-    uart::uartinit(); // serial port
-    trap::tvinit(); // trap vectors
-    bio::binit(); // buffer cache (TODO)
-    file::fileinit(); // file table (TODO)
-    ide::ideinit(); // disk (TODO)
+    kinit1(end(), p2v(P(4 * 1024 * 1024))); // phys page allocator
+    kvmalloc(); // kernel page table
+    mpinit(); // detect other processors
+    lapicinit(); // interrupt controller
+    seginit(); // segment descriptors
+    picinit(); // another interrupt controller
+    ioapicinit(); // another interrupt controller
+    consoleinit(); // console hardware
+    uartinit(); // serial port
+    tvinit(); // trap vectors
+    binit(); // buffer cache (TODO)
+    fileinit(); // file table (TODO)
+    ideinit(); // disk (TODO)
     assert!(ismp);
     // if(!ismp)
     //   timerinit();   // uniprocessor timer (TODO)
     startothers(); // start other processors (TODO)
-    kalloc::kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
-    process::userinit(); // first user process (TODO)
+    kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
+    userinit(); // first user process (TODO)
     mpmain(); // finish this processor's setup (TODO)
-    console::cprintf("looping\n", &[]);
+    cprintf("looping\n", &[]);
     loop {}
 }
 

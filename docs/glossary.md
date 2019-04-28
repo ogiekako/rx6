@@ -10,3 +10,6 @@
 
 - LSI - large scale integration (集積回路)
 - COM - commucation port. Name of the serial port interface on IBM computers.
+- SMP - Symmetric multiprocessing
+
+- IDE - Integrated Drive Electronics

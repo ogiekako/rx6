@@ -10,6 +10,35 @@
 #[macro_use]
 extern crate lazy_static;
 
+pub use bio::*;
+pub use buf::*;
+pub use console::*;
+pub use file::*;
+pub use fs::*;
+pub use ide::*;
+pub use ioapic::*;
+pub use kalloc::*;
+pub use kernmain::*;
+pub use lapic::*;
+pub use linker::*;
+pub use memlayout::*;
+pub use mmu::*;
+pub use mp::*;
+pub use param::*;
+pub use picirq::*;
+pub use process::*;
+pub use spinlock::*;
+pub use string::*;
+pub use syscall::*;
+pub use sysfile::*;
+pub use sysproc::*;
+pub use trap::*;
+pub use traps::*;
+pub use types::*;
+pub use uart::*;
+pub use vm::*;
+pub use x86::*;
+
 pub mod bio;
 pub mod buf;
 pub mod console;

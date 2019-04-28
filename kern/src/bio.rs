@@ -18,6 +18,18 @@
 // * B_DIRTY: the buffer data has been modified
 //     and needs to be written to disk.
 
+use buf::*;
+use console::*;
+use core;
+use lapic::*;
+use mmu::*;
+use mp::*;
+use param::*;
+use spinlock::*;
+use sysfile::*;
+use types::*;
+use x86::*;
+
 //// #include "types.h"
 //// #include "defs.h"
 //// #include "param.h"
@@ -35,22 +47,30 @@
 ////   struct buf head;
 //// } bcache;
 
+struct Bcache {
+    buf: [Buf; NBUF],
+    head: Buf,
+}
+
+lazy_static! {
+    static ref bcache: Mutex<Bcache> = Mutex::new(unsafe { core::mem::zeroed() });
+}
+
 pub unsafe fn binit() {
-    ////  struct buf *b;
-    ////
-    ////  initlock(&bcache.lock, "bcache");
-    ////
-    //////PAGEBREAK!
-    ////  // Create linked list of buffers
-    ////  bcache.head.prev = &bcache.head;
-    ////  bcache.head.next = &bcache.head;
-    ////  for(b = bcache.buf; b < bcache.buf+NBUF; b++){
-    ////    b->next = bcache.head.next;
-    ////    b->prev = &bcache.head;
-    ////    initsleeplock(&b->lock, "buffer");
-    ////    bcache.head.next->prev = b;
-    ////    bcache.head.next = b;
-    ////  }
+    // FIXME: bcache.lock() causes OS reboot. Fit it.
+    // let mut bcache2 = bcache.lock();
+    // Create linked list of buffers
+
+    // bcache2.head.prev = core::mem::transmute(&mut bcache2.head);
+    // bcache2.head.next = core::mem::transmute(&mut bcache2.head);
+    // for i in 0..NBUF {
+    //     let mut b: &'static mut Buf = core::mem::transmute(&mut bcache2.buf[i]);
+    //     b.next = core::mem::transmute_copy(&mut bcache2.head.next);
+    //     b.prev = core::mem::transmute(&mut bcache2.head);
+    //     ////    initsleeplock(&b->lock, "buffer");
+    //     bcache2.head.next.prev = core::mem::transmute_copy(&b);
+    //     bcache2.head.next = b;
+    // }
 }
 
 // Look through buffer cache for block on device dev.

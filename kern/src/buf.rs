@@ -1,14 +1,14 @@
 use fs::*;
 
 pub struct Buf {
-    flags: i32,
-    dev: u32,
-    blockno: u32,
-    refcnt: u32,
-    prev: Option<&'static Buf>, // LRU cache list
-    next: Option<&'static Buf>,
-    qnext: Option<&'static Buf>, // disk queue
-    data: [u8; BSIZE],
+    pub flags: i32,
+    pub dev: u32,
+    pub blockno: u32,
+    pub refcnt: u32,
+    pub prev: &'static mut Buf, // LRU cache list
+    pub next: &'static mut Buf,
+    pub qnext: &'static mut Buf, // disk queue
+    pub data: [u8; BSIZE],
 }
 
 pub const B_VALID: i32 = 0x2; // buffer has been read from disk
