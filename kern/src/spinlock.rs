@@ -6,65 +6,28 @@ use core::ops::DerefMut;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering;
 
-use memlayout::*;
-use mmu::*;
-use process::*;
-use x86::*;
+use super::*;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::sync::Arc;
-    use std::thread;
-
-    #[test]
-    fn spin() {
-        let spin_mutex = Mutex::new(0);
-
-        // Modify the data
-        {
-            let mut data = spin_mutex.lock();
-            *data = 2;
-        }
-
-        // Read the data
-        let answer = {
-            let data = spin_mutex.lock();
-            *data
-        };
-
-        assert_eq!(answer, 2);
-    }
-
-    #[test]
-    fn thread_safe() {
-        let m = Arc::new(Mutex::new(0));
-        let mut handles = vec![];
-        let n = 1000;
-        for _ in 0..n {
-            let m = Arc::clone(&m);
-            let handle = thread::spawn(move || {
-                let mut v = m.lock();
-                *v += 1;
-            });
-            handles.push(handle);
-        }
-        for handle in handles {
-            handle.join().unwrap();
-        }
-        let v = m.lock();
-        assert_eq!(*v, n);
-    }
-}
-
+#[repr(C)]
 pub struct Mutex<T> {
     lock: AtomicBool,
     val: UnsafeCell<T>,
 }
+#[repr(C)]
+pub struct Mutex2<T> {
+    // val: UnsafeCell<T>,
+    val: T
+}
+impl<T> Mutex2<T> {
+    pub unsafe fn hoge(&self) -> &T {
+        &self.val
+    }
+}
 
 // For test
 unsafe impl<T> Sync for Mutex<T> {}
+
+unsafe impl<T> Sync for Mutex2<T> {}
 
 pub struct Obj<'a, T: 'a> {
     lock: &'a AtomicBool,
@@ -72,6 +35,13 @@ pub struct Obj<'a, T: 'a> {
 }
 
 impl<T> Mutex<T> {
+    pub const fn new2(val: T) -> Mutex2<T> {
+        Mutex2 {
+            val : val,
+            // val: UnsafeCell::new(val),
+        }
+    }
+
     pub const fn new(val: T) -> Mutex<T> {
         Mutex {
             lock: AtomicBool::new(false),
@@ -154,5 +124,52 @@ pub fn popcli() {
         if ((mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
             sti();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::sync::Arc;
+    use std::thread;
+
+    #[test]
+    fn spin() {
+        let spin_mutex = Mutex::new(0);
+
+        // Modify the data
+        {
+            let mut data = spin_mutex.lock();
+            *data = 2;
+        }
+
+        // Read the data
+        let answer = {
+            let data = spin_mutex.lock();
+            *data
+        };
+
+        assert_eq!(answer, 2);
+    }
+
+    #[test]
+    fn thread_safe() {
+        let m = Arc::new(Mutex::new(0));
+        let mut handles = vec![];
+        let n = 1000;
+        for _ in 0..n {
+            let m = Arc::clone(&m);
+            let handle = thread::spawn(move || {
+                let mut v = m.lock();
+                *v += 1;
+            });
+            handles.push(handle);
+        }
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        let v = m.lock();
+        assert_eq!(*v, n);
     }
 }

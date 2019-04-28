@@ -1,5 +1,6 @@
 use fs::*;
 
+#[repr(C)]
 pub struct Buf {
     pub flags: i32,
     pub dev: u32,

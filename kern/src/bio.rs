@@ -20,14 +20,6 @@
 
 use super::*;
 
-//// #include "types.h"
-//// #include "defs.h"
-//// #include "param.h"
-//// #include "spinlock.h"
-//// #include "sleeplock.h"
-//// #include "fs.h"
-//// #include "buf.h"
-////
 //// struct {
 ////   struct spinlock lock;
 ////   struct buf buf[NBUF];
@@ -37,18 +29,23 @@ use super::*;
 ////   struct buf head;
 //// } bcache;
 
+#[repr(C)]
 struct Bcache {
     buf: [Buf; NBUF],
     head: Buf,
 }
 
 lazy_static! {
-    static ref bcache: Mutex<Bcache> = Mutex::new(unsafe { core::mem::zeroed() });
+    // static ref bcache: Mutex<Bcache> = Mutex::new(unsafe { core::mem::uninitialized() });
+    static ref hoge: Mutex2<i32> = Mutex::new2(0);
+    // static ref piyo: u32 = 0;
 }
 
 pub unsafe fn binit() {
     // FIXME: bcache.lock() causes OS reboot. Fit it.
     // let mut bcache2 = bcache.lock();
+
+    let a = hoge.hoge();
     // Create linked list of buffers
 
     // bcache2.head.prev = core::mem::transmute(&mut bcache2.head);

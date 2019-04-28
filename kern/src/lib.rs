@@ -2,6 +2,7 @@
 #![feature(const_fn)]
 #![feature(ptr_offset_from)]
 #![no_std]
+
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
@@ -9,6 +10,7 @@
 
 #[macro_use]
 extern crate lazy_static;
+
 
 pub use bio::*;
 pub use buf::*;
