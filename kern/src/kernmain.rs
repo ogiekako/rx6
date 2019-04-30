@@ -13,7 +13,7 @@ pub unsafe fn kernmain() {
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
     tvinit(); // trap vectors
-    binit(); // buffer cache (TODO)
+    binit(); // buffer cache
     fileinit(); // file table (TODO)
     ideinit(); // disk (TODO)
     assert!(ismp);
