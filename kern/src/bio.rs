@@ -30,32 +30,67 @@ use super::*;
 //// } bcache;
 
 #[repr(C)]
-#[derive(Default)]
 struct Bcache {
     buf: [Buf; NBUF],
     head: Buf,
 }
 
-lazy_static! {
-    static ref bcache: Mutex<Bcache> = Mutex::new(Bcache::default());
+impl Bcache {
+    pub const unsafe fn uninit() -> Bcache {
+        Bcache {
+            buf: [
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+                Buf::uninit(),
+            ],
+            head: Buf::uninit(),
+        }
+    }
 }
+
+static mut bcache: Mutex<Bcache> = unsafe { Mutex::new(Bcache::uninit()) };
 
 pub unsafe fn binit() {
     let mut bcache2 = bcache.lock();
 
-    //    let a = hoge.hoge();
     // Create linked list of buffers
-
-    // bcache2.head.prev = core::mem::transmute(&mut bcache2.head);
-    // bcache2.head.next = core::mem::transmute(&mut bcache2.head);
-    // for i in 0..NBUF {
-    //     let mut b: &'static mut Buf = core::mem::transmute(&mut bcache2.buf[i]);
-    //     b.next = core::mem::transmute_copy(&mut bcache2.head.next);
-    //     b.prev = core::mem::transmute(&mut bcache2.head);
-    //     ////    initsleeplock(&b->lock, "buffer");
-    //     bcache2.head.next.prev = core::mem::transmute_copy(&b);
-    //     bcache2.head.next = b;
-    // }
+    bcache2.head.prev = &mut bcache2.head as *mut Buf;
+    bcache2.head.next = &mut bcache2.head as *mut Buf;
+    for i in 0..NBUF {
+        let mut b = &mut bcache2.buf[i] as *mut Buf;
+        (*b).next = bcache2.head.next;
+        (*b).prev = &mut bcache2.head as *mut Buf;
+        ////    initsleeplock(&b->lock, "buffer");
+        (*bcache2.head.next).prev = b;
+        bcache2.head.next = b;
+    }
 }
 
 // Look through buffer cache for block on device dev.

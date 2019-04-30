@@ -6,25 +6,24 @@ pub struct Buf {
     pub dev: u32,
     pub blockno: u32,
     pub refcnt: u32,
-    // pub prev: *mut Buf, // LRU cache list
-    //    pub next: &'static mut Buf,
-    //    pub qnext: &'static mut Buf, // disk queue
-    pub data: [u8; SZ],
+    pub prev: *mut Buf, // LRU cache list
+    pub next: *mut Buf,
+    pub qnext: *mut Buf, // disk queue
+    pub data: [u8; BSIZE],
 }
 
-const SZ: usize = 217;
-
-impl core::default::Default for Buf {
-    fn default() -> Buf {
+impl Buf {
+    pub const unsafe fn uninit() -> Buf {
         unsafe {
             Buf {
                 flags: 0,
                 dev: 0,
                 blockno: 0,
                 refcnt: 0,
-                //          prev: core::mem::zeroed(),
-                //          prev: core::mem::uninitialized(),
-                data: [0; SZ],
+                prev: core::ptr::null_mut(),
+                next: core::ptr::null_mut(),
+                qnext: core::ptr::null_mut(),
+                data: [0; BSIZE],
             }
         }
     }

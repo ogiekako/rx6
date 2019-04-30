@@ -1,4 +1,8 @@
-# 2019-04-29 13:02
+
+
+
+# 2019-04-29 13:02 (done)
+
 
 ```
 => 0x8011e935 <kern::spinlock::Mutex<T>::new+5>:        push   %esi
@@ -206,15 +210,131 @@ stack ってどこから値を得ているんだ。
 
 なんか、kernmain の stack をセットアップしているところがコメントアウトされているように見える。これがバグの原因か。
 
+[GNU as] reference を読む。
+
+[GNU as]: https://sourceware.org/binutils/docs/as/Comm.html#Comm
+
+.comm は、変数の宣言をしているのか。.comm symbol length で、 そのシンボル用の領域を、その長さだけ確保している。
+
+```
+> $ i386-elf-nm entry.o                                                                                                                                                 [±master ●●]
+8000000c T _start
+0000000c T entry
+         U entrypgdir
+         U main
+00000000 T multiboot_header
+00001000 C stack
+```
+
+```
+nm - list symbols from object files.
+
+           "C" The symbol is common.  Common symbols are uninitialized data.
+               When linking, multiple common symbols may appear with the same
+               name.  If the symbol is defined anywhere, the common symbols
+               are treated as undefined references.
+
+           "T"
+           "t" The symbol is in the text (code) section.
+
+           "U" The symbol is undefined.
+```
+
+どの symbol がどの section にいるのかをひと目で知る方法は
+
+stack 領域は、.bss section に、他の変数と混じって存在することがわかった。4K byte を踏み越えると容赦なくバグるということか。
+
+xv6 に対して実験。
+
+```
+> $ i386-elf-readelf -S kernel                                                                                                                                          [±master ●●]
+There are 18 section headers, starting at offset 0x32fd8:
+
+Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .text             PROGBITS        80100000 001000 0065fa 00  AX  0   0  4
+  [ 2] .rodata           PROGBITS        80106600 007600 0009ac 00   A  0   0 32
+  [ 3] .stab             PROGBITS        80106fac 007fac 000001 0c  WA  4   0  1
+  [ 4] .stabstr          STRTAB          80106fad 007fad 000001 00  WA  0   0  1
+  [ 5] .data             PROGBITS        80107000 008000 002516 00  WA  0   0 4096
+  [ 6] .bss              NOBITS          80109520 00a516 00b008 00  WA  0   0 32
+  [ 7] .debug_line       PROGBITS        00000000 00a516 005ee2 00      0   0  1
+ ...
 
 
+$ i386-elf-nm kernel -lnsS | less 
+
+...
+80109516 D _binary_entryother_end
+80109520 00000038 b cons        /Users/okakeigo/src/github.com/ogiekako/xv6-public/console.c:25
+80109558 00000004 b panicked    /Users/okakeigo/src/github.com/ogiekako/xv6-public/console.c:20
+80109560 00000004 b havedisk1   /Users/okakeigo/src/github.com/ogiekako/xv6-public/ide.c:34
+80109564 00000004 b idequeue    /Users/okakeigo/src/github.com/ogiekako/xv6-public/ide.c:32
+80109580 00000034 b idelock     /Users/okakeigo/src/github.com/ogiekako/xv6-public/ide.c:31
+801095b4 00000004 b shift.1423
+801095b8 00000004 b n.1539
+801095bc 00000004 b initproc    /Users/okakeigo/src/github.com/ogiekako/xv6-public/proc.c:15
+801095c0 00000004 b uart        /Users/okakeigo/src/github.com/ogiekako/xv6-public/uart.c:17
+801095d0 00001000 B stack
+8010a5e0 00004958 B bcache      /Users/okakeigo/src/github.com/ogiekako/xv6-public/bio.c:36
+8010ef40 0000008c B input       /Users/okakeigo/src/github.com/ogiekako/xv6-public/console.c:186
+```
+
+bss と common の違いってこういうことなのか。https://stackoverflow.com/questions/16835716/bss-vs-common-what-goes-where
+
+stack がどう定義されているかは完全にこれでわかったな。それは、.bss section の中に他の変数と入り混じって存在する。
+
+rx6 では、stack は以下。
+
+```
+80151d00 00001000 B stack
+80152d00 B __end
+```
+
+`stack + 4096` から、esp は開始している。
+kernmain の時点で、すでに、stack + 3936 になっている。あまりにも下がり過ぎでは？
+そんなことなかった。
+
+Mutex::new においてはすでに踏み越えている。
+call_once
+
+lazy_static::lazy::Lazy<T>::get
+defer::__stability
+deref
+
+```
+(gdb) bt
+#0  lazy_static::lazy::Lazy<T>::get (self=0x8015004c <<kern::bio::bcache as core::ops::deref::Deref>::deref::__stability::LAZY>)
+    at /Users/okakeigo/.cargo/registry/src/github.com-1ecc6299db9ec823/lazy_static-1.3.0/src/core_lazy.rs:21
+    #1  <kern::bio::bcache as core::ops::deref::Deref>::deref::__stability () at <::lazy_static::__lazy_static_internal macros>:12
+    #2  <kern::bio::bcache as core::ops::deref::Deref>::deref (self=0x801424a4) at <::lazy_static::__lazy_static_internal macros>:13
+    #3  0x00000100 in ?? ()
+    #4  0x00000100 in ?? ()
+    #5  0x8015004c in kern::lapic::lapic ()
+    #6  0x8014f824 in ?? ()
+    #7  0x8011bfb5 in kern::kernmain::kernmain () at src/kernmain.rs:16
+    #8  0x00000000 in ?? ()
+(gdb) print $esp
+$7 = (void *) 0x80152bd0 <stack+3792>
+```
 
 
+とりあえず、binit でとめるか。
+
+stack = 80151d00
+
+call_once - 8014f210
+deref    - stack+3792  (bt が壊れている。)
+binit    - stack+3816
+kernmain - stack+3936
 
 
+BCache というのは、BUF の 31 倍の大きさの構造体なんだな。そりゃおかしくなるな。そして、Buf は、BSIZE = 512 bytes の配列を持っているわけで。
 
+結局、でかい構造体を初期化するのに、 lazy_static は使うなという教訓が得られた。
 
-
+2019-04-30 11:35 - デバッグ終了。
 
 
 
