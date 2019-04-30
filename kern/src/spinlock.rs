@@ -9,6 +9,16 @@ struct spinlock {
     pcs: [u32; 10], // The call stack (an array of program counters)
 }
 
+impl spinlock {
+    fn const uninit() -> spinlock {
+        spinlock {
+            locked: 0,
+            name: "",
+            pcs: [0; 10]
+        }
+    }
+}
+
 // Mutual exclusion spin locks.
 
 pub unsafe fn initlock(lk: *mut spinlock, name: *mut str) {
@@ -23,9 +33,10 @@ pub unsafe fn initlock(lk: *mut spinlock, name: *mut str) {
 // other CPUs to waste time spinning to acquire it.
 pub unsafe fn acquire(lk: *mut spinlock) {
     pushcli(); // disable interrupts to avoid deadlock.
-               //// if holding(lk) {
-               ////     panic("acquire");
-               //// }
+
+    //// if holding(lk) {
+    ////     panic("acquire");
+    //// }
 
     // The xchg is atomic.
     while (xchg((*lk).locked, 1) != 0) {}

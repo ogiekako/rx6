@@ -10,6 +10,22 @@ cprintf もなんか変な抽象化が入っている…… こういうのや�
 
 C言語のvolatile を翻訳しようとしている。まずは、C言語の volatile がどういう意味なのかを把握しよう。volatile - 複数スレッドからアクセスされる可能性のある変数につける。その変数はいつでも変化しうるとコンパイラに伝える。
 
+Rust の asm! の仕様、一回調べて、x86.rs を一気に書き換えたいな。
+
+Rust nomicon の、Uninitialized memory の章を呼んでいる。Drop すべきかどうかの情報は、runtime に track され(る場合もあり)、その情報は stack に置かれる。
+
+asm! の使い方は、GCC の asm と似ている。
+%0 を $0 に変える、volatile の場合は、最後に "volatile" とつける、以外は変更なしかな。
+
+`__sync_synchronize` は、メモリバリア (full memory barrier) を挟む。任意のメモリオペランドは、この境界をまたいで入れ替わらない。
+これは、GCC の機能で、[Built-in functions for atomic memory access](http://gcc.gnu.org/onlinedocs/gcc-4.6.2/gcc/Atomic-Builtins.html)に書いてある。
+
+const transmute は実は feature としてはあるのか…… file:///home/oka/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/share/doc/rust/html/unstable-book/language-features/const-transmute.html
+
+  spinlock の `__sync_synchronize();` を翻訳しようとしている。おそらく、core::sync::atomic::fence を使えばよい。
+まず、そもそもここでどうして atomic fence が必要なのかを理解する。その次に、fench に与える Ordering それぞれの意味を理解し、
+`__sync__synchronize` が対応するものを判断する。
+
 # 2019-04-29
 
 8:52 - Qemu が、terminal の折り返し設定をバグらせるらしい。qemu 起動したあとで、長いコマンドを表示すると、折り返しが次の行にいかなくなってしまう。

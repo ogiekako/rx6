@@ -3,6 +3,7 @@
 // Output is written to the screen and serial port.
 
 use super::*;
+use spinlock::spinlock;
 use core;
 
 static mut panicked: bool = false;

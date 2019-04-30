@@ -1,18 +1,26 @@
+# Xv6
+
+xv6 specific なメモ
+
+uint -> u32
+int  -> i32
+
 # How to translate C to Rust
 
 - すべてが unsafe
 - すべてが public
   - `fn` ではなく、`pub unsafe fn` と書きましょう
   - lib.rs, foo.rs, bar.rs ... がある場合、`lib.rs` に `pub use foo::*; pub use bar::*;` などと書き、foo.rs では、`use super::*;` とすると良いでしょう。
+  - (static int とかは、pub でなくてよい。)
 - 初期値は、`core::mem::zeroed()`
-  - memset が必要。compiler-builtins crate を使う。
-  -る compiler_builtin::mem::memset が `#[no_std]` の場合は、提供されている。cargo xbuild をつかっていれば、対象ターゲット用に、コンパイルされるはず。
-  - static int とかは、pub でなくてよい。
+  - Rust nomicon. Drop trait の場合は危険。
 - 初期値つき static 変数は `lazy_static!`
   - stack が消費されることに注意。サイズが大きいものは要注意。
   - core::mem::zeroed() が const fn でないのが annoying.
 - lifetime は `&'static`
 - アセンブラは、`asm!`
+  - だいたい GCC 拡張と一緒。最後に volatile をつける。%0 -> $0
+  - unstable book の asm の項を参照。
 - グローバル変数は static mut
   - const fn バージョンの core::mem::zeroed()
   - (C言語では、静的変数は 0 初期化される)

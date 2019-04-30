@@ -102,15 +102,15 @@ pub unsafe fn sti() {
 }
 
 #[inline]
-pub unsafe fn xchg(volatile uint *addr, uint newval) -> u32
-{
-  uint result;
-
+// pub unsafe fn xchg(volatile uint *addr, uint newval) -> u32
+pub unsafe fn xchg(addr: *mut u32, newval: u32) -> u32 {
+  let mut result = 0u32;
   // The + in "+m" denotes a read-modify-write operand.
-  asm volatile("lock; xchgl %0, %1" :
-               "+m" (*addr), "=a" (result) :
-               "1" (newval) :
-               "cc");
+  asm!("lock; xchgl $0, $1":
+       "+m"(*addr), "=a"(result):
+       "1"(newval):
+       "cc":
+       "volatile");
   return result;
 }
 
