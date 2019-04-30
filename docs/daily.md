@@ -1,3 +1,16 @@
+# 2019-04-29
+
+8:52 - Qemu が、terminal の折り返し設定をバグらせるらしい。qemu 起動したあとで、長いコマンドを表示すると、折り返しが次の行にいかなくなってしまう。
+
+コードをおっていくと、`x86_64` のコードを呼んでいるところがあるようだ。これがおかしいのでは。
+
+```
+=> 0x801226b7 <core::ops::function::FnOnce::call_once+71>:      pop    %ebx
+0x801226b7 in core::ops::function::FnOnce::call_once () at /Users/okakeigo/.rustup/toolchains/nightly-x86_64-apple-darwin/lib/rustlib/src/rust/src/libcore/ops/function.rs:231
+231         extern "rust-call" fn call_once(self, args: Args) -> Self::Output;
+```
+それは関係ないだろう。
+
 # 2019-04-28
 
 ## 午後

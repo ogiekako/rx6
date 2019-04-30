@@ -13,21 +13,9 @@ pub struct Mutex<T> {
     lock: AtomicBool,
     val: UnsafeCell<T>,
 }
-#[repr(C)]
-pub struct Mutex2<T> {
-    // val: UnsafeCell<T>,
-    val: T
-}
-impl<T> Mutex2<T> {
-    pub unsafe fn hoge(&self) -> &T {
-        &self.val
-    }
-}
 
 // For test
 unsafe impl<T> Sync for Mutex<T> {}
-
-unsafe impl<T> Sync for Mutex2<T> {}
 
 pub struct Obj<'a, T: 'a> {
     lock: &'a AtomicBool,
@@ -35,13 +23,6 @@ pub struct Obj<'a, T: 'a> {
 }
 
 impl<T> Mutex<T> {
-    pub const fn new2(val: T) -> Mutex2<T> {
-        Mutex2 {
-            val : val,
-            // val: UnsafeCell::new(val),
-        }
-    }
-
     pub const fn new(val: T) -> Mutex<T> {
         Mutex {
             lock: AtomicBool::new(false),

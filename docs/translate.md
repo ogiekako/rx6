@@ -10,6 +10,11 @@
 - 初期値つき static 変数は `lazy_static!`
 - lifetime は `&'static`
 - アセンブラは、`asm!`
+- グローバル変数は static mut
+  - const fn バージョンの core::mem::zeroed()
+  - (C言語では、静的変数は 0 初期化される)
+
+- 初期化されていないリファレンスには、MaybeUninit を使う
 
 - pointer は ptr
 - pointer 型 `*u8` の使用

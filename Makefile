@@ -92,6 +92,8 @@ endif
 TARGET = $(ARCH)-unknown-linux-gnu
 KERN = kern/target/$(TARGET)/$(RELEASE)/libkern.a
 
+entry.o: entry.S asm.h memlayout.h mmu.h param.h
+
 kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) $(OBJS) -b binary 2>&1 | tee /tmp/rx6-ld.log
 	if grep "warning" /tmp/rx6-ld.log > /dev/null; then rm kernel; exit 1; fi
@@ -102,8 +104,8 @@ kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld
 
 kern: $(KERN)
 
-$(KERN): $(wildcard kern/src/*.rs)
-	(cd kern && cargo xbuild --target $(TARGET) $(RELEASEFLAG) --verbose)
+$(KERN): $(wildcard kern/src/*.rs) kern/Cargo.toml
+	(cd kern && cargo xbuild --target $(TARGET).json $(RELEASEFLAG) --verbose)
 
 vectors.S: vectors.pl
 	perl vectors.pl > vectors.S

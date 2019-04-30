@@ -1,12 +1,6 @@
 /// main.c in xv6
 use super::*;
 
-lazy_static! {
-    // static ref bcache: Mutex<Bcache> = Mutex::new(unsafe { core::mem::uninitialized() });
-    static ref piyo: Mutex2<i32> = Mutex::new2(0);
-    // static ref piyo: u32 = 0;
-}
-
 // main in main.c
 pub unsafe fn kernmain() {
     kinit1(end(), p2v(P(4 * 1024 * 1024))); // phys page allocator
@@ -20,8 +14,6 @@ pub unsafe fn kernmain() {
     uartinit(); // serial port (Outputs "xv6...")
     tvinit(); // trap vectors
     binit(); // buffer cache (TODO)
-    cprintf("looping\n", &[]);
-    loop {}
     fileinit(); // file table (TODO)
     ideinit(); // disk (TODO)
     assert!(ismp);
@@ -31,6 +23,8 @@ pub unsafe fn kernmain() {
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
     userinit(); // first user process (TODO)
     mpmain(); // finish this processor's setup (TODO)
+    cprintf("looping\n", &[]);
+    loop {}
 }
 
 // // Other CPUs jump here from entryother.S.

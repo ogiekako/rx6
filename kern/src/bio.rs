@@ -30,22 +30,20 @@ use super::*;
 //// } bcache;
 
 #[repr(C)]
+#[derive(Default)]
 struct Bcache {
     buf: [Buf; NBUF],
     head: Buf,
 }
 
 lazy_static! {
-    // static ref bcache: Mutex<Bcache> = Mutex::new(unsafe { core::mem::uninitialized() });
-    static ref hoge: Mutex2<i32> = Mutex::new2(0);
-    // static ref piyo: u32 = 0;
+    static ref bcache: Mutex<Bcache> = Mutex::new(Bcache::default());
 }
 
 pub unsafe fn binit() {
-    // FIXME: bcache.lock() causes OS reboot. Fit it.
-    // let mut bcache2 = bcache.lock();
+    let mut bcache2 = bcache.lock();
 
-    let a = hoge.hoge();
+    //    let a = hoge.hoge();
     // Create linked list of buffers
 
     // bcache2.head.prev = core::mem::transmute(&mut bcache2.head);
