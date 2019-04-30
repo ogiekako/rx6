@@ -2,20 +2,26 @@
 // Input is from the keyboard or serial port.
 // Output is written to the screen and serial port.
 
+use super::*;
 use core;
 
-use ioapic::*;
-use memlayout::*;
-use mmu::*;
-use param::*;
-use picirq::*;
-use process::*;
-use string::*;
-use traps::*;
-use uart::*;
-use x86::*;
-
 static mut panicked: bool = false;
+
+struct Cons {
+    lock: spinlock,
+    locking: i32,
+}
+
+impl Cons {
+    const unsafe fn uninit() -> Cons {
+        Cons {
+            lock: spinlock::uninit(),
+            locking: 0,
+        }
+    }
+}
+
+static mut cons: Cons = Cons::uninit();
 
 //// static struct {
 ////   struct spinlock lock;
@@ -120,24 +126,21 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     }
 }
 
-// void
-//// panic(char *s)
-//// {
-////   int i;
-////   uint pcs[10];
-////
-////   cli();
-////   cons.locking = 0;
-////   cprintf("cpu %d: panic: ", cpuid());
-////   cprintf(s);
-////   cprintf("\n");
-////   getcallerpcs(&s, pcs);
-////   for(i=0; i<10; i++)
-////     cprintf(" %p", pcs[i]);
-////   panicked = true; // freeze other CPU
-////   for(;;)
-////     ;
-//// }
+pub unsafe fn panic(s: *mut str) {
+    let mut pcs = [0u32; 10];
+    let mut i = 0;
+
+    cli();
+    cons.locking = 0;
+    //// cprintf("cpu %d: panic: ", cpuid());
+    //// cprintf(s);
+    //// cprintf("\n");
+    getcallerpcs(&s, &mut pcs);
+    //// for(i=0; i<10; i++)
+    ////   cprintf(" %p", pcs[i]);
+    panicked = true; // freeze other CPU
+    loop {}
+}
 
 pub const BACKSPACE: u16 = 0x100;
 pub const CRTPORT: u16 = 0x3d4;

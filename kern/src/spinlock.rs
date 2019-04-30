@@ -1,84 +1,113 @@
-// Mutual exclusion spin locks.
-
-use core::cell::UnsafeCell;
-use core::ops::Deref;
-use core::ops::DerefMut;
-use core::sync::atomic::AtomicBool;
-use core::sync::atomic::Ordering;
-
 use super::*;
 
-#[repr(C)]
-pub struct Mutex<T> {
-    lock: AtomicBool,
-    val: UnsafeCell<T>,
+// Mutual exclusion lock.
+struct spinlock {
+    locked: u32, // Is the lock held?
+    // For debugging:
+    name: *mut str, // Name of lock.
+    //// cpu: *mut cpu,  // The cpu holding the lock.
+    pcs: [u32; 10], // The call stack (an array of program counters)
 }
 
-// For test
-unsafe impl<T> Sync for Mutex<T> {}
+// Mutual exclusion spin locks.
 
-pub struct Obj<'a, T: 'a> {
-    lock: &'a AtomicBool,
-    data: &'a mut T,
+pub unsafe fn initlock(lk: *mut spinlock, name: *mut str) {
+    (*lk).name = name;
+    (*lk).locked = 0;
+    //// lk.cpu = 0;
 }
 
-impl<T> Mutex<T> {
-    pub const fn new(val: T) -> Mutex<T> {
-        Mutex {
-            lock: AtomicBool::new(false),
-            val: UnsafeCell::new(val),
+// Acquire the lock.
+// Loops (spins) until the lock is acquired.
+// Holding a lock for a long time may cause
+// other CPUs to waste time spinning to acquire it.
+pub unsafe fn acquire(lk: *mut spinlock) {
+    pushcli(); // disable interrupts to avoid deadlock.
+               //// if holding(lk) {
+               ////     panic("acquire");
+               //// }
+
+    // The xchg is atomic.
+    while (xchg((*lk).locked, 1) != 0) {}
+
+    // Tell the C compiler and the processor to not move loads or stores
+    // past this point, to ensure that the critical section's memory
+    // references happen after the lock is acquired.
+    __sync_synchronize();
+
+    // Record info about lock acquisition for debugging.
+    //// lk->cpu = cpu;
+    //// getcallerpcs(&lk, lk->pcs);
+}
+//// void
+//// acquire(struct spinlock *lk)
+//// {
+////   pushcli(); // disable interrupts to avoid deadlock.
+////   if(holding(lk))
+////     panic("acquire");
+////
+////   // The xchg is atomic.
+////   while(xchg(&lk->locked, 1) != 0)
+////     ;
+////
+////   // Tell the C compiler and the processor to not move loads or stores
+////   // past this point, to ensure that the critical section's memory
+////   // references happen after the lock is acquired.
+////   __sync_synchronize();
+////
+////   // Record info about lock acquisition for debugging.
+////   lk->cpu = cpu;
+////   getcallerpcs(&lk, lk->pcs);
+//// }
+////
+//// // Release the lock.
+//// void
+//// release(struct spinlock *lk)
+//// {
+////   if(!holding(lk))
+////     panic("release");
+////
+////   lk->pcs[0] = 0;
+////   lk->cpu = 0;
+////
+////   // Tell the C compiler and the processor to not move loads or stores
+////   // past this point, to ensure that all the stores in the critical
+////   // section are visible to other cores before the lock is released.
+////   // Both the C compiler and the hardware may re-order loads and
+////   // stores; __sync_synchronize() tells them both not to.
+////   __sync_synchronize();
+////
+////   // Release the lock, equivalent to lk->locked = 0.
+////   // This code can't use a C assignment, since it might
+////   // not be atomic. A real OS would use C atomics here.
+////   asm volatile("movl $0, %0" : "+m" (lk->locked) : );
+////
+////   popcli();
+//// }
+
+// Record the current call stack in pcs[] by following the %ebp chain.
+pub unsafe fn getcallerpcs(v: *mut (), pcs: &mut [u32]) {
+    let mut ebp = (v as *mut u32).offset(-2);
+    let mut i = 0;
+    while i < 10 {
+        if ebp == 0 || ebp < KERNBASE as *mut u32 || ebp == (0xffffffff as *mut u32) {
+            break;
         }
+        pcs[i] = ebp[1]; // saved %eip
+        ebp = ebp[0] as *mut u32; // saved %ebp
+        i += 1;
     }
-    unsafe fn acquire(&self) {
-        // TODO: disable interrupt without breaking test (and the first call scenario)
-        //// pushcli(); // disable interrupts to avoid deadlock.
 
-        // The xchg is atomic.
-        while self.lock.swap(true, Ordering::Acquire) {}
-        // TODO: uncomment the following for debugging.
-        //         // Record info about lock acquisition for debugging.
-        ////         lk->cpu = mycpu();
-        ////         getcallerpcs(&lk, lk->pcs);
-    }
-    pub fn lock(&self) -> Obj<T> {
-        unsafe {
-            self.acquire();
-            Obj {
-                lock: &self.lock,
-                data: &mut *self.val.get(),
-            }
-        }
+    while i < 10 {
+        pcs[i] = 0;
+        i += 1;
     }
 }
 
-impl<'a, T: 'a> Deref for Obj<'a, T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &*self.data
-    }
-}
-
-impl<'a, T: 'a> DerefMut for Obj<'a, T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut *self.data
-    }
-}
-
-impl<'a, T: 'a> Drop for Obj<'a, T> {
-    // Release the lock.
-    fn drop(&mut self) {
-        // TODO: uncomment the following for debug
-        //// if(!holding(lk))
-        ////     panic("release");
-        ////
-        //// lk->pcs[0] = 0;
-        //// lk->cpu = 0;
-
-        self.lock.store(false, Ordering::Release);
-        // TODO: enable interrupt.
-        //// popcli();
-    }
-}
+// Check whether this cpu is holding the lock.
+//// pub unsafe fn holding(lock: *mut spinlock) -> bool {
+////     return (*lock).locked && (*lock).cpu == cpu;
+//// }
 
 // Pushcli/popcli are like cli/sti except that they are matched:
 // it takes two popcli to undo two pushcli.  Also, if interrupts
@@ -105,52 +134,5 @@ pub fn popcli() {
         if ((mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
             sti();
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::sync::Arc;
-    use std::thread;
-
-    #[test]
-    fn spin() {
-        let spin_mutex = Mutex::new(0);
-
-        // Modify the data
-        {
-            let mut data = spin_mutex.lock();
-            *data = 2;
-        }
-
-        // Read the data
-        let answer = {
-            let data = spin_mutex.lock();
-            *data
-        };
-
-        assert_eq!(answer, 2);
-    }
-
-    #[test]
-    fn thread_safe() {
-        let m = Arc::new(Mutex::new(0));
-        let mut handles = vec![];
-        let n = 1000;
-        for _ in 0..n {
-            let m = Arc::clone(&m);
-            let handle = thread::spawn(move || {
-                let mut v = m.lock();
-                *v += 1;
-            });
-            handles.push(handle);
-        }
-        for handle in handles {
-            handle.join().unwrap();
-        }
-        let v = m.lock();
-        assert_eq!(*v, n);
     }
 }

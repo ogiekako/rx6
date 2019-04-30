@@ -66,22 +66,22 @@ impl Bcache {
     }
 }
 
-static mut bcache: Mutex<Bcache> = unsafe { Mutex::new(Bcache::uninit()) };
+//// static mut bcache: Mutex<Bcache> = unsafe { Mutex::new(Bcache::uninit()) };
 
 pub unsafe fn binit() {
-    let mut bcache2 = bcache.lock();
+    //// let mut bcache2 = bcache.lock();
 
     // Create linked list of buffers
-    bcache2.head.prev = &mut bcache2.head as *mut Buf;
-    bcache2.head.next = &mut bcache2.head as *mut Buf;
-    for i in 0..NBUF {
-        let mut b = &mut bcache2.buf[i] as *mut Buf;
-        (*b).next = bcache2.head.next;
-        (*b).prev = &mut bcache2.head as *mut Buf;
-        ////    initsleeplock(&b->lock, "buffer");
-        (*bcache2.head.next).prev = b;
-        bcache2.head.next = b;
-    }
+    //// bcache2.head.prev = &mut bcache2.head as *mut Buf;
+    //// bcache2.head.next = &mut bcache2.head as *mut Buf;
+    //// for i in 0..NBUF {
+    ////     let mut b = &mut bcache2.buf[i] as *mut Buf;
+    ////     (*b).next = bcache2.head.next;
+    ////     (*b).prev = &mut bcache2.head as *mut Buf;
+    ////     ////    initsleeplock(&b->lock, "buffer");
+    ////     (*bcache2.head.next).prev = b;
+    ////     bcache2.head.next = b;
+    //// }
 }
 
 // Look through buffer cache for block on device dev.

@@ -1,15 +1,10 @@
 // proc.{h,c}.
 // renamed to process.rs because proc is a reserved keyword in Rust.
 
+use super::*;
 use core;
-use lapic::*;
-use mmu::*;
-use mp::*;
-use param::*;
-use spinlock::*;
-use sysfile::*;
-use types::*;
-use x86::*;
+
+use spinlock_mutex::*;
 
 // Per-CPU state
 pub struct Cpu {

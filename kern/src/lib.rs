@@ -39,6 +39,8 @@ pub use uart::*;
 pub use vm::*;
 pub use x86::*;
 
+pub mod spinlock_mutex;
+
 pub mod bio;
 pub mod buf;
 pub mod console;
@@ -67,6 +69,10 @@ pub mod types;
 pub mod uart;
 pub mod vm;
 pub mod x86;
+
+type unit = u32;
+type char = u8;
+type int = i32;
 
 #[cfg(not(test))]
 #[lang = "eh_personality"]

@@ -3,14 +3,9 @@
 // and pipe buffers. Allocates 4096-byte pages.
 
 use core;
-// #include "types.h"
-// #include "defs.h"
-// #include "param.h"
-use linker;
-use memlayout::*;
-use mmu::*;
-use spinlock::*;
-use string::*;
+
+use super::*;
+use spinlock_mutex::*;
 
 struct Run {
     next: Option<&'static mut Run>,
