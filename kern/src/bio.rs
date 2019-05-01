@@ -21,14 +21,16 @@
 use super::*;
 
 #[repr(C)]
-struct Bcache {
-    buf: [Buf; NBUF],
-    head: Buf,
+pub struct Bcache {
+    pub lock: Spinlock,
+    pub buf: [Buf; NBUF],
+    pub head: Buf,
 }
 
 impl Bcache {
     pub const unsafe fn uninit() -> Bcache {
         Bcache {
+            lock: Spinlock::uninit(),
             buf: [
                 Buf::uninit(),
                 Buf::uninit(),
@@ -66,22 +68,23 @@ impl Bcache {
     }
 }
 
-//// static mut bcache: Mutex<Bcache> = unsafe { Mutex::new(Bcache::uninit()) };
+static mut bcache: Bcache = unsafe { Bcache::uninit() };
 
 pub unsafe fn binit() {
-    //// let mut bcache2 = bcache.lock();
+    
+    initlock(&mut bcache.lock as *mut Spinlock, "bcache" as *const str);
 
     // Create linked list of buffers
-    //// bcache2.head.prev = &mut bcache2.head as *mut Buf;
-    //// bcache2.head.next = &mut bcache2.head as *mut Buf;
-    //// for i in 0..NBUF {
-    ////     let mut b = &mut bcache2.buf[i] as *mut Buf;
-    ////     (*b).next = bcache2.head.next;
-    ////     (*b).prev = &mut bcache2.head as *mut Buf;
-    ////     ////    initsleeplock(&b->lock, "buffer");
-    ////     (*bcache2.head.next).prev = b;
-    ////     bcache2.head.next = b;
-    //// }
+    bcache.head.prev = &mut bcache.head as *mut Buf;
+    bcache.head.next = &mut bcache.head as *mut Buf;
+    for i in 0..NBUF {
+        let mut b = &mut bcache.buf[i] as *mut Buf;
+        (*b).next = bcache.head.next;
+        (*b).prev = &mut bcache.head as *mut Buf;
+        ////    initsleeplock(&b->lock, "buffer");
+        (*bcache.head.next).prev = b;
+        bcache.head.next = b;
+    }
 }
 
 // Look through buffer cache for block on device dev.

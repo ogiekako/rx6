@@ -23,7 +23,7 @@ impl Spinlock {
 
 // Mutual exclusion spin locks.
 
-pub unsafe fn initlock(lk: *mut Spinlock, name: *mut str) {
+pub unsafe fn initlock(lk: *mut Spinlock, name: *const str) {
     (*lk).name = name;
     (*lk).locked = 0;
     //// lk.cpu = 0;
