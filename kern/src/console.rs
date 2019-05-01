@@ -3,31 +3,25 @@
 // Output is written to the screen and serial port.
 
 use super::*;
-use spinlock::spinlock;
 use core;
 
 static mut panicked: bool = false;
 
 struct Cons {
-    lock: spinlock,
+    lock: Spinlock,
     locking: i32,
 }
 
 impl Cons {
     const unsafe fn uninit() -> Cons {
         Cons {
-            lock: spinlock::uninit(),
+            lock: Spinlock::uninit(),
             locking: 0,
         }
     }
 }
 
-static mut cons: Cons = Cons::uninit();
-
-//// static struct {
-////   struct spinlock lock;
-////   int locking;
-//// } cons;
+static mut cons: Cons = unsafe { Cons::uninit() };
 
 unsafe fn printint(xx: i32, base: u32, sign: bool) {
     let mut negative = false;
@@ -136,7 +130,7 @@ pub unsafe fn panic(s: *mut str) {
     //// cprintf("cpu %d: panic: ", cpuid());
     //// cprintf(s);
     //// cprintf("\n");
-    getcallerpcs(&s, &mut pcs);
+    getcallerpcs(s as *mut (), &mut pcs);
     //// for(i=0; i<10; i++)
     ////   cprintf(" %p", pcs[i]);
     panicked = true; // freeze other CPU

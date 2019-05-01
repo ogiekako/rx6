@@ -1,19 +1,19 @@
 use super::*;
 
 // Mutual exclusion lock.
-struct spinlock {
+pub struct Spinlock {
     locked: u32, // Is the lock held?
     // For debugging:
-    name: *mut str, // Name of lock.
+    name: *const str, // Name of lock.
     //// cpu: *mut cpu,  // The cpu holding the lock.
     pcs: [u32; 10], // The call stack (an array of program counters)
 }
 
-impl spinlock {
-    fn const uninit() -> spinlock {
-        spinlock {
+impl Spinlock {
+    pub const fn uninit() -> Spinlock {
+        Spinlock {
             locked: 0,
-            name: "",
+            name: "" as *const str,
             pcs: [0; 10]
         }
     }
@@ -21,7 +21,7 @@ impl spinlock {
 
 // Mutual exclusion spin locks.
 
-pub unsafe fn initlock(lk: *mut spinlock, name: *mut str) {
+pub unsafe fn initlock(lk: *mut Spinlock, name: *mut str) {
     (*lk).name = name;
     (*lk).locked = 0;
     //// lk.cpu = 0;
@@ -31,7 +31,7 @@ pub unsafe fn initlock(lk: *mut spinlock, name: *mut str) {
 // Loops (spins) until the lock is acquired.
 // Holding a lock for a long time may cause
 // other CPUs to waste time spinning to acquire it.
-pub unsafe fn acquire(lk: *mut spinlock) {
+pub unsafe fn acquire(lk: *mut Spinlock) {
     pushcli(); // disable interrupts to avoid deadlock.
 
     //// if holding(lk) {
@@ -39,38 +39,18 @@ pub unsafe fn acquire(lk: *mut spinlock) {
     //// }
 
     // The xchg is atomic.
-    while (xchg((*lk).locked, 1) != 0) {}
+    while (xchg(&mut (*lk).locked as *mut u32, 1) != 0) {}
 
     // Tell the C compiler and the processor to not move loads or stores
     // past this point, to ensure that the critical section's memory
     // references happen after the lock is acquired.
-    __sync_synchronize();
+    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
     // Record info about lock acquisition for debugging.
     //// lk->cpu = cpu;
     //// getcallerpcs(&lk, lk->pcs);
 }
-//// void
-//// acquire(struct spinlock *lk)
-//// {
-////   pushcli(); // disable interrupts to avoid deadlock.
-////   if(holding(lk))
-////     panic("acquire");
-////
-////   // The xchg is atomic.
-////   while(xchg(&lk->locked, 1) != 0)
-////     ;
-////
-////   // Tell the C compiler and the processor to not move loads or stores
-////   // past this point, to ensure that the critical section's memory
-////   // references happen after the lock is acquired.
-////   __sync_synchronize();
-////
-////   // Record info about lock acquisition for debugging.
-////   lk->cpu = cpu;
-////   getcallerpcs(&lk, lk->pcs);
-//// }
-////
+
 //// // Release the lock.
 //// void
 //// release(struct spinlock *lk)
@@ -101,11 +81,11 @@ pub unsafe fn getcallerpcs(v: *mut (), pcs: &mut [u32]) {
     let mut ebp = (v as *mut u32).offset(-2);
     let mut i = 0;
     while i < 10 {
-        if ebp == 0 || ebp < KERNBASE as *mut u32 || ebp == (0xffffffff as *mut u32) {
+        if ebp == core::ptr::null_mut() || ebp < KERNBASE.0 as *mut u32 || ebp == (0xffffffff as *mut u32) {
             break;
         }
-        pcs[i] = ebp[1]; // saved %eip
-        ebp = ebp[0] as *mut u32; // saved %ebp
+        pcs[i] = *(ebp.offset(1)) as u32; // saved %eip
+        ebp = (*ebp) as *mut u32; // saved %ebp
         i += 1;
     }
 

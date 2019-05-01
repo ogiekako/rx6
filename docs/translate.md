@@ -35,6 +35,8 @@ int  -> i32
   - p.offset
   - ptr::copy() の使用
   - See [`core::ptr`].
+  - p = `*u32` の場合、p[1] は、`*(p.offset(1))`
+  - 0 との比較は、`ptr::null_mut()` に置き換え
 
 - #[repr(C)] を使う.
   - 構造体に対して offset でアクセスしているコードを正しく動かすには、#[repr(C)] をつけましょう。
