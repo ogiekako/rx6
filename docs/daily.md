@@ -8,6 +8,8 @@ Default で move semantics であることが、C の default は copy である
 14:33 - 休憩。
 15:45 - 再開。macbook になった。
 
+const_transmute feature により、core::mem::transmute が const になったので、static 変数の初期化が楽になった。
+
 
 # 2019-04-30
 
