@@ -1,5 +1,6 @@
 # 2019-04-30
 
+
 Bcache の initial value を定義するのに、const fn 内で使える array! macro ないのかなと思ったけど、わからなかった。これは TODO にしておく。arr! は良さそうに見えたが、no_std でそのままでは動かなかった。build 時のみの依存とかはできないのかな。
 
 ついにエラーなくロックを突破できた。
@@ -24,7 +25,15 @@ const transmute は実は feature としてはあるのか…… file:///home/ok
 
   spinlock の `__sync_synchronize();` を翻訳しようとしている。おそらく、core::sync::atomic::fence を使えばよい。
 まず、そもそもここでどうして atomic fence が必要なのかを理解する。その次に、fench に与える Ordering それぞれの意味を理解し、
-`__sync__synchronize` が対応するものを判断する。
+`__sync_synchronize` が対応するものを判断する。
+
+`__sync_synchronize` が保証しているのは、lock を取る前に、読み取りが発生しないこと。これがないと、コンパイラは、lock を取る前に、それが保護しているものを
+
+Linux kernel memory barrier についての文章が見つかった。https://www.kernel.org/doc/Documentation/memory-barriers.txt
+
+https://en.wikipedia.org/wiki/Memory_barrier をまずは読もう。
+
+基本的に、コンパイラは、single thread を仮定した optimize を自由にできる。つまり、無関係に見える２つの statement を入れ替えてよい。しかし、これは、lock の文脈では問題である。lock を取ることと、それによって守られる領域の使用は、逆順になってしまうと、ciritcal section の invariant が守られなくなってしまう。よって、lock の取得の直後には、memory fence が必要である。(fence と barrier はおそらく同じ意味)
 
 # 2019-04-29
 
