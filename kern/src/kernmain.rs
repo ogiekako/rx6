@@ -14,7 +14,7 @@ pub unsafe fn kernmain() {
     uartinit(); // serial port (Outputs "xv6...")
     tvinit(); // trap vectors
     binit(); // buffer cache
-    fileinit(); // file table (TODO)
+    fileinit(); // file table
     ideinit(); // disk (TODO)
     assert!(ismp);
     // if(!ismp)

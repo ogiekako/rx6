@@ -6,15 +6,15 @@ pub enum FileType {
     FD_INODE,
 }
 
-struct File {
-    _type: FileType,
-    _ref: i32, // reference count
+pub struct File {
+    pub _type: FileType,
+    pub _ref: i32, // reference count
 
-   readable: u8,
-   writable: u8,
-  //// struct pipe *pipe;
-  //// struct inode *ip;
-  off: u32,
+    pub readable: u8,
+    pub writable: u8,
+    //// struct pipe *pipe;
+    //// struct inode *ip;
+    pub off: u32,
 }
 
 ////
@@ -68,10 +68,15 @@ pub struct Ftable {
 }
 
 impl Ftable {
+    pub const unsafe fn uninit() -> Ftable {
+        Ftable {
+            lock: Spinlock::uninit(),
+            file: core::mem::transmute([0u8; core::mem::size_of::<[File; NFILE]>()]),
+        }
+    }
 }
 
 pub static mut ftable: Ftable = unsafe { Ftable::uninit() };
-
 
 pub unsafe fn fileinit() {
     initlock(&mut ftable.lock as *mut Spinlock, "ftable");

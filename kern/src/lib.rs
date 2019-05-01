@@ -1,6 +1,7 @@
 #![feature(lang_items, asm)]
 #![feature(const_fn)]
 #![feature(ptr_offset_from)]
+#![feature(const_transmute)]
 #![no_std]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
