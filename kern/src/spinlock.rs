@@ -16,7 +16,7 @@ impl Spinlock {
         Spinlock {
             locked: 0,
             name: "" as *const str,
-            pcs: [0; 10]
+            pcs: [0; 10],
         }
     }
 }
@@ -54,28 +54,27 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
 }
 
 // Release the lock.
-pub unsafe fn release(lk: *mut Spinlock)
-{
-  //// if !holding(lk) {
-  ////   panic("release");
-  //// }
+pub unsafe fn release(lk: *mut Spinlock) {
+    //// if !holding(lk) {
+    ////   panic("release");
+    //// }
 
-  (*lk).pcs[0] = 0;
-  //// lk.cpu = 0;
+    (*lk).pcs[0] = 0;
+    //// lk.cpu = 0;
 
-  // Tell the C compiler and the processor to not move loads or stores
-  // past this point, to ensure that all the stores in the critical
-  // section are visible to other cores before the lock is released.
-  // Both the C compiler and the hardware may re-order loads and
-  // stores; __sync_synchronize() tells them both not to.
-  atomic::fence(atomic::Ordering::SeqCst);
+    // Tell the C compiler and the processor to not move loads or stores
+    // past this point, to ensure that all the stores in the critical
+    // section are visible to other cores before the lock is released.
+    // Both the C compiler and the hardware may re-order loads and
+    // stores; __sync_synchronize() tells them both not to.
+    atomic::fence(atomic::Ordering::SeqCst);
 
-  // Release the lock, equivalent to lk->locked = 0.
-  // This code can't use a C assignment, since it might
-  // not be atomic. A real OS would use C atomics here.
-  asm!("movl $0, %0" : "+m" ((*lk).locked) : :::"volatile");
+    // Release the lock, equivalent to lk->locked = 0.
+    // This code can't use a C assignment, since it might
+    // not be atomic. A real OS would use C atomics here.
+    asm!("movl $0, %0" : "+m" ((*lk).locked) : :::"volatile");
 
-  popcli();
+    popcli();
 }
 
 // Record the current call stack in pcs[] by following the %ebp chain.
@@ -83,7 +82,10 @@ pub unsafe fn getcallerpcs(v: *mut (), pcs: &mut [u32]) {
     let mut ebp = (v as *mut u32).offset(-2);
     let mut i = 0;
     while i < 10 {
-        if ebp == core::ptr::null_mut() || ebp < KERNBASE.0 as *mut u32 || ebp == (0xffffffff as *mut u32) {
+        if ebp == core::ptr::null_mut()
+            || ebp < KERNBASE.0 as *mut u32
+            || ebp == (0xffffffff as *mut u32)
+        {
             break;
         }
         pcs[i] = *(ebp.offset(1)) as u32; // saved %eip
@@ -109,10 +111,10 @@ pub unsafe fn getcallerpcs(v: *mut (), pcs: &mut [u32]) {
 pub unsafe fn pushcli() {
     let eflags = readeflags();
     cli();
-    if (mycpu().ncli == 0) {
-        mycpu().intena = (eflags & FL_IF) as i32;
+    if ((*mycpu()).ncli == 0) {
+        (*mycpu()).intena = (eflags & FL_IF) as i32;
     }
-    mycpu().ncli += 1;
+    (*mycpu()).ncli += 1;
 }
 
 pub fn popcli() {
@@ -120,11 +122,11 @@ pub fn popcli() {
         if (readeflags() & FL_IF > 0) {
             panic!("popcli - interruptible");
         }
-        (mycpu()).ncli -= 1;
-        if ((mycpu()).ncli < 0) {
+        (*mycpu()).ncli -= 1;
+        if ((*mycpu()).ncli < 0) {
             panic!("popcli");
         }
-        if ((mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
+        if ((*mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
             sti();
         }
     }

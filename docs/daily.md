@@ -11,6 +11,56 @@ Default で move semantics であることが、C の default は copy である
 const_transmute feature により、core::mem::transmute が const になったので、static 変数の初期化が楽になった。
 
 
+startothers を翻訳するにあたり、extern をどうするか考える。
+まず、xv6 でこれがどういう意味でなぜ使われているのかを理解する。
+
+`main.c` にある、`extern _binary_entryother_start` ってなにかと思ったが、これは、linker が自動生成する変数っぽい。??
+
+```
+>-$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
+```
+
+上記の、option において、途中に -b binary がはさまっている。
+-b の手前までは、i386 elf binary として解釈され、それ以降は、binary として解釈される。
+linker が binary をどう解釈するんだ？
+
+16:41 - 場所を移動。
+16:56 - 再開。
+
+-b で指定できるのは、[BFD library] で規定されているもの。
+[BFD library]: https://en.wikipedia.org/wiki/Binary_File_Descriptor_library
+objdump -i で使用可能なリストを取得できる。
+
+おそらく、ld は binary を解釈せず、たんに後ろにつなげる？
+[Embedding Blobs in Binaries](https://gareus.org/wiki/embedding_resources_in_executables) というブログによるとそう。
+
+ld -r -b binary -o x.o x とすると、x のデータが、.data section に収められた、elf relocatable object file ができあがる。さらに、
+`_binary_x_start, _binary_x_end, _binary_x_size` 変数が定義される。
+この自動生成される定数について、リファレンスのどこに書かれているかが見つからない。なにをやっているかはわかったので一旦それを探すのは保留にしよう。
+対応する gold のソースコードをみつけた。(_FILENAME_ で検索)
+http://ftp.netbsd.org/pub/NetBSD/NetBSD-current/src/external/gpl3/binutils/dist/gold/binary.cc
+
+さて、binary が埋め込まれるのはわかった。それを xv6 はどのように利用しているのだろうか？
+
+17:24 - 休憩。(場所を移動)
+17:36 - 再開
+
+entryother は、bootblockyother.o の .text 部分のみを取り出したもの。
+0x7000 にそれを貼り付けて、0x7000 に飛べば動くように Makefile の entryother section で、entryother.S から作られている。
+
+0x7000 から始まるメモリ領域(とそのまえの entrypgdir 用の領域) が unused であることをみこしている。
+
+17:59 - トイレ行く
+18:26 - 再開。休憩し過ぎ感。
+
+kalloc が Option を返すようになってる... これももとに戻そう...
+
+```
+    xchg(&mut ((*mycpu()).started) as *mut u32, 1); // tell startothers() we're up
+```
+
+Rust compiler の ICE を踏んでしまったぽい。
+
 # 2019-04-30
 
 Bcache の initial value を定義するのに、const fn 内で使える array! macro ないのかなと思ったけど、わからなかった。これは TODO にしておく。arr! は良さそうに見えたが、no_std でそのままでは動かなかった。build 時のみの依存とかはできないのかな。

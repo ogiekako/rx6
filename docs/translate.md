@@ -7,6 +7,7 @@ int  -> i32
 
 # How to translate C to Rust
 
+
 - すべてが unsafe
 - すべてが public
   - `fn` ではなく、`pub unsafe fn` と書きましょう
@@ -28,7 +29,15 @@ int  -> i32
   - 初期化されていないばあいなど、予期せぬ UB, Drop が発生する危険。具体例？
   - cast が発生しまくるが割り切る。
 
-- 初期化されていないリファレンスには、MaybeUninit を使う
+- `__sync_synchronize` は、`core::sync::atomic::fence(SeqCst)` .
+
+- function pointer は、`&(mpenter as unsafe fn()) as *const unsafe fn() as usize` のようにすれば作れる。
+
+- static mut の初期化は feature const_transmute を有効化して、`core::mem::transmute([0u8; size_of<T>()])`.
+
+- extern ?
+
+
 
 - pointer は ptr
 - pointer 型 `*u8` の使用

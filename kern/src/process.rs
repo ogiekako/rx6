@@ -137,7 +137,7 @@ pub unsafe fn cpuid() -> usize {
 
 static mut n: i32 = 0;
 // Must be called with interrupts disabled
-pub unsafe fn mycpu() -> &'static mut Cpu {
+pub unsafe fn mycpu() -> *mut Cpu {
     // Would prefer to panic but even printing is chancy here: almost everything,
     // including cprintf and panic, calls mycpu(), often indirectly through
     // acquire and release.
@@ -150,7 +150,7 @@ pub unsafe fn mycpu() -> &'static mut Cpu {
         }
     }
 
-    return &mut cpus[lapiccpunum()];
+    return &mut cpus[lapiccpunum()] as *mut Cpu;
 }
 
 // Disable interrupts so that we are not rescheduled
@@ -158,7 +158,7 @@ pub unsafe fn mycpu() -> &'static mut Cpu {
 pub unsafe fn myproc() -> &'static mut Proc {
     pushcli();
     let c = mycpu();
-    let p = c.process;
+    let p = (*c).process;
     popcli();
     return &mut *p;
 }

@@ -21,7 +21,6 @@ pub static mut idelock: Spinlock = unsafe { Spinlock::uninit() };
 pub static mut idequeue: *mut Buf = unsafe { core::ptr::null_mut() };
 
 static mut havedisk1: i32 = 0;
-//// static void idestart(struct buf*);
 
 // Wait for IDE disk to become ready.
 pub unsafe fn idewait(checkerr: i32) -> i32 {

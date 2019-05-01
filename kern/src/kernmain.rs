@@ -27,55 +27,69 @@ pub unsafe fn kernmain() {
     loop {}
 }
 
-// // Other CPUs jump here from entryother.S.
-//// static void
-//// mpenter(void)
-//// {
-////   switchkvm();
-////   seginit();
-////   lapicinit();
-////   mpmain();
-//// }
+// Other CPUs jump here from entryother.S.
+pub unsafe fn mpenter() {
+    switchkvm();
+    seginit();
+    lapicinit();
+    mpmain();
+}
 
 // Common CPU setup code.
-fn mpmain() {
+pub unsafe fn mpmain() {
     //// cprintf("cpu%d: starting %d\n", cpuid(), cpuid());
-    ////  idtinit();       // load idt register
-    ////  xchg(&(mycpu()->started), 1); // tell startothers() we're up
-    ////  scheduler();     // start running processes
+    //// idtinit();       // load idt register
+    xchg(&mut ((*mycpu()).started) as *mut u32, 1); // tell startothers() we're up
+                                                    //// scheduler();     // start running processes
+}
+
+extern "C" {
+    static mut _binary_entryother_start: *mut u8;
+    static mut _binary_entryother_size: *mut u8;
+    static mut entrypgdir: *mut u8;
 }
 
 // Start the non-boot (AP) processors.
-fn startothers() {
-    ////  extern uchar _binary_entryother_start[], _binary_entryother_size[];
-    ////  uchar *code;
-    ////  struct cpu *c;
-    ////  char *stack;
-    ////
-    ////  // Write entry code to unused memory at 0x7000.
-    ////  // The linker has placed the image of entryother.S in
-    ////  // _binary_entryother_start.
-    ////  code = P2V(0x7000);
-    ////  memmove(code, _binary_entryother_start, (uint)_binary_entryother_size);
-    ////
-    ////  for(c = cpus; c < cpus+ncpu; c++){
-    ////    if(c == mycpu())  // We've started already.
-    ////      continue;
-    ////
-    ////    // Tell entryother.S what stack to use, where to enter, and what
-    ////    // pgdir to use. We cannot use kpgdir yet, because the AP processor
-    ////    // is running in low  memory, so we use entrypgdir for the APs too.
-    ////    stack = kalloc();
-    ////    *(void**)(code-4) = stack + KSTACKSIZE;
-    ////    *(void**)(code-8) = mpenter;
-    ////    *(int**)(code-12) = (void *) V2P(entrypgdir);
-    ////
-    ////    lapicstartap(c->apicid, V2P(code));
-    ////
-    ////    // wait for cpu to finish mpmain()
-    ////    while(c->started == 0)
-    ////      ;
-    ////  }
+unsafe fn startothers() {
+    let mut code: *mut u8;
+    let mut stack: *mut i8;
+
+    // Write entry code to unused memory at 0x7000.
+    // The linker has placed the image of entryother.S in
+    // _binary_entryother_start.
+    code = p2v(P(0x7000)).0 as *mut u8;
+    memmove(
+        code,
+        _binary_entryother_start,
+        _binary_entryother_size as usize,
+    );
+
+    for i in 0..ncpu {
+        let mut c = &mut cpus[i] as *mut Cpu;
+        if c == mycpu() {
+            // We've started already.
+            continue;
+        }
+        // Tell entryother.S what stack to use, where to enter, and what
+        // pgdir to use. We cannot use kpgdir yet, because the AP processor
+        // is running in low  memory, so we use entrypgdir for the APs too.
+        let mut stack = kalloc().unwrap();
+        core::ptr::write(code.offset(-4) as *mut usize, stack.0 + KSTACKSIZE);
+        core::ptr::write(
+            code.offset(-8) as *mut usize,
+            &(mpenter as unsafe fn()) as *const unsafe fn() as usize,
+        );
+        core::ptr::write(
+            code.offset(-12) as *mut u32,
+            v2p(V(entrypgdir as usize)).0 as u32,
+        );
+
+        //// lapicstartap((*c).apicid, v2p(code));
+
+        // wait for cpu to finish mpmain()
+        while ((*c).started == 0) {}
+        c = c.offset(1);
+    }
 }
 
 // // The boot page table used in entry.S and entryother.S.

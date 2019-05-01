@@ -35,7 +35,7 @@ pub unsafe fn seginit() {
 // for use in scheduler()
 static mut kpgdir: PageDir = PageDir { pd: V(0) };
 
-struct PageDir {
+pub struct PageDir {
     pd: V, // [pd, pd+PGSIZE)
 }
 
@@ -43,7 +43,7 @@ impl PageDir {
     // Return the address of the PTE in page table pgdir
     // that corresponds to virtual address va.  If alloc!=0,
     // create any required page table pages.
-    unsafe fn walkpgdir(&mut self, va: V, alloc: bool) -> Option<V> {
+    pub unsafe fn walkpgdir(&mut self, va: V, alloc: bool) -> Option<V> {
         let pde = (self.pd.0 + va.pdx() * 4) as *mut PTE;
         let mut pgtab: V;
         if ((*pde).0 & PTE_P > 0) {
@@ -78,7 +78,7 @@ impl PageDir {
     // physical addresses starting at pa. va and size might not
     // be page-aligned.
     // returns success or not.
-    unsafe fn mappages(&mut self, va: V, size: usize, mut pa: P, perm: usize) -> bool {
+    pub unsafe fn mappages(&mut self, va: V, size: usize, mut pa: P, perm: usize) -> bool {
         {
             assert!(size > 0);
 
@@ -127,7 +127,7 @@ impl PageDir {
 
 // This table defines the kernel's mappings, which are present in
 // every process's page table.
-struct Kmap {
+pub struct Kmap {
     virt: V,
     phys_start: P,
     phys_end: P,
@@ -135,7 +135,7 @@ struct Kmap {
 }
 
 impl Kmap {
-    fn new(virt: V, phys_start: P, phys_end: P, perm: usize) -> Kmap {
+    pub fn new(virt: V, phys_start: P, phys_end: P, perm: usize) -> Kmap {
         Kmap {
             virt,
             phys_start,
@@ -145,7 +145,7 @@ impl Kmap {
     }
 }
 
-fn kmap() -> [Kmap; 4] {
+pub fn kmap() -> [Kmap; 4] {
     [
         Kmap::new(KERNBASE, P(0), EXTMEM, PTE_W), // I/O space
         Kmap::new(KERNLINK, v2p(KERNLINK), v2p(linker::data()), 0), // kern text+rodata
@@ -155,7 +155,7 @@ fn kmap() -> [Kmap; 4] {
 }
 
 // Set up kernel part of a page table.
-unsafe fn setupkvm() -> Option<PageDir> {
+pub unsafe fn setupkvm() -> Option<PageDir> {
     let p = kalloc();
     if p.is_none() {
         return None;
@@ -192,7 +192,7 @@ pub unsafe fn kvmalloc() {
 
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
-unsafe fn switchkvm() {
+pub unsafe fn switchkvm() {
     lcr3(v2p(kpgdir.pd).0 as u32); // switch to the kernel page table
 }
 
