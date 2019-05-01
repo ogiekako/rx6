@@ -1,5 +1,7 @@
 use super::*;
 
+use core::sync::atomic;
+
 // Mutual exclusion lock.
 pub struct Spinlock {
     locked: u32, // Is the lock held?
@@ -44,37 +46,37 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
     // Tell the C compiler and the processor to not move loads or stores
     // past this point, to ensure that the critical section's memory
     // references happen after the lock is acquired.
-    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
+    atomic::fence(atomic::Ordering::SeqCst);
 
     // Record info about lock acquisition for debugging.
     //// lk->cpu = cpu;
     //// getcallerpcs(&lk, lk->pcs);
 }
 
-//// // Release the lock.
-//// void
-//// release(struct spinlock *lk)
-//// {
-////   if(!holding(lk))
-////     panic("release");
-////
-////   lk->pcs[0] = 0;
-////   lk->cpu = 0;
-////
-////   // Tell the C compiler and the processor to not move loads or stores
-////   // past this point, to ensure that all the stores in the critical
-////   // section are visible to other cores before the lock is released.
-////   // Both the C compiler and the hardware may re-order loads and
-////   // stores; __sync_synchronize() tells them both not to.
-////   __sync_synchronize();
-////
-////   // Release the lock, equivalent to lk->locked = 0.
-////   // This code can't use a C assignment, since it might
-////   // not be atomic. A real OS would use C atomics here.
-////   asm volatile("movl $0, %0" : "+m" (lk->locked) : );
-////
-////   popcli();
-//// }
+// Release the lock.
+pub unsafe fn release(lk: *mut Spinlock)
+{
+  //// if !holding(lk) {
+  ////   panic("release");
+  //// }
+
+  (*lk).pcs[0] = 0;
+  //// lk.cpu = 0;
+
+  // Tell the C compiler and the processor to not move loads or stores
+  // past this point, to ensure that all the stores in the critical
+  // section are visible to other cores before the lock is released.
+  // Both the C compiler and the hardware may re-order loads and
+  // stores; __sync_synchronize() tells them both not to.
+  atomic::fence(atomic::Ordering::SeqCst);
+
+  // Release the lock, equivalent to lk->locked = 0.
+  // This code can't use a C assignment, since it might
+  // not be atomic. A real OS would use C atomics here.
+  asm!("movl $0, %0" : "+m" ((*lk).locked) : :::"volatile");
+
+  popcli();
+}
 
 // Record the current call stack in pcs[] by following the %ebp chain.
 pub unsafe fn getcallerpcs(v: *mut (), pcs: &mut [u32]) {
