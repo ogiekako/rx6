@@ -2,6 +2,11 @@
 
 13:18 - 開始が遅れてしまった。
 
+Default で move semantics であることが、C の default は copy であることで問題を起こしたりしないだろうか。これを防ぐには、すべてに Derive(Copy) をつけておけば良い？
+
+14:33 - 休憩。
+
+
 # 2019-04-30
 
 Bcache の initial value を定義するのに、const fn 内で使える array! macro ないのかなと思ったけど、わからなかった。これは TODO にしておく。arr! は良さそうに見えたが、no_std でそのままでは動かなかった。build 時のみの依存とかはできないのかな。

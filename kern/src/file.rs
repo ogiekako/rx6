@@ -1,12 +1,22 @@
-//// struct file {
-////   enum { FD_NONE, FD_PIPE, FD_INODE } type;
-////   int ref; // reference count
-////   char readable;
-////   char writable;
-////   struct pipe *pipe;
-////   struct inode *ip;
-////   uint off;
-//// };
+use super::*;
+
+pub enum FileType {
+    FD_NONE,
+    FD_PIPE,
+    FD_INODE,
+}
+
+struct File {
+    _type: FileType,
+    _ref: i32, // reference count
+
+   readable: u8,
+   writable: u8,
+  //// struct pipe *pipe;
+  //// struct inode *ip;
+  off: u32,
+}
+
 ////
 ////
 //// // in-memory copy of an inode
@@ -52,13 +62,19 @@
 //// #include "file.h"
 ////
 //// struct devsw devsw[NDEV];
-//// struct {
-////   struct spinlock lock;
-////   struct file file[NFILE];
-//// } ftable;
+pub struct Ftable {
+    pub lock: Spinlock,
+    pub file: [File; NFILE],
+}
+
+impl Ftable {
+}
+
+pub static mut ftable: Ftable = unsafe { Ftable::uninit() };
+
 
 pub unsafe fn fileinit() {
-    //// initlock(&ftable.lock, "ftable");
+    initlock(&mut ftable.lock as *mut Spinlock, "ftable");
 }
 
 //// // Allocate a file structure.
