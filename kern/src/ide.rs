@@ -1,71 +1,62 @@
-// // Simple PIO-based (non-DMA) IDE driver code.
-//
-//// #include "types.h"
-//// #include "defs.h"
-//// #include "param.h"
-//// #include "memlayout.h"
-//// #include "mmu.h"
-//// #include "proc.h"
-//// #include "x86.h"
-//// #include "traps.h"
-//// #include "spinlock.h"
-//// #include "sleeplock.h"
-//// #include "fs.h"
-//// #include "buf.h"
-////
-//// #define SECTOR_SIZE   512
-//// #define IDE_BSY       0x80
-//// #define IDE_DRDY      0x40
-//// #define IDE_DF        0x20
-//// #define IDE_ERR       0x01
-////
-//// #define IDE_CMD_READ  0x20
-//// #define IDE_CMD_WRITE 0x30
-//// #define IDE_CMD_RDMUL 0xc4
-//// #define IDE_CMD_WRMUL 0xc5
-////
-//// // idequeue points to the buf now being read/written to the disk.
-//// // idequeue->qnext points to the next buf to be processed.
-//// // You must hold idelock while manipulating queue.
-////
-//// static struct spinlock idelock;
-//// static struct buf *idequeue;
-////
-//// static int havedisk1;
+use super::*;
+
+// Simple PIO-based (non-DMA) IDE driver code.
+
+const SECTOR_SIZE: u32 = 512;
+const IDE_BSY: u8 = 0x80;
+const IDE_DRDY: u8 = 0x40;
+const IDE_DF: u8 = 0x20;
+const IDE_ERR: u8 = 0x01;
+
+const IDE_CMD_READ: u8 = 0x20;
+const IDE_CMD_WRITE: u8 = 0x30;
+const IDE_CMD_RDMUL: u8 = 0xc4;
+const IDE_CMD_WRMUL: u8 = 0xc5;
+
+// idequeue points to the buf now being read/written to the disk.
+// idequeue->qnext points to the next buf to be processed.
+// You must hold idelock while manipulating queue.
+
+pub static mut idelock: Spinlock = unsafe { Spinlock::uninit() };
+pub static mut idequeue: *mut Buf = unsafe { core::ptr::null_mut() };
+
+static mut havedisk1: i32 = 0;
 //// static void idestart(struct buf*);
-////
-//// // Wait for IDE disk to become ready.
-//// static int
-//// idewait(int checkerr)
-//// {
-////   int r;
-////
-////   while(((r = inb(0x1f7)) & (IDE_BSY|IDE_DRDY)) != IDE_DRDY)
-////     ;
-////   if(checkerr && (r & (IDE_DF|IDE_ERR)) != 0)
-////     return -1;
-////   return 0;
-//// }
+
+// Wait for IDE disk to become ready.
+pub unsafe fn idewait(checkerr: i32) -> i32 {
+    let mut r;
+    loop {
+        r = inb(0x1f7);
+        if r & (IDE_BSY | IDE_DRDY) == IDE_DRDY {
+            break;
+        }
+    }
+
+    if checkerr != 0 && (r & (IDE_DF | IDE_ERR)) != 0 {
+        return -1;
+    }
+    return 0;
+}
 
 pub unsafe fn ideinit() {
-    ////   int i;
-    ////
-    ////   initlock(&idelock, "ide");
-    ////   picenable(IRQ_IDE);
-    ////   ioapicenable(IRQ_IDE, ncpu - 1);
-    ////   idewait(0);
-    ////
-    ////   // Check if disk 1 is present
-    ////   outb(0x1f6, 0xe0 | (1<<4));
-    ////   for(i=0; i<1000; i++){
-    ////     if(inb(0x1f7) != 0){
-    ////       havedisk1 = 1;
-    ////       break;
-    ////     }
-    ////   }
-    ////
-    ////   // Switch back to disk 0.
-    ////   outb(0x1f6, 0xe0 | (0<<4));
+    initlock(&mut idelock as *mut Spinlock, "ide");
+
+    picenable(IRQ_IDE as i32);
+    ioapicenable(IRQ_IDE, ncpu as u32 - 1);
+    idewait(0);
+
+    // Check if disk 1 is present
+    outb(0x1f6, 0xe0 | (1 << 4));
+    for i in 0..1000 {
+        if inb(0x1f7) != 0 {
+            havedisk1 = 1;
+            break;
+        }
+    }
+
+    // Switch back to disk 0.
+    outb(0x1f6, 0xe0 | (0 << 4));
 }
 
 //// // Start the request for b.  Caller must hold idelock.

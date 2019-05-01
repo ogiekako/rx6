@@ -15,7 +15,7 @@ pub unsafe fn kernmain() {
     tvinit(); // trap vectors
     binit(); // buffer cache
     fileinit(); // file table
-    ideinit(); // disk (TODO)
+    ideinit(); // disk
     assert!(ismp);
     // if(!ismp)
     //   timerinit();   // uniprocessor timer (TODO)
