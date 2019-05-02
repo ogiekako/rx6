@@ -31,9 +31,6 @@ trapret はどこ？
       - iinit *
       - initlog *
 
-- userinit
-  - allocproc
-
 # 2019-05-01
 
 13:18 - 開始が遅れてしまった。
