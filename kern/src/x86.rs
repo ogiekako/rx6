@@ -62,19 +62,17 @@ pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
 }
 
 //// struct gatedesc;
-//
-//// static inline void
-//// lidt(struct gatedesc *p, int size)
-//// {
-////   volatile ushort pd[3];
-////
-////   pd[0] = size-1;
-////   pd[1] = (uint)p;
-////   pd[2] = (uint)p >> 16;
-////
-////   asm volatile("lidt (%0)" : : "r" (pd));
-//// }
-//
+
+pub unsafe fn lidt(p: *const Gatedesc, size: i32) {
+    let mut pd: [u16; 3] = [
+        (size - 1) as u16,
+        p as usize as u16,
+        ((p as usize) >> 16) as u16,
+    ];
+
+    asm!("lidt ($0)" : : "r" (&pd) : : "volatile");
+}
+
 //// static inline void
 //// ltr(ushort sel)
 //// {

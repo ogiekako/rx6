@@ -39,6 +39,7 @@ int  -> i32
 
 
 
+
 - pointer は ptr
 - pointer 型 `*u8` の使用
   - p.offset
@@ -46,6 +47,7 @@ int  -> i32
   - See [`core::ptr`].
   - p = `*u32` の場合、p[1] は、`*(p.offset(1))`
   - 0 との比較は、`ptr::null_mut()` に置き換え
+  - 関数ポインタ. fn foo() のポインタをとるには、foo as *const fn();  でよい。
 
 - #[repr(C)] を使う.
   - 構造体に対して offset でアクセスしているコードを正しく動かすには、#[repr(C)] をつけましょう。

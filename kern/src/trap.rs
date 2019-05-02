@@ -30,11 +30,9 @@ pub unsafe fn tvinit() {
     //// initlock(&tickslock, "time");
 }
 
-//// pub unsafe fn
-//// idtinit(void)
-//// {
-////   lidt(idt, sizeof(idt));
-//// }
+pub unsafe fn idtinit() {
+    lidt(&idt as *const Gatedesc, core::mem::size_of_val(&idt) as i32);
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn trap(tf: *mut Trapframe) {

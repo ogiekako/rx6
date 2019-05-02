@@ -37,31 +37,37 @@ pub unsafe fn mpenter() {
 
 // Common CPU setup code.
 pub unsafe fn mpmain() {
-    //// cprintf("cpu%d: starting %d\n", cpuid(), cpuid());
-    //// idtinit();       // load idt register
+    cprintf(
+        "cpu%d: starting %d\n",
+        &[Arg::Int(cpuid() as i32), Arg::Int(cpuid() as i32)],
+    );
+    idtinit(); // load idt register
     xchg(&mut ((*mycpu()).started) as *mut u32, 1); // tell startothers() we're up
                                                     //// scheduler();     // start running processes
 }
 
 extern "C" {
-    static mut _binary_entryother_start: *mut u8;
-    static mut _binary_entryother_size: *mut u8;
-    static mut entrypgdir: *mut u8;
+    static mut _binary_entryother_start: u8;
+    static mut _binary_entryother_size: u8;
+    static mut entrypgdir: u8;
 }
+
+// unsafe fn hoge() -> usize {
+//     &_binary_entryother_size as *const () as usize
+// }
 
 // Start the non-boot (AP) processors.
 unsafe fn startothers() {
-    let mut code: *mut u8;
     let mut stack: *mut i8;
 
     // Write entry code to unused memory at 0x7000.
     // The linker has placed the image of entryother.S in
     // _binary_entryother_start.
-    code = p2v(P(0x7000)).0 as *mut u8;
+    let code = p2v(P(0x7000)).0 as *mut u8;
     memmove(
         code,
-        _binary_entryother_start,
-        _binary_entryother_size as usize,
+        &_binary_entryother_start as *const u8,
+        &_binary_entryother_size as *const u8 as usize,
     );
 
     for i in 0..ncpu {
@@ -77,11 +83,11 @@ unsafe fn startothers() {
         core::ptr::write(code.offset(-4) as *mut usize, stack.0 + KSTACKSIZE);
         core::ptr::write(
             code.offset(-8) as *mut usize,
-            &(mpenter as unsafe fn()) as *const unsafe fn() as usize,
+            mpenter as *const unsafe fn() as usize,
         );
         core::ptr::write(
             code.offset(-12) as *mut u32,
-            v2p(V(entrypgdir as usize)).0 as u32,
+            v2p(V(&entrypgdir as *const u8 as usize)).0 as u32,
         );
 
         lapicstartap((*c).apicid, v2p(V(code as usize)).0 as u32);

@@ -1,5 +1,69 @@
+ 2019-05-02 14:39
+
+```
+=> 0x8011c2c2 <kern::kernmain::startothers+114>:        mov    -0x20(%eax),%ecx
+0x8011c2c2      66              core::mem::transmute(_binary_entryother_start),
+(gdb)
+=> 0x8011c2c8 <kern::kernmain::startothers+120>:        mov    (%ecx),%ecx
+67              core::mem::transmute(_binary_entryother_size),
+(gdb)
+
+The target architecture is assumed to be i8086
+```
+
+`_binary_entryother_size` を読み出す時点で落ちている？
+`_binary_entryother_*` は、address を読まないといけなかった。なおした。
+
+(gdb)
+=> 0x8011c4c0 <kern::kernmain::startothers+624>:        mov    (%ecx),%ecx
+93                  v2p(V(entrypgdir as usize)).0 as u32,
+(gdb)
+
+で無限ループになっている。
+
+^C
+Thread 1 received signal SIGINT, Interrupt.
+=> 0x80100058 <rust_begin_unwind+8>:    jmp    0x80100058 <rust_begin_unwind+8>
+rust_begin_unwind (info=0x80153520 <stack+3488>) at src/lib.rs:86
+86          loop {}
+
+p2v でおかしくなる？
+
+assert! で落ちているのか……。
+
+```
+=> 0x8011c4c0 <kern::kernmain::startothers+624>:        mov    (%ecx),%ecx
+92                  v2p(V(entrypgdir as usize)).0 as u32,
+```
+
+なるほど、entrypgdir は extern されているからか。
+
+(gdb) print entrypgdir
+$1 = 0x80146000 <entrypgdir>
+
+複数 thread の
+
+thread 2 も起動するようになったぽい？
+gdb で multithread のデバッグをする方法を学んだほうがよさそう。
+
+- [1] http://www.sourceware.org/gdb/current/onlinedocs/gdb/Threads.html
+- [2] https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/4/html/Debugging_with_gdb/threads.html
+- [3] http://www.drdobbs.com/cpp/multithreaded-debugging-techniques/199200938?pgno=6
+ 
+とりあえず、上記を読む。
+
+gdb
+
+- info threads
+- thread `id`  - switch thread
+- thread apply `id` args - apply command to the thread.
+- set print thread-events
+
+`break buffer.c:33 thread 7 if level > watermark` のように書ける。[3]
 
 
+lapicstartap は機能して、thread 2 が走りはじめている。
+0x7000 にでも breakpoint しかければいいのかな。
 
 # 2019-04-29 13:02 (done)
 
