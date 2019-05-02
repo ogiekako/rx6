@@ -226,28 +226,32 @@ pub unsafe fn userinit() {
         &mut _binary_initcode_start,
         &_binary_initcode_size as *const u8 as u32,
     );
-    //// p->sz = PGSIZE;
-    //// memset(p->tf, 0, sizeof(*p->tf));
-    //// p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
-    //// p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
-    //// p->tf->es = p->tf->ds;
-    //// p->tf->ss = p->tf->ds;
-    //// p->tf->eflags = FL_IF;
-    //// p->tf->esp = PGSIZE;
-    //// p->tf->eip = 0;  // beginning of initcode.S
-    ////
-    //// safestrcpy(p->name, "initcode", sizeof(p->name));
-    //// p->cwd = namei("/");
-    ////
-    //// // this assignment to p->state lets other cores
-    //// // run this process. the acquire forces the above
-    //// // writes to be visible, and the lock is also needed
-    //// // because the assignment might not be atomic.
-    //// acquire(&ptable.lock);
-    ////
-    //// p->state = RUNNABLE;
-    ////
-    //// release(&ptable.lock);
+    (*p).sz = PGSIZE as u32;
+    memset((*p).tf as *mut u8, 0, core::mem::size_of_val(&(*(*p).tf)));
+    (*(*p).tf).cs = (SEG_UCODE << 3) as u16 | DPL_USER as u16;
+    (*(*p).tf).ds = (SEG_UDATA << 3) as u16 | DPL_USER as u16;
+    (*(*p).tf).es = (*(*p).tf).ds;
+    (*(*p).tf).ss = (*(*p).tf).ds;
+    (*(*p).tf).eflags = FL_IF;
+    (*(*p).tf).esp = PGSIZE as u32;
+    (*(*p).tf).eip = 0; // beginning of initcode.S
+
+    safestrcpy(
+        ((*p).name).as_mut_ptr(),
+        "initcode\0".as_ptr(),
+        core::mem::size_of_val(&(*p).name) as i32,
+    );
+    //// (*p).cwd = namei("/");
+
+    // this assignment to p->state lets other cores
+    // run this process. the acquire forces the above
+    // writes to be visible, and the lock is also needed
+    // because the assignment might not be atomic.
+    acquire(&mut ptable.lock as *mut Spinlock);
+
+    (*p).state = RUNNABLE;
+
+    release(&mut ptable.lock as *mut Spinlock);
 }
 
 // // Grow current process's memory by n bytes.

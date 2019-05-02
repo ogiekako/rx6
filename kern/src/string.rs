@@ -82,21 +82,28 @@ pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) {
 ////     *s++ = 0;
 ////   return os;
 //// }
-//
-// // Like strncpy but guaranteed to NUL-terminate.
-//// char*
-//// safestrcpy(char *s, const char *t, int n)
-//// {
-////   char *os;
-////
-////   os = s;
-////   if(n <= 0)
-////     return os;
-////   while(--n > 0 && (*s++ = *t++) != 0)
-////     ;
-////   *s = 0;
-////   return os;
-//// }
+
+// Like strncpy but guaranteed to NUL-terminate.
+pub unsafe fn safestrcpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
+    let mut os = s;
+    if n <= 0 {
+        return os;
+    }
+    loop {
+        n -= 1;
+        if n <= 0 {
+            break;
+        }
+        *s = *t;
+        if *s == 0 {
+            break;
+        }
+        s = s.offset(1);
+        t = t.offset(1);
+    }
+    *s = 0;
+    os
+}
 //
 //// int
 //// strlen(const char *s)

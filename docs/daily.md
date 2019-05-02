@@ -31,10 +31,12 @@ trapret はどこ？
       - iinit *
       - initlog *
   - inituvm (vm.rs)
-    - mappages *
+    - mappages
   - initcode (initcode.S)
+  - namei *
+  - safestrcpy
 
-initcode.S の SYS_exec が存在しない。これどうしようかな。
+initcode.S の SYS_exec が存在しない。これどうしようかな。必要なとこだけ header でいいや。どうせ対して使わないし。
 
 
 # 2019-05-01

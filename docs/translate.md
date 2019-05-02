@@ -58,3 +58,7 @@ int  -> i32
 - ownership エラーは `core::mem::transmute()`, `core::mem::transmute_copy で回避` - これはなるべく避けたい。(型自体を変換する必要があることはそんなにないはず……)
 
 - 暗黙の型変換用に into() を定義する
+
+- 文字列の扱い。Rust の str は null terminate になっているとは限らない。
+    - s="hoge"; t="piyo" みたいにやって、strings すると hogepiyo と出る
+    - "hoge\0".as_ptr() とするとよい。

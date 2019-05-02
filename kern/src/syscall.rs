@@ -32,13 +32,13 @@ pub const SYS_close: usize = 21;
 
 pub const SYS_num: usize = 22;
 
-// // User code makes a system call with INT T_SYSCALL.
-// // System call number in %eax.
-// // Arguments on the stack, from the user call to the C
-// // library system call function. The saved user %esp points
-// // to a saved program counter, and then the first argument.
-//
-// // Fetch the int at addr from the current process.
+// User code makes a system call with INT T_SYSCALL.
+// System call number in %eax.
+// Arguments on the stack, from the user call to the C
+// library system call function. The saved user %esp points
+// to a saved program counter, and then the first argument.
+
+// Fetch the int at addr from the current process.
 //// pub unsafe fn fetchint(uint addr, int *ip) -> i32
 //// {
 ////   struct proc *curproc = myproc();
