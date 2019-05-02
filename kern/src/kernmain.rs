@@ -19,7 +19,7 @@ pub unsafe fn kernmain() {
     assert!(ismp);
     // if(!ismp)
     //   timerinit();   // uniprocessor timer (TODO)
-    startothers(); // start other processors (TODO)
+    startothers(); // start other processors
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
     userinit(); // first user process (TODO)
     mpmain(); // finish this processor's setup (TODO)

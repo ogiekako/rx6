@@ -5,6 +5,13 @@
 x86 環境で test を走らせたくなってきた。
 
 starting thread 1 の表示までできた。
+thread が正常に走っている？
+
+line count でいうとまだまだ。
+
+まず、ptable が Mutex で守られているのをもとに戻す。
+
+userinit をコンパイルしようとしている。
 
 # 2019-05-01
 

@@ -92,19 +92,11 @@ pub struct Proc {
 // TODO: fix
 unsafe impl Send for Proc {}
 
-// // Process memory is laid out contiguously, low addresses first:
-// //   text
-// //   original data and bss
-// //   fixed-size stack
-// //   expandable heap
-//// #include "types.h"
-//// #include "defs.h"
-//// #include "param.h"
-//// #include "memlayout.h"
-//// #include "mmu.h"
-//// #include "x86.h"
-//// #include "proc.h"
-//// #include "spinlock.h"
+// Process memory is laid out contiguously, low addresses first:
+//   text
+//   original data and bss
+//   fixed-size stack
+//   expandable heap
 
 lazy_static! {
     static ref ptable: Mutex<[Proc; NPROC]> = Mutex::new(unsafe { core::mem::zeroed() });
@@ -120,13 +112,9 @@ mod tests {
     }
 }
 
-// static struct proc *initproc;
-//
-// int nextpid = 1;
-// extern void forkret(void);
-// extern void trapret(void);
-//
-// static void wakeup1(void *chan);
+pub static mut initproc: *mut Proc = unsafe { core::ptr::null_mut() };
+
+pub static mut nextpid: u32 = 1;
 
 // Must be called with interrupts disabled
 pub unsafe fn cpuid() -> usize {
@@ -214,7 +202,7 @@ pub unsafe fn myproc() -> &'static mut Proc {
 
 // Set up first user process.
 pub unsafe fn userinit() {
-    ////  struct proc *p;
+    let p: *mut Proc;
     ////  extern char _binary_initcode_start[], _binary_initcode_size[];
     ////
     ////  p = allocproc();
