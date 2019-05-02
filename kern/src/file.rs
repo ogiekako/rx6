@@ -22,7 +22,7 @@ pub struct Inode {
     pub dev: usize,  // Device number
     pub inum: usize, // Inode number
     pub ref_: i32,   // Reference count
-    //// lock: Sleeplock,
+    pub lock: Sleeplock,
     pub flags: i32, // I_VALID
 
     pub type_: i16, // copy of disk inode

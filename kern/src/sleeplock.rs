@@ -1,67 +1,48 @@
+use super::*;
 // sleeplock.h
 
-//// // Long-term locks for processes
-//// struct sleeplock {
-////   uint locked;       // Is the lock held?
-////   struct spinlock lk; // spinlock protecting this sleep lock
-////
-////   // For debugging:
-////   char *name;        // Name of lock.
-////   int pid;           // Process holding lock
-//// };
+// Long-term locks for processes
+pub struct Sleeplock {
+    pub locked: usize, // Is the lock held?
+    pub lk: Spinlock,  // spinlock protecting this sleep lock
+
+    // For debugging:
+    pub name: *const u8, // Name of lock.
+    pub pid: i32,        // Process holding lock
+}
 
 // sleeplock.c
 
-//// // Sleeping locks
-////
-//// #include "types.h"
-//// #include "defs.h"
-//// #include "param.h"
-//// #include "x86.h"
-//// #include "memlayout.h"
-//// #include "mmu.h"
-//// #include "proc.h"
-//// #include "spinlock.h"
-//// #include "sleeplock.h"
-////
-//// void
-//// initsleeplock(struct sleeplock *lk, char *name)
-//// {
-////   initlock(&lk->lk, "sleep lock");
-////   lk->name = name;
-////   lk->locked = 0;
-////   lk->pid = 0;
-//// }
-////
-//// void
-//// acquiresleep(struct sleeplock *lk)
-//// {
-////   acquire(&lk->lk);
-////   while (lk->locked) {
-////     sleep(lk, &lk->lk);
-////   }
-////   lk->locked = 1;
-////   lk->pid = proc->pid;
-////   release(&lk->lk);
-//// }
-////
-//// void
-//// releasesleep(struct sleeplock *lk)
-//// {
-////   acquire(&lk->lk);
-////   lk->locked = 0;
-////   lk->pid = 0;
-////   wakeup(lk);
-////   release(&lk->lk);
-//// }
-////
-//// int
-//// holdingsleep(struct sleeplock *lk)
-//// {
-////   int r;
-////
-////   acquire(&lk->lk);
-////   r = lk->locked;
-////   release(&lk->lk);
-////   return r;
-//// }
+// Sleeping locks
+
+pub unsafe fn initsleeplock(lk: *mut Sleeplock, name: *const u8) {
+    initlock(&mut ((*lk).lk) as *mut Spinlock, "sleep lock");
+    (*lk).name = name;
+    (*lk).locked = 0;
+    (*lk).pid = 0;
+}
+
+pub unsafe fn acquiresleep(lk: *mut Sleeplock) {
+    acquire(&mut ((*lk).lk) as *mut Spinlock);
+    //// while (*lk).locked {
+    ////     sleep(lk, &mut (*lk).lk as *mut Spinlock);
+    //// }
+    (*lk).locked = 1;
+    //// (*lk).pid = (*proc).pid;
+    release(&mut (*lk).lk as *mut Spinlock);
+}
+
+pub unsafe fn releasesleep(lk: *mut Sleeplock) {
+    acquire(&mut (*lk).lk as *mut Spinlock);
+    (*lk).locked = 0;
+    (*lk).pid = 0;
+    //// wakeup(lk);
+    release(&mut (*lk).lk as *mut Spinlock);
+}
+
+pub unsafe fn holdingsleep(lk: *mut Sleeplock) -> i32 {
+    acquire(&mut (*lk).lk as *mut Spinlock);
+    let r = (*lk).locked;
+    release(&mut (*lk).lk as *mut Spinlock);
+    r as i32
+}

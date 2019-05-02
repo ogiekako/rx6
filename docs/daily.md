@@ -24,7 +24,7 @@ trapret はどこ？
 
 * : 途中
 
-- userinit (process.rs) *
+- userinit (process.rs)
   - allocproc (process.rs)
     - trapret (trapasm.S)
     - forkret (process.rs)
@@ -36,6 +36,9 @@ trapret はどこ？
   - p.cwd *
     - Inode (file.rs) *
       - Sleeplock *
+        - extern struct proc = asm(%gs)in (proc.h) *
+        - sleep,
+        - wakeup
   - namei * (fs.rs)
     - namex *
       - iget, idup, ilock ...
