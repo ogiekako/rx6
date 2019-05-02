@@ -12,7 +12,7 @@ line count でいうとまだまだ。
 まず、ptable が Mutex で守られているのをもとに戻す。
 
 userinit をコンパイルしようとしている。
-lazy_static は危険なのでなくしたい。
+`lazy_static` は危険なのでなくしたい。
 
 まず、struct をすべて compile できるようにして、存在しない変数になやまないようにするか。
 
@@ -26,8 +26,8 @@ trapret はどこ？
 
 - userinit (process.rs) *
   - allocproc (process.rs)
-    - trapret (trapasm.S)  *
-    - forkret (process.rs) *
+    - trapret (trapasm.S)
+    - forkret (process.rs)
       - iinit *
       - initlog *
 

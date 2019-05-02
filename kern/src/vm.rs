@@ -36,7 +36,7 @@ pub unsafe fn seginit() {
 static mut kpgdir: PageDir = PageDir { pd: V(0) };
 
 pub struct PageDir {
-    pd: V, // [pd, pd+PGSIZE)
+    pub pd: V, // [pd, pd+PGSIZE)
 }
 
 impl PageDir {
