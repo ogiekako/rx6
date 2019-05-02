@@ -84,7 +84,7 @@ unsafe fn startothers() {
             v2p(V(entrypgdir as usize)).0 as u32,
         );
 
-        //// lapicstartap((*c).apicid, v2p(code));
+        lapicstartap((*c).apicid, v2p(V(code as usize)).0 as u32);
 
         // wait for cpu to finish mpmain()
         while ((*c).started == 0) {}
