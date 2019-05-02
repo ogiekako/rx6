@@ -33,11 +33,18 @@ trapret はどこ？
   - inituvm (vm.rs)
     - mappages
   - initcode (initcode.S)
-  - namei *
+  - p.cwd *
+    - Inode (file.rs) *
+      - Sleeplock *
+  - namei * (fs.rs)
+    - namex *
+      - iget, idup, ilock ...
   - safestrcpy
 
 initcode.S の SYS_exec が存在しない。これどうしようかな。必要なとこだけ header でいいや。どうせ対して使わないし。
 
+
+u32 は使わず、すべて usize に置き換えたほうが良かったかもしれない。あとでいいけど。
 
 # 2019-05-01
 

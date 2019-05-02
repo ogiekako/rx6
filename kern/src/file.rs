@@ -17,23 +17,21 @@ pub struct File {
     pub off: u32,
 }
 
-////
-////
-//// // in-memory copy of an inode
-//// struct inode {
-////   uint dev;           // Device number
-////   uint inum;          // Inode number
-////   int ref;            // Reference count
-////   struct sleeplock lock;
-////   int flags;          // I_VALID
-////
-////   short type;         // copy of disk inode
-////   short major;
-////   short minor;
-////   short nlink;
-////   uint size;
-////   uint addrs[NDIRECT+1];
-//// };
+// in-memory copy of an inode
+pub struct Inode {
+    pub dev: usize,  // Device number
+    pub inum: usize, // Inode number
+    pub ref_: i32,   // Reference count
+    //// lock: Sleeplock,
+    pub flags: i32, // I_VALID
+
+    pub type_: i16, // copy of disk inode
+    pub major: i16,
+    pub minor: i16,
+    pub nlink: i16,
+    pub size: usize,
+    pub addrs: [usize; NDIRECT + 1],
+}
 //// #define I_VALID 0x2
 ////
 //// // table mapping major device number to

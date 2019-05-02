@@ -83,8 +83,8 @@ pub struct Proc {
     pub killed: bool,          // If non-zero, have been killed
     // TODO:fix
     //// pub ofile: [File; NOFILE],  // Open files
-    //// pub cwd: *const Inode,           // Current directory
-    pub name: [u8; 16], // Process name (debugging)
+    pub cwd: *const Inode, // Current directory
+    pub name: [u8; 16],    // Process name (debugging)
 }
 
 // Process memory is laid out contiguously, low addresses first:
@@ -241,7 +241,7 @@ pub unsafe fn userinit() {
         "initcode\0".as_ptr(),
         core::mem::size_of_val(&(*p).name) as i32,
     );
-    //// (*p).cwd = namei("/");
+    (*p).cwd = namei("/\0".as_ptr());
 
     // this assignment to p->state lets other cores
     // run this process. the acquire forces the above
