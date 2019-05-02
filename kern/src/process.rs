@@ -4,8 +4,6 @@
 use super::*;
 use core;
 
-use spinlock_mutex::*;
-
 // Per-CPU state
 pub struct Cpu {
     pub apicid: u8,              // Local APIC ID
@@ -89,32 +87,28 @@ pub struct Proc {
     pub name: [u8; 16], // Process name (debugging)
 }
 
-// TODO: fix
-unsafe impl Send for Proc {}
-
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
 
-lazy_static! {
-    static ref ptable: Mutex<[Proc; NPROC]> = Mutex::new(unsafe { core::mem::zeroed() });
+// proc.c
+pub struct Ptable {
+    pub lock: Spinlock,
+    pub proc: [Proc; NPROC],
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn ptable_unused() {
-        let p = ptable.lock();
-        assert_eq!(p[0].state, Procstate::UNUSED);
-    }
-}
+pub static mut ptable: Ptable =
+    unsafe { core::mem::transmute([0u8; core::mem::size_of::<Ptable>()]) };
 
 pub static mut initproc: *mut Proc = unsafe { core::ptr::null_mut() };
 
 pub static mut nextpid: u32 = 1;
+
+pub unsafe fn pinit() {
+    initlock(&mut ptable.lock as *mut Spinlock, "ptable");
+}
 
 // Must be called with interrupts disabled
 pub unsafe fn cpuid() -> usize {

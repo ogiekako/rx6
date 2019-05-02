@@ -9,9 +9,11 @@ pub unsafe fn kernmain() {
     lapicinit(); // interrupt controller
     seginit(); // segment descriptors
     picinit(); // another interrupt controller
+               //// cprintf("\ncpu%d: starting xv6\n\n", &[Arg::Int(cpunum())]);
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
+    pinit(); // process table
     tvinit(); // trap vectors
     binit(); // buffer cache
     fileinit(); // file table
