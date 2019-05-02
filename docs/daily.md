@@ -1,4 +1,6 @@
-# 2019-05-01
+" # 2019-05-0
+
+
 
 
 13:18 - 開始が遅れてしまった。
@@ -60,6 +62,96 @@ kalloc が Option を返すようになってる... これももとに戻そう.
 ```
 
 Rust compiler の ICE を踏んでしまったぽい。
+
+Minimal reproduce code https://play.rust-lang.org/?version=nightly&mode=debug&edition=2018&gist=63dcfc89365288e1713fa47e038dba23 . xchg の asm! が問題であった。
+inline assembly について、ICE 報告はいくつか上がっている。
+https://github.com/rust-lang/rust/issues?q=is%3Aissue+is%3Aopen+asm+ICE+label%3AA-inline-assembly
+けっこうバグバグなのかな……。
+
+https://github.com/rust-lang/rust/issues/51130 - `We should validate lots and lots of things about the values passed to inline asm, and we currently don't do any of them. That's no reason to not fix it, but it will be a drop in the bucket.`
+なるほど。
+
+19:53 - 休憩
+20:51 - 帰宅して再開.
+
+Rust の [intrinsics] の volatiles と、atomics の項の、Acuiqre, Release の説明がとても簡潔でわかりやすかった。
+
+[intrinsics](https://doc.rust-lang.org/core/intrinsics/index.html)
+
+TODO: 読む？ [Synchronization in Xv6 – Brian Pan – Medium](https://medium.com/@ppan.brian/synchronization-in-xv6-be05ae0b34ec)
+
+22:21 - 再開
+
+GCC と LLVM の inline assembler の違いを抑えておきたい。まずは、LLVM のほうのドキュメントを読む。
+
+Documents:
+
+- [GCC asm]: https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended-Asm
+- [LLVM asm]: http://llvm.org/docs/LangRef.html#inline-assembler-expressions
+
+違い (GCC -> LLVM)
+- %0, %1 ... -> $0, $1 ...
+- $0, ... -> $$0, ...
+- "=a" -> "={eax}"
+
+以下のコードを読み解いていくか。
+
+```
+static inline uint
+xchg(volatile uint *addr, uint newval)
+{
+  uint result;
+  // The + in "+m" denotes a read-modify-write operand.
+  asm volatile("lock; xchgl %0, %1" :
+               "+m" (*addr), "=a" (result) :
+               "1" (newval) :
+               "cc");
+  return result;
+}
+```
+
+`=` は、そこに書き込みが発生するということ。
+`+` は、Read も Write の発生するということ。`=`, `+` 以外は、readonly とみなされる。([Modifier])
+m という constraint は、memory を意味する。([Simple Constraints])
+a という constraint は、a register を意味する。(See [Machine Constraints])
+"1" は、%1 と同じものを指すことを表す。
+
+clober list の "cc" は、flag registers が変化することをしめす。
+"memory" は、input, output に示されていないメモリの読み書きが発生することを示す。(結果として read/write memory barrier がコンパイラにより生成される)
+
+[Simple Constraints]: https://gcc.gnu.org/onlinedocs/gcc/Simple-Constraints.html#Simple-Constraints
+[Modifiers]: https://gcc.gnu.org/onlinedocs/gcc/Modifiers.html#Modifiers
+[Machine Constraints]: https://gcc.gnu.org/onlinedocs/gcc/Machine-Constraints.html#Machine-Constraints
+
+addr は C では volatile 変数だけど、これは Rust でどう表せば？
+
+clang で、llvm にコンパイルすれば、対応する llvm inline asm がわかるのでは？ それを Rust に翻訳しなおせばよさそう。
+
+Rust における、asm! の エラーテスト:
+https://github.com/rust-lang/rust/tree/9ebf47851a357faa4cd97f4b1dc7835f6376e639/src/test/ui/asm
+
+x86.h を llvm にコンパイル。
+
+```
+clang --target=i686-unknown-linux-gnu -S -emit-llvm a.c
+```
+
+asm 部分のコードは以下のようになった。
+
+```
+  %8 = call i32 asm sideeffect "lock; xchgl $0, $1", "=*m,={ax},1,*m,~{cc},~{dirflag},~{fpsr},~{flags}"(i32* %6, i32 %7, i32* %6) #1, !srcloc !3
+```
+
+asm! において、`*addr` を `addr` にしたらコンパイルとおったけど、本当にこれでいいのかな。
+LLVM として出力されるものを見るか……。
+
+```
+%4 = call i32 asm sideeffect "lock; xchgl $0, $1", "=*m,={ax},1,~{cc},~{dirflag},~{fpsr},~{flags}"(i32* %3, i32 %2), !dbg !33, !srcloc !34
+```
+
+微妙にちがうね。
+しかし、addr に関しては完全に同じアクセスのされかたであった。つまり、`*` を外したのは正しかったぽい。
+
 
 # 2019-04-30
 
@@ -554,3 +646,4 @@ xv6-public の bootblock をコピペしてきてもバグっているので、�
 
 - Qemu で、`C-a c` してから、info registers で、その時点のレジスタ情報を見れる。
   - `C-a h` でヘルプ。
+

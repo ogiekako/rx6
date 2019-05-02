@@ -72,7 +72,7 @@ pub unsafe fn release(lk: *mut Spinlock) {
     // Release the lock, equivalent to lk->locked = 0.
     // This code can't use a C assignment, since it might
     // not be atomic. A real OS would use C atomics here.
-    asm!("movl $0, %0" : "+m" ((*lk).locked) : :::"volatile");
+    asm!("movl $$0, $0" : "+m" ((*lk).locked) : :::"volatile");
 
     popcli();
 }
