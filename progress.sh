@@ -5,9 +5,11 @@ cd "$(dirname $0)"
 echo "===== commented out C code ====="
 
 tot=0
-for f in *rs; do
+for f in kern/src/*.rs *.S; do
   cnt=$(grep -E '////' $f | wc -l)
-  tot=$((tot + cnt))
-  printf "%12s %i\n" $f $cnt
+  if [[ cnt -gt 0 ]]; then
+    tot=$((tot + cnt))
+    printf "%12s %i\n" $(basename $f) $cnt
+  fi
 done
 printf "%-12s %i\n" "Total:" $tot

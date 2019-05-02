@@ -68,12 +68,6 @@ rx6.img: bootblock kernel
 	dd if=bootblock of=rx6.img conv=notrunc
 	dd if=kernel of=rx6.img seek=1 conv=notrunc
 
-entryother: entryother.S
-	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c entryother.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7000 -o bootblockother.o entryother.o
-	$(OBJCOPY) -S -O binary -j .text bootblockother.o entryother
-	$(OBJDUMP) -S bootblockother.o > entryother.asm
-
 bootblock: bootasm.S $(wildcard bootmain/src/*.rs)
 	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c bootasm.S
 	(cd bootmain && cross build --target $(TARGET) --release)
@@ -100,13 +94,26 @@ KERN = kern/target/$(TARGET)/$(RELEASE)/libkern.a
 
 entry.o: entry.S asm.h memlayout.h mmu.h param.h
 
-kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld entryother
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) $(OBJS) -b binary entryother 2>&1 | tee /tmp/rx6-ld.log
+entryother: entryother.S
+	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c entryother.S
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7000 -o bootblockother.o entryother.o
+	$(OBJCOPY) -S -O binary -j .text bootblockother.o entryother
+	$(OBJDUMP) -S bootblockother.o > entryother.asm
+
+initcode: initcode.S
+	$(CC) $(CFLAGS) -nostdinc -I. -c initcode.S
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o initcode.out initcode.o
+	$(OBJCOPY) -S -O binary initcode.out initcode
+	$(OBJDUMP) -S initcode.o > initcode.asm
+
+kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld entryother initcode
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) $(OBJS) -b binary initcode entryother 2>&1 | tee /tmp/rx6-ld.log
 	if grep "warning" /tmp/rx6-ld.log > /dev/null; then rm kernel; exit 1; fi
 	# -S: Display source code intermixed with disassembly. Implies -d (= --disassemble).
 	$(OBJDUMP) -S kernel > kernel.asm
 	# -t: Print the symbol table entries of the file.
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
+
 
 kern: $(KERN)
 

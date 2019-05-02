@@ -1,21 +1,6 @@
 use core;
 
-use kalloc::*;
-use linker;
-use memlayout::*;
-use mmu::*;
-use mp::*;
-use process::*;
-use x86::*;
-
-// #include "param.h"
-// #include "types.h"
-// #include "defs.h"
-// #include "x86.h"
-// #include "memlayout.h"
-// #include "mmu.h"
-// #include "proc.h"
-// #include "elf.h"
+use super::*;
 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
@@ -219,21 +204,22 @@ pub unsafe fn switchkvm() {
 ////   lcr3(V2P(p->pgdir));  // switch to process's address space
 ////   popcli();
 //// }
-//
-// // Load the initcode into address 0 of pgdir.
-// // sz must be less than a page.
-//// void
-//// inituvm(pde_t *pgdir, char *init, uint sz)
-//// {
-////   char *mem;
-////
-////   if(sz >= PGSIZE)
-////     panic("inituvm: more than a page");
-////   mem = kalloc();
-////   memset(mem, 0, PGSIZE);
-////   mappages(pgdir, 0, PGSIZE, V2P(mem), PTE_W|PTE_U);
-////   memmove(mem, init, sz);
-//// }
+
+// Load the initcode into address 0 of pgdir.
+// sz must be less than a page.
+pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: u32) {
+    if sz >= PGSIZE as u32 {
+        panic!("inituvm: more than a page");
+    }
+    let mem: *mut u8 = kalloc().map(|v| v.0).unwrap_or(0) as *mut u8;
+    memset(mem, 0, PGSIZE);
+
+    (PageDir {
+        pd: V(pgdir as usize),
+    })
+    .mappages(V(0), PGSIZE, v2p(V(mem as usize)), PTE_W | PTE_U);
+    memmove(mem, init, sz as usize);
+}
 //
 // // Load a program segment into pgdir.  addr must be page-aligned
 // // and the pages from addr to addr+sz must already be mapped.

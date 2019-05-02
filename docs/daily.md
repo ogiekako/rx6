@@ -30,6 +30,12 @@ trapret はどこ？
     - forkret (process.rs)
       - iinit *
       - initlog *
+  - inituvm (vm.rs)
+    - mappages *
+  - initcode (initcode.S)
+
+initcode.S の SYS_exec が存在しない。これどうしようかな。
+
 
 # 2019-05-01
 
