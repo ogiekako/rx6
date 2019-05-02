@@ -73,7 +73,7 @@ use self::Procstate::*;
 pub struct Proc {
     pub sz: u32,               // Size of process memory (bytes)
     pub pgdir: *mut pde_t,     // Page table
-    pub kstack: V,             // Bottom of kernel stack for this process
+    pub kstack: *mut u8,       // Bottom of kernel stack for this process
     pub state: Procstate,      // Process state
     pub pid: i32,              // Process ID
     pub parent: *mut Proc,     // Parent process
@@ -104,7 +104,11 @@ pub static mut ptable: Ptable =
 
 pub static mut initproc: *mut Proc = unsafe { core::ptr::null_mut() };
 
-pub static mut nextpid: u32 = 1;
+pub static mut nextpid: i32 = 1;
+
+extern "C" {
+    fn trapret();
+}
 
 pub unsafe fn pinit() {
     initlock(&mut ptable.lock as *mut Spinlock, "ptable");
@@ -145,61 +149,73 @@ pub unsafe fn myproc() -> &'static mut Proc {
     return &mut *p;
 }
 
-// // Look in the process table for an UNUSED proc.
-// // If found, change state to EMBRYO and initialize
-// // state required to run in the kernel.
-// // Otherwise return 0.
-//// static struct proc*
-//// allocproc(void)
-//// {
-////   struct proc *p;
-////   char *sp;
-////
-////   acquire(&ptable.lock);
-////
-////   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-////     if(p->state == UNUSED)
-////       goto found;
-////
-////   release(&ptable.lock);
-////   return 0;
-////
-//// found:
-////   p->state = EMBRYO;
-////   p->pid = nextpid++;
-////
-////   release(&ptable.lock);
-////
-////   // Allocate kernel stack.
-////   if((p->kstack = kalloc()) == 0){
-////     p->state = UNUSED;
-////     return 0;
-////   }
-////   sp = p->kstack + KSTACKSIZE;
-////
-////   // Leave room for trap frame.
-////   sp -= sizeof *p->tf;
-////   p->tf = (struct trapframe*)sp;
-////
-////   // Set up new context to start executing at forkret,
-////   // which returns to trapret.
-////   sp -= 4;
-////   *(uint*)sp = (uint)trapret;
-////
-////   sp -= sizeof *p->context;
-////   p->context = (struct context*)sp;
-////   memset(p->context, 0, sizeof *p->context);
-////   p->context->eip = (uint)forkret;
-////
-////   return p;
-//// }
+// Look in the process table for an UNUSED proc.
+// If found, change state to EMBRYO and initialize
+// state required to run in the kernel.
+// Otherwise return 0.
+pub unsafe fn allocproc() -> *mut Proc {
+    acquire(&mut ptable.lock as *mut Spinlock);
+
+    let mut p = core::ptr::null_mut();
+    let mut found = false;
+    for i in 0..NPROC {
+        p = &mut ptable.proc[i] as *mut Proc;
+
+        if (*p).state == UNUSED {
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        release(&mut ptable.lock as *mut Spinlock);
+        return core::ptr::null_mut();
+    }
+    (*p).state = EMBRYO;
+    (*p).pid = nextpid;
+    nextpid += 1;
+
+    release(&mut ptable.lock as *mut Spinlock);
+
+    // Allocate kernel stack.
+    (*p).kstack = kalloc().unwrap_or(V(0)).0 as *mut u8;
+    if (*p).kstack == core::ptr::null_mut() {
+        (*p).state = UNUSED;
+        return core::ptr::null_mut();
+    }
+    let mut sp = (*p).kstack.offset(KSTACKSIZE as isize);
+
+    // Leave room for trap frame.
+    sp = sp.offset(-(core::mem::size_of_val(&((*p).tf)) as isize));
+    (*p).tf = sp as *mut Trapframe;
+
+    // Set up new context to start executing at forkret,
+    // which returns to trapret.
+    sp = sp.offset(-4);
+    core::ptr::write(sp as *mut u32, trapret as u32);
+    //// *(uint*)sp = (uint)trapret;
+
+    sp = sp.offset(-(core::mem::size_of_val(&((*p).context)) as isize));
+    (*p).context = sp as *mut Context;
+    memset(
+        (*p).context as *mut u8,
+        0,
+        core::mem::size_of_val(&((*p).context)),
+    );
+    (*(*p).context).eip = forkret as u32;
+
+    p
+}
+
+extern "C" {
+    static mut _binary_initcode_start: u8;
+    static mut _binary_initcode_size: u8;
+}
 
 // Set up first user process.
 pub unsafe fn userinit() {
     let p: *mut Proc;
-    ////  extern char _binary_initcode_start[], _binary_initcode_size[];
-    ////
-    ////  p = allocproc();
+
+    p = allocproc();
     ////
     ////  initproc = p;
     ////  if((p->pgdir = setupkvm()) == 0)
@@ -466,26 +482,26 @@ pub unsafe fn exit() {
 ////   release(&ptable.lock);
 //// }
 ////
-//// // A fork child's very first scheduling by scheduler()
-//// // will swtch here.  "Return" to user space.
-//// void
-//// forkret(void)
-//// {
-////   static int first = 1;
-////   // Still holding ptable.lock from scheduler.
-////   release(&ptable.lock);
-////
-////   if (first) {
-////     // Some initialization functions must be run in the context
-////     // of a regular process (e.g., they call sleep), and thus cannot
-////     // be run from main().
-////     first = 0;
-////     iinit(ROOTDEV);
-////     initlog(ROOTDEV);
-////   }
-////
-////   // Return to "caller", actually trapret (see allocproc).
-//// }
+// A fork child's very first scheduling by scheduler()
+// will swtch here.  "Return" to user space.
+
+#[no_mangle]
+pub unsafe extern "C" fn forkret() {
+    static mut first: i32 = 1;
+    // Still holding ptable.lock from scheduler.
+    release(&mut ptable.lock as *mut Spinlock);
+
+    if (first > 0) {
+        // Some initialization functions must be run in the context
+        // of a regular process (e.g., they call sleep), and thus cannot
+        // be run from main().
+        first = 0;
+        //// iinit(ROOTDEV);
+        //// initlog(ROOTDEV);
+    }
+
+    // Return to "caller", actually trapret (see allocproc).
+}
 //
 // // Atomically release lock and sleep on chan.
 // // Reacquires lock when awakened.

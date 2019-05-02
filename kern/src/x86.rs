@@ -51,7 +51,6 @@ pub unsafe fn stosl(mut addr: *mut (), data: i32, mut cnt: i32) {
          "memory", "cc": "volatile");
 }
 
-// TODO: &Segdesc
 pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
     let mut pd = [0u16; 3];
     pd[0] = size - 1;
@@ -60,8 +59,6 @@ pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
 
     asm!("lgdt ($0)" :: "r" (&pd) : "memory":"volatile");
 }
-
-//// struct gatedesc;
 
 pub unsafe fn lidt(p: *const Gatedesc, size: i32) {
     let mut pd: [u16; 3] = [

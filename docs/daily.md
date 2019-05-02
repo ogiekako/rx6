@@ -1,8 +1,8 @@
-# 2019-05-02
-
-14:30 - startothers のデバッグを開始。
-
-x86 環境で test を走らせたくなってきた。
+ 2019-05-02
+// 
+// 14:30 - startothers のデバッグを開始。
+// 
+// x86 環境で test を走らせたくなってきた。
 
 starting thread 1 の表示までできた。
 thread が正常に走っている？
@@ -15,6 +15,24 @@ userinit をコンパイルしようとしている。
 lazy_static は危険なのでなくしたい。
 
 まず、struct をすべて compile できるようにして、存在しない変数になやまないようにするか。
+
+- kalloc もOption つかわない version に戻したい。... とおもったけど意外とつかわれていないのか。じゃあほっとくか。
+
+trapret はどこ？
+
+関数の依存グラフ
+
+* : 途中
+
+- userinit (process.rs) *
+  - allocproc (process.rs)
+    - trapret (trapasm.S)  *
+    - forkret (process.rs) *
+      - iinit *
+      - initlog *
+
+- userinit
+  - allocproc
 
 # 2019-05-01
 
