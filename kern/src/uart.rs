@@ -1,13 +1,5 @@
+use super::*;
 // Intel 8250 serial port (UART).
-
-use ioapic::*;
-use lapic::*;
-use mmu::*;
-use param::*;
-use picirq::*;
-use process::*;
-use traps::*;
-use x86::*;
 
 // Memory mapped I/O interface is binded here.
 pub const COM1: u16 = 0x3f8;
@@ -58,17 +50,16 @@ pub unsafe fn uartputc(c: u8) {
     outb(COM1 + 0, c);
 }
 
-pub unsafe fn uartgetc() -> Option<u8> {
+pub unsafe fn uartgetc() -> i32 {
     if !uart {
-        return None;
+        return -1;
     }
-    if ((inb(COM1 + 5) & 0x01) == 0) {
-        return None;
+    if (inb(COM1 + 5) & 0x01) == 0 {
+        return -1;
     }
-    Some(inb(COM1 + 0))
+    inb(COM1 + 0) as i32
 }
 
-//// fn uartintr()
-//// {
-////   consoleintr(uartgetc);
-//// }
+pub unsafe fn uartintr() {
+    consoleintr(uartgetc);
+}

@@ -67,6 +67,20 @@ pub enum Procstate {
     ZOMBIE,
 }
 
+impl Procstate {
+    fn to_str(&self) -> &'static str {
+        match self {
+            UNUSED => "unused",
+            EMBRYO => "embryo",
+            SLEEPING => "sleep ",
+            RUNNABLE => "runble",
+            RUNNING => "run   ",
+            ZOMBIE => "zombie",
+            _ => "???",
+        }
+    }
+}
+
 use self::Procstate::*;
 
 // Per-process state
@@ -591,40 +605,39 @@ pub unsafe fn kill(pid: i32) -> i32 {
     release(&mut ptable.lock as *mut Spinlock);
     return -1;
 }
-//
-// //PAGEBREAK: 36
-// // Print a process listing to console.  For debugging.
-// // Runs when user types ^P on console.
-// // No lock to avoid wedging a stuck machine further.
-//// void
-//// procdump(void)
-//// {
-////   static char *states[] = {
-////   [UNUSED]    "unused",
-////   [EMBRYO]    "embryo",
-////   [SLEEPING]  "sleep ",
-////   [RUNNABLE]  "runble",
-////   [RUNNING]   "run   ",
-////   [ZOMBIE]    "zombie"
-////   };
-////   int i;
-////   struct proc *p;
-////   char *state;
-////   uint pc[10];
-////
-////   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-////     if(p->state == UNUSED)
-////       continue;
-////     if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
-////       state = states[p->state];
-////     else
-////       state = "???";
-////     cprintf("%d %s %s", p->pid, state, p->name);
-////     if(p->state == SLEEPING){
-////       getcallerpcs((uint*)p->context->ebp+2, pc);
-////       for(i=0; i<10 && pc[i] != 0; i++)
-////         cprintf(" %p", pc[i]);
-////     }
-////     cprintf("\n");
-////   }
-//// }
+
+// Print a process listing to console.  For debugging.
+// Runs when user types ^P on console.
+// No lock to avoid wedging a stuck machine further.
+pub unsafe fn procdump() {
+    let mut pc = [0usize; 10];
+
+    for i in 0..NPROC {
+        let p = &ptable.proc[i];
+        if (p.state == UNUSED) {
+            continue;
+        }
+        let state = p.state.to_str();
+        cprintf(
+            "%d %s %s",
+            &[
+                Arg::Int(p.pid),
+                Arg::Str(state),
+                Arg::Str(core::str::from_utf8(&p.name).unwrap()),
+            ],
+        );
+        if p.state == SLEEPING {
+            getcallerpcs(
+                ((*p.context).ebp as *const usize).add(2) as *const (),
+                &mut pc,
+            );
+            for i in 0..10 {
+                if pc[i] == 0 {
+                    break;
+                }
+                cprintf(" %p", &[Arg::Int(pc[i] as i32)]);
+            }
+        }
+        cprintf("\n", &[]);
+    }
+}
