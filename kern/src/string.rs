@@ -118,13 +118,11 @@ pub unsafe fn safestrcpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u
     *s = 0;
     os
 }
-//
-//// int
-//// strlen(const char *s)
-//// {
-////   int n;
-////
-////   for(n = 0; s[n]; n++)
-////     ;
-////   return n;
-//// }
+
+pub unsafe fn strlen(s: *const u8) -> i32 {
+    let mut n = 0;
+    while *(s.offset(n)) != 0 {
+        n += 1;
+    }
+    return n as i32;
+}

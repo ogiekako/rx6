@@ -315,8 +315,8 @@ pub unsafe fn consolewrite(ip: *mut Inode, buf: *mut u8, n: i32) -> i32 {
 pub unsafe fn consoleinit() {
     initlock(&mut cons.lock as *mut Spinlock, "console");
 
-    //// devsw[CONSOLE].write = consolewrite;
-    //// devsw[CONSOLE].read = consoleread;
+    devsw[CONSOLE].write = Some(consolewrite);
+    devsw[CONSOLE].read = Some(consoleread);
     cons.locking = 1;
 
     picenable(IRQ_KBD as i32);

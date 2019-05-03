@@ -226,30 +226,41 @@ pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: usize) {
     .mappages(V(0), PGSIZE, v2p(V(mem as usize)), PTE_W | PTE_U);
     memmove(mem, init, sz as usize);
 }
-//
-// // Load a program segment into pgdir.  addr must be page-aligned
-// // and the pages from addr to addr+sz must already be mapped.
-//// int
-//// loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
-//// {
-////   uint i, pa, n;
-////   pte_t *pte;
-////
-////   if((uint) addr % PGSIZE != 0)
-////     panic("loaduvm: addr must be page aligned");
-////   for(i = 0; i < sz; i += PGSIZE){
-////     if((pte = walkpgdir(pgdir, addr+i, 0)) == 0)
-////       panic("loaduvm: address should exist");
-////     pa = PTE_ADDR(*pte);
-////     if(sz - i < PGSIZE)
-////       n = sz - i;
-////     else
-////       n = PGSIZE;
-////     if(readi(ip, P2V(pa), offset+i, n) != n)
-////       return -1;
-////   }
-////   return 0;
-//// }
+
+// Load a program segment into pgdir.  addr must be page-aligned
+// and the pages from addr to addr+sz must already be mapped.
+pub unsafe fn loaduvm(
+    pgdir: *mut pde_t,
+    addr: *mut u8,
+    ip: *mut Inode,
+    offset: usize,
+    sz: usize,
+) -> i32 {
+    if ((addr as usize) % PGSIZE != 0) {
+        panic!("loaduvm: addr must be page aligned");
+    }
+    for i in (0..sz).step_by(PGSIZE) {
+        let pte = (&mut PageDir {
+            pd: V(pgdir as usize),
+        })
+            .walkpgdir(V(addr.add(i) as usize), false);
+        if pte.is_none() {
+            panic!("loaduvm: address should exist");
+        }
+        let pte = pte.unwrap().0 as *mut pte_t;
+        let pa = PTE(pte as usize).addr().0;
+        let n: usize;
+        if (sz - i < PGSIZE) {
+            n = sz - i;
+        } else {
+            n = PGSIZE;
+        }
+        if (readi(ip, P2V(pa as *mut u8), offset + i, n) != n as i32) {
+            return -1;
+        }
+    }
+    return 0;
+}
 
 // Allocate page tables and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.

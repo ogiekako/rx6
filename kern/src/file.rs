@@ -41,13 +41,11 @@ pub const I_VALID: i32 = 0x2;
 // table mapping major device number to
 // device functions
 pub struct Devsw {
-    pub read: Option<fn(*mut Inode, *mut u8, i32) -> i32>,
-    pub write: Option<fn(*mut Inode, *mut u8, i32) -> i32>,
+    pub read: Option<unsafe fn(*mut Inode, *mut u8, i32) -> i32>,
+    pub write: Option<unsafe fn(*mut Inode, *mut u8, i32) -> i32>,
 }
 
-//// extern struct devsw devsw[];
-
-const CONSOLE: usize = 1;
+pub const CONSOLE: usize = 1;
 
 // file.c
 //
