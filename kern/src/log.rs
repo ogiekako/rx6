@@ -43,7 +43,7 @@ pub struct Log {
 pub static mut log: Log = unsafe { core::mem::transmute([0u8; core::mem::size_of::<Log>()]) };
 
 pub unsafe fn initlog(dev: i32) {
-    if (core::mem::size_of::<Logheader> >= BSIZE) {
+    if (core::mem::size_of::<Logheader>() >= BSIZE) {
         panic!("initlog: too big logheader");
     }
 
@@ -59,9 +59,9 @@ pub unsafe fn initlog(dev: i32) {
 // Copy committed blocks from log to their home location
 pub unsafe fn install_trans() {
     for tail in 0..log.lh.n {
-        let lbuf = bread(log.dev, log.start + tail + 1); // read log block
-        let dbuf = bread(log.dev, log.lh.block[tail]); // read dst
-        memmove((*dbuf).data.as_mut_ptr(), (*lbuf).data, BSIZE); // copy block to dst
+        let lbuf = bread(log.dev as usize, (log.start + tail + 1) as usize); // read log block
+        let dbuf = bread(log.dev as usize, log.lh.block[tail as usize] as usize); // read dst
+        memmove((*dbuf).data.as_mut_ptr(), (*lbuf).data.as_ptr(), BSIZE); // copy block to dst
         bwrite(dbuf); // write dst to disk
         brelse(lbuf);
         brelse(dbuf);
