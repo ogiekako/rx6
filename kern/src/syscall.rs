@@ -1,11 +1,5 @@
-use console::*;
+use super::*;
 use core;
-use memlayout::*;
-use mmu::*;
-use process::*;
-use sysfile::*;
-use sysproc::*;
-use x86::*;
 
 // System call numbers
 pub const SYS_fork: usize = 1;
