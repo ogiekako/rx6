@@ -25,18 +25,7 @@ trapret はどこ？
 * : 途中 , + : 依存に対するコメントアウト以外おわり
 
 - userinit (process.rs)
-  - allocproc (process.rs)
-    - trapret (trapasm.S)
-    - forkret (process.rs)
-      - iinit +
-        - readsb (fs.rs) *
-          - bread (bio.rs) *
-            - iderw (ide.rs) *
-          - brelse (bio.rs) *
       - initlog *
-  - inituvm (vm.rs)
-    - mappages
-  - initcode (initcode.S)
   - p.cwd
     - Inode (file.rs) +
       - Sleeplock +
@@ -46,7 +35,6 @@ trapret はどこ？
   - namei * (fs.rs)
     - namex *
       - iget, idup, ilock ...
-  - safestrcpy
 
 initcode.S の SYS_exec が存在しない。これどうしようかな。必要なとこだけ header でいいや。どうせ対して使わないし。
 
