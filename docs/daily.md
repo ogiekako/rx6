@@ -25,13 +25,10 @@ trapret はどこ？
 * : 途中 , + : 依存に対するコメントアウト以外おわり
 
 - userinit (process.rs)
-      - initlog
-  - p.cwd
-    - Inode (file.rs) +
-      - Sleeplock +
-        - extern struct proc = asm(%gs)in (proc.h) *
-        - sleep *,
-        - wakeup *
+  - extern struct proc = asm(%gs)in (proc.h) *
+  - extern struct cpu = asm(%gs)in (proc.h) *
+  - sched +
+      - swtch (swtch.S) *
   - namei * (fs.rs)
     - namex *
       - iget, idup, ilock ...

@@ -26,7 +26,7 @@ pub unsafe fn outb(port: u16, data: u8) {
 ////   asm volatile("out %0,%1" : : "a" (data), "d" (port));
 //// }
 
-pub unsafe fn outsl(port: i32, addr: *mut (), cnt: i32) {
+pub unsafe fn outsl(port: i32, mut addr: *mut (), mut cnt: i32) {
     asm!("cld; rep outsl" :
                "={si}" (addr), "={ecx}" (cnt) :
                "{edx}" (port), "0" (addr), "1" (cnt) :

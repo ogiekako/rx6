@@ -62,4 +62,4 @@ int  -> i32
 - 文字列の扱い。Rust の str は null terminate になっているとは限らない。
     - s="hoge"; t="piyo" みたいにやって、strings すると hogepiyo と出る
     - "hoge\0".as_ptr() とするとよい。
-- 予約語 (type, ref など) type_, ref_ として対処した
+- 予約語 (type, ref, yield など) type_, ref_ として対処した

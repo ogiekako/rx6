@@ -79,7 +79,7 @@ pub struct Proc {
     pub parent: *mut Proc,     // Parent process
     pub tf: *mut Trapframe,    // Trap frame for current syscall
     pub context: *mut Context, // swtch() here to run process
-    pub chan: V,               // If non-zero, sleeping on chan
+    pub chan: *mut (),         // If non-zero, sleeping on chan
     pub killed: bool,          // If non-zero, have been killed
     // TODO:fix
     //// pub ofile: [File; NOFILE],  // Open files
@@ -141,12 +141,12 @@ pub unsafe fn mycpu() -> *mut Cpu {
 
 // Disable interrupts so that we are not rescheduled
 // while reading proc from the cpu structure
-pub unsafe fn myproc() -> &'static mut Proc {
+pub unsafe fn myproc() -> *mut Proc {
     pushcli();
     let c = mycpu();
     let p = (*c).process;
     popcli();
-    return &mut *p;
+    return p;
 }
 
 // Look in the process table for an UNUSED proc.
@@ -454,43 +454,42 @@ pub unsafe fn exit() {
 ////
 ////   }
 //// }
-//
-// // Enter scheduler.  Must hold only ptable.lock
-// // and have changed proc->state. Saves and restores
-// // intena because intena is a property of this
-// // kernel thread, not this CPU. It should
-// // be proc->intena and proc->ncli, but that would
-// // break in the few places where a lock is held but
-// // there's no process.
-//// void
-//// sched(void)
-//// {
-////   int intena;
-////   struct proc *p = myproc();
-////
-////   if(!holding(&ptable.lock))
-////     panic("sched ptable.lock");
-////   if(mycpu()->ncli != 1)
-////     panic("sched locks");
-////   if(p->state == RUNNING)
-////     panic("sched running");
-////   if(readeflags()&FL_IF)
-////     panic("sched interruptible");
-////   intena = mycpu()->intena;
-////   swtch(&p->context, mycpu()->scheduler);
-////   mycpu()->intena = intena;
-//// }
-//
-// // Give up the CPU for one scheduling round.
-//// void
-//// yield(void)
-//// {
-////   acquire(&ptable.lock);  //DOC: yieldlock
-////   myproc()->state = RUNNABLE;
-////   sched();
-////   release(&ptable.lock);
-//// }
-////
+
+// Enter scheduler.  Must hold only ptable.lock
+// and have changed proc->state. Saves and restores
+// intena because intena is a property of this
+// kernel thread, not this CPU. It should
+// be proc->intena and proc->ncli, but that would
+// break in the few places where a lock is held but
+// there's no process.
+pub unsafe fn sched() {
+    let p = myproc();
+
+    if (!holding(&mut ptable.lock as *mut Spinlock)) {
+        panic!("sched ptable.lock");
+    }
+    if ((*mycpu()).ncli != 1) {
+        panic!("sched locks");
+    }
+    if ((*p).state == RUNNING) {
+        panic!("sched running");
+    }
+    if (readeflags() & FL_IF) != 0 {
+        panic!("sched interruptible");
+    }
+    let intena = (*mycpu()).intena;
+    //// swtch(&(*p).context, (*mycpu()).scheduler);
+    (*mycpu()).intena = intena;
+}
+
+// Give up the CPU for one scheduling round.
+pub unsafe fn yield_() {
+    acquire(&mut ptable.lock as *mut Spinlock);
+    (*myproc()).state = RUNNABLE;
+    sched();
+    release(&mut ptable.lock as *mut Spinlock);
+}
+
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.
 
@@ -511,91 +510,87 @@ pub unsafe extern "C" fn forkret() {
 
     // Return to "caller", actually trapret (see allocproc).
 }
-//
-// // Atomically release lock and sleep on chan.
-// // Reacquires lock when awakened.
-//// void
-//// sleep(void *chan, struct spinlock *lk)
-//// {
-////   struct proc *p = myproc();
-////
-////   if(p == 0)
-////     panic("sleep");
-////
-////   if(lk == 0)
-////     panic("sleep without lk");
-////
-////   // Must acquire ptable.lock in order to
-////   // change p->state and then call sched.
-////   // Once we hold ptable.lock, we can be
-////   // guaranteed that we won't miss any wakeup
-////   // (wakeup runs with ptable.lock locked),
-////   // so it's okay to release lk.
-////   if(lk != &ptable.lock){  //DOC: sleeplock0
-////     acquire(&ptable.lock);  //DOC: sleeplock1
-////     release(lk);
-////   }
-////
-////  // Go to sleep.
-////  p->chan = chan;
-////  p->state = SLEEPING;
-////
-////  sched();
-////
-////  // Tidy up.
-////  p->chan = 0;
-////
-////   // Reacquire original lock.
-////   if(lk != &ptable.lock){  //DOC: sleeplock2
-////     release(&ptable.lock);
-////     acquire(lk);
-////   }
-//// }
-//
-// //PAGEBREAK!
-// // Wake up all processes sleeping on chan.
-// // The ptable lock must be held.
-//// static void
-//// wakeup1(void *chan)
-//// {
-////   struct proc *p;
-////
-////   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-////     if(p->state == SLEEPING && p->chan == chan)
-////       p->state = RUNNABLE;
-//// }
-//
-// // Wake up all processes sleeping on chan.
-//// void
-//// wakeup(void *chan)
-//// {
-////   acquire(&ptable.lock);
-////   wakeup1(chan);
-////   release(&ptable.lock);
-//// }
-////
-//// // Kill the process with the given pid.
-//// // Process won't exit until it returns
-//// // to user space (see trap in trap.c).
-//// int
-//// kill(int pid)
-//// {
-////   struct proc *p;
-////
-////   acquire(&ptable.lock);
-////   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-////     if(p->pid == pid){
-////       p->killed = 1;
-////       // Wake process from sleep if necessary.
-////       if(p->state == SLEEPING)
-////         p->state = RUNNABLE;
-////       release(&ptable.lock);
-////       return 0;
-////     }
-////   }
-////   release(&ptable.lock);
-////   return -1;
-//// }
+
+// Atomically release lock and sleep on chan.
+// Reacquires lock when awakened.
+pub unsafe fn sleep(chan: *mut (), lk: *mut Spinlock) {
+    let p = myproc();
+
+    if (p == core::ptr::null_mut()) {
+        panic!("sleep");
+    }
+
+    if (lk == core::ptr::null_mut()) {
+        panic!("sleep without lk");
+    }
+
+    // Must acquire ptable.lock in order to
+    // change p->state and then call sched.
+    // Once we hold ptable.lock, we can be
+    // guaranteed that we won't miss any wakeup
+    // (wakeup runs with ptable.lock locked),
+    // so it's okay to release lk.
+    if (lk != &mut ptable.lock as *mut Spinlock) {
+        //DOC: sleeplock0
+        acquire(&mut ptable.lock as *mut Spinlock); //DOC: sleeplock1
+        release(lk);
+    }
+
+    // Go to sleep.
+    (*p).chan = chan;
+    (*p).state = SLEEPING;
+
+    sched();
+
+    // Tidy up.
+    (*p).chan = core::ptr::null_mut();
+
+    // Reacquire original lock.
+    if (lk != &mut ptable.lock as *mut Spinlock) {
+        release(&mut ptable.lock as *mut Spinlock);
+        acquire(lk);
+    }
+}
+
+//PAGEBREAK!
+// Wake up all processes sleeping on chan.
+// The ptable lock must be held.
+pub unsafe fn wakeup1(chan: *mut ()) {
+    for i in 0..NPROC {
+        let p = &mut ptable.proc[i];
+        if (p.state == SLEEPING && p.chan == chan) {
+            p.state = RUNNABLE;
+        }
+    }
+}
+
+// Wake up all processes sleeping on chan.
+pub unsafe fn wakeup(chan: *mut ()) {
+    acquire(&mut ptable.lock as *mut Spinlock);
+    wakeup1(chan);
+    release(&mut ptable.lock as *mut Spinlock);
+}
+
+// Kill the process with the given pid.
+// Process won't exit until it returns
+// to user space (see trap in trap.c).
+pub unsafe fn kill(pid: i32) -> i32 {
+    acquire(&mut ptable.lock as *mut Spinlock);
+    for i in 0..NPROC {
+        let p = &mut ptable.proc[i];
+        if (p.pid == pid) {
+            p.killed = true;
+            // Wake process from sleep if necessary.
+            if p.state == SLEEPING {
+                p.state = RUNNABLE;
+            }
+            release(&mut ptable.lock as *mut Spinlock);
+            return 0;
+        }
+    }
+    release(&mut ptable.lock as *mut Spinlock);
+    return -1;
+}
 //
 // //PAGEBREAK: 36
 // // Print a process listing to console.  For debugging.

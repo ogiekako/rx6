@@ -36,7 +36,7 @@ pub unsafe fn releasesleep(lk: *mut Sleeplock) {
     acquire(&mut (*lk).lk as *mut Spinlock);
     (*lk).locked = 0;
     (*lk).pid = 0;
-    wakeup(lk);
+    wakeup(lk as *mut ());
     release(&mut (*lk).lk as *mut Spinlock);
 }
 

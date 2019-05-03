@@ -7,8 +7,8 @@ pub struct Spinlock {
     locked: u32, // Is the lock held?
     // For debugging:
     name: *const str, // Name of lock.
-    //// cpu: *mut cpu,  // The cpu holding the lock.
-    pcs: [u32; 10], // The call stack (an array of program counters)
+    cpu: *mut Cpu,    // The cpu holding the lock.
+    pcs: [u32; 10],   // The call stack (an array of program counters)
 }
 
 impl Spinlock {
@@ -16,6 +16,7 @@ impl Spinlock {
         Spinlock {
             locked: 0,
             name: "" as *const str,
+            cpu: core::ptr::null_mut(),
             pcs: [0; 10],
         }
     }
@@ -100,9 +101,10 @@ pub unsafe fn getcallerpcs(v: *mut (), pcs: &mut [u32]) {
 }
 
 // Check whether this cpu is holding the lock.
-//// pub unsafe fn holding(lock: *mut spinlock) -> bool {
-////     return (*lock).locked && (*lock).cpu == cpu;
-//// }
+pub unsafe fn holding(lock: *mut Spinlock) -> bool {
+    panic!("unimplemented");
+    //// (*lock).locked != 0 && (*lock).cpu == cpu
+}
 
 // Pushcli/popcli are like cli/sti except that they are matched:
 // it takes two popcli to undo two pushcli.  Also, if interrupts

@@ -121,7 +121,7 @@ pub unsafe fn ideintr() {
     // Wake process waiting for this buf.
     (*b).flags |= B_VALID;
     (*b).flags &= !B_DIRTY;
-    wakeup(b);
+    wakeup(b as *mut ());
 
     // Start disk on next buf in queue.
     if (idequeue != core::ptr::null_mut()) {
@@ -163,7 +163,7 @@ pub unsafe fn iderw(b: *mut Buf) {
 
     // Wait for request to finish.
     while ((*b).flags & (B_VALID | B_DIRTY)) != B_VALID {
-        sleep(b, &mut idelock as *mut Spinlock);
+        sleep(b as *mut (), &mut idelock as *mut Spinlock);
     }
 
     release(&mut idelock as *mut Spinlock);

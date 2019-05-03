@@ -105,10 +105,16 @@ pub unsafe fn begin_op() {
     acquire(&mut log.lock as *mut Spinlock);
     loop {
         if (log.committing != 0) {
-            sleep(&log, &log.lock);
+            sleep(
+                &mut log as *mut Log as *mut (),
+                &mut log.lock as *mut Spinlock,
+            );
         } else if (log.lh.n + (log.outstanding + 1) * MAXOPBLOCKS as i32 > LOGSIZE as i32) {
             // this op might exhaust log space; wait for commit.
-            sleep(&log, &log.lock);
+            sleep(
+                &mut log as *mut Log as *mut (),
+                &mut log.lock as *mut Spinlock,
+            );
         } else {
             log.outstanding += 1;
             release(&mut log.lock as *mut Spinlock);
@@ -132,7 +138,7 @@ pub unsafe fn end_op() {
         log.committing = 1;
     } else {
         // begin_op() may be waiting for log space.
-        wakeup(&log);
+        wakeup(&mut log as *mut Log as *mut ());
     }
     release(&mut log.lock as *mut Spinlock);
 
@@ -142,7 +148,8 @@ pub unsafe fn end_op() {
         commit();
         acquire(&mut log.lock as *mut Spinlock);
         log.committing = 0;
-        wakeup(&log).release(&mut log.lock as *mut Spinlock);
+        wakeup(&mut log as *mut Log as *mut ());
+        release(&mut log.lock as *mut Spinlock);
     }
 }
 
