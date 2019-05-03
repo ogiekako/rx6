@@ -264,66 +264,60 @@ pub unsafe fn consoleintr(getc: unsafe fn()->i32)
     }
 }
 
-//// int
-//// consoleread(struct inode *ip, char *dst, int n)
-//// {
-////   uint target;
-////   int c;
-////
-////   iunlock(ip);
-////   target = n;
-////   acquire(&cons.lock);
-////   while(n > 0){
-////     while(input.r == input.w){
-////       if(myproc()->killed){
-////         release(&cons.lock);
-////         ilock(ip);
-////         return -1;
-////       }
-////       sleep(&input.r, &cons.lock);
-////     }
-////     c = input.buf[input.r++ % INPUT_BUF];
-////     if(c == C('D')){  // EOF
-////       if(n < target){
-////         // Save ^D for next time, to make sure
-////         // caller gets a 0-byte result.
-////         input.r--;
-////       }
-////       break;
-////     }
-////     *dst++ = c;
-////     --n;
-////     if(c == '\n')
-////       break;
-////   }
-////   release(&cons.lock);
-////   ilock(ip);
-////
-////   return target - n;
-//// }
-////
-//// int
-//// consolewrite(struct inode *ip, char *buf, int n)
-//// {
-////   int i;
-////
-////   iunlock(ip);
-////   acquire(&cons.lock);
-////   for(i = 0; i < n; i++)
-////     consputc(buf[i] & 0xff);
-////   release(&cons.lock);
-////   ilock(ip);
-////
-////   return n;
-//// }
+pub unsafe fn consoleread(ip: *mut Inode, mut dst: *mut u8, mut n: i32) -> i32 {
+  iunlock(ip);
+  let mut target = n;
+  acquire(&mut cons.lock as *mut Spinlock);
+  while(n > 0){
+    while(input.r == input.w){
+      if( (*myproc()).killed){
+        release(&mut cons.lock as *mut Spinlock);
+        ilock(ip);
+        return -1;
+      }
+      sleep(&mut input.r as *mut usize as *mut (), &mut cons.lock as *mut Spinlock);
+    }
+    let c = input.buf[input.r % INPUT_BUF];
+    input.r += 1;
+    if(c == C(b'D') as u8){  // EOF
+      if(n < target){
+        // Save ^D for next time, to make sure
+        // caller gets a 0-byte result.
+        input.r-=1;
+      }
+      break;
+    }
+    *dst = c;
+    dst = dst.offset(1);
+    n -= 1;
+    if(c == b'\n') {
+      break;
+    }
+  }
+  release(&mut cons.lock as *mut Spinlock);
+  ilock(ip);
+
+  return target - n;
+}
+
+pub unsafe fn consolewrite(ip: *mut Inode, buf: *mut u8, n: i32) -> i32 {
+  iunlock(ip);
+  acquire(&mut cons.lock as *mut Spinlock);
+  for i in 0..n {
+    consputc((*(buf.offset(i as isize)) & 0xff) as u16);
+  }
+  release(&mut cons.lock as *mut Spinlock);
+  ilock(ip);
+
+  return n;
+}
 
 pub unsafe fn consoleinit() {
-    // TODO: lock
-    //// initlock(&cons.lock, "console");
+    initlock(&mut cons.lock as *mut Spinlock, "console");
 
     //// devsw[CONSOLE].write = consolewrite;
     //// devsw[CONSOLE].read = consoleread;
-    //// cons.locking = 1;
+    cons.locking = 1;
 
     picenable(IRQ_KBD as i32);
     ioapicenable(IRQ_KBD, 0);
