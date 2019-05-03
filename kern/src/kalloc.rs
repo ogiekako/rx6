@@ -41,7 +41,7 @@ unsafe fn freerange(vstart: V, vend: V) {
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
-unsafe fn kfree(v: V) {
+pub unsafe fn kfree(v: V) {
     // TODO: do sensible check for test
     #[cfg(not(test))]
     {

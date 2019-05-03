@@ -15,6 +15,14 @@ pub fn v2p(v: V) -> P {
     P(v.0.wrapping_sub(KERNBASE.0))
 }
 
+pub fn V2P(a: usize) -> usize {
+    a - KERNBASE.0
+}
+
+pub unsafe fn P2V(a: *const u8) -> *const u8 {
+    a.add(KERNBASE.0)
+}
+
 pub const fn p2v(p: P) -> V {
     V(p.0 + KERNBASE.0)
 }

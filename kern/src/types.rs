@@ -1,1 +1,1 @@
-pub type pde_t = u32;
+pub type pde_t = usize;

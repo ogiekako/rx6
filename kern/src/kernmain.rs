@@ -44,8 +44,8 @@ pub unsafe fn mpmain() {
         &[Arg::Int(cpuid() as i32), Arg::Int(cpuid() as i32)],
     );
     idtinit(); // load idt register
-    xchg(&mut ((*mycpu()).started) as *mut u32, 1); // tell startothers() we're up
-                                                    //// scheduler();     // start running processes
+    xchg(&mut ((*mycpu()).started) as *mut usize, 1); // tell startothers() we're up
+                                                      //// scheduler();     // start running processes
 }
 
 extern "C" {

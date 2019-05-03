@@ -8,10 +8,10 @@ use core;
 pub struct Cpu {
     pub apicid: u8,              // Local APIC ID
     pub scheduler: *mut Context, // swtch() here to enter scheduler
-    pub ts: taskstate,           // Used by x86 to find stack for interrupt
+    pub ts: Taskstate,           // Used by x86 to find stack for interrupt
     pub gdt: [Segdesc; NSEGS],   // x86 global descriptor table
     // TODO volatile
-    pub started: u32,       // Has the CPU started?
+    pub started: usize,     // Has the CPU started?
     pub ncli: i32,          // Depth of pushcli nesting.
     pub intena: i32,        // Were interrupts enabled before pushcli?
     pub process: *mut Proc, // The process running on this cpu or null
@@ -19,23 +19,7 @@ pub struct Cpu {
 
 impl Cpu {
     pub const unsafe fn zero() -> Cpu {
-        Cpu {
-            apicid: 0,
-            scheduler: 0usize as *mut Context,
-            ts: taskstate {},
-            gdt: [
-                seg(0, 0, 0, 0),
-                seg(0, 0, 0, 0),
-                seg(0, 0, 0, 0),
-                seg(0, 0, 0, 0),
-                seg(0, 0, 0, 0),
-                seg(0, 0, 0, 0),
-            ],
-            started: 0,
-            ncli: 0,
-            intena: 0,
-            process: 0usize as *mut Proc,
-        }
+        transmute([0u8; size_of::<Cpu>()])
     }
 }
 
@@ -50,11 +34,11 @@ impl Cpu {
 // at the "Switch stacks" comment. Switch doesn't save eip explicitly,
 // but it is on the stack and allocproc() manipulates it.
 pub struct Context {
-    pub edi: u32,
-    pub esi: u32,
-    pub ebx: u32,
-    pub ebp: u32,
-    pub eip: u32,
+    pub edi: usize,
+    pub esi: usize,
+    pub ebx: usize,
+    pub ebp: usize,
+    pub eip: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -85,20 +69,19 @@ use self::Procstate::*;
 
 // Per-process state
 pub struct Proc {
-    pub sz: u32,               // Size of process memory (bytes)
-    pub pgdir: *mut pde_t,     // Page table
-    pub kstack: *mut u8,       // Bottom of kernel stack for this process
-    pub state: Procstate,      // Process state
-    pub pid: i32,              // Process ID
-    pub parent: *mut Proc,     // Parent process
-    pub tf: *mut Trapframe,    // Trap frame for current syscall
-    pub context: *mut Context, // swtch() here to run process
-    pub chan: *mut (),         // If non-zero, sleeping on chan
-    pub killed: bool,          // If non-zero, have been killed
-    // TODO:fix
-    //// pub ofile: [File; NOFILE],  // Open files
-    pub cwd: *mut Inode, // Current directory
-    pub name: [u8; 16],  // Process name (debugging)
+    pub sz: usize,                  // Size of process memory (bytes)
+    pub pgdir: *mut pde_t,          // Page table
+    pub kstack: *mut u8,            // Bottom of kernel stack for this process
+    pub state: Procstate,           // Process state
+    pub pid: i32,                   // Process ID
+    pub parent: *mut Proc,          // Parent process
+    pub tf: *mut Trapframe,         // Trap frame for current syscall
+    pub context: *mut Context,      // swtch() here to run process
+    pub chan: *mut (),              // If non-zero, sleeping on chan
+    pub killed: bool,               // If non-zero, have been killed
+    pub ofile: [*mut File; NOFILE], // Open files
+    pub cwd: *mut Inode,            // Current directory
+    pub name: [u8; 16],             // Process name (debugging)
 }
 
 // Process memory is laid out contiguously, low addresses first:
@@ -135,18 +118,18 @@ pub unsafe fn cpuid() -> usize {
     i as usize
 }
 
-static mut n: i32 = 0;
+static mut n_mycpu: i32 = 0;
 // Must be called with interrupts disabled
 pub unsafe fn mycpu() -> *mut Cpu {
     // Would prefer to panic but even printing is chancy here: almost everything,
     // including cprintf and panic, calls mycpu(), often indirectly through
     // acquire and release.
     if (readeflags() & FL_IF > 0) {
-        let nn = n;
-        n += 1;
+        let nn = n_mycpu;
+        n_mycpu += 1;
         if (nn == 0) {
             // TODO: fix
-            // cprintf("mycpu called from %x with interrupts enabled\n", __builtin_return_address(0));
+            //// cprintf("mycpu called from %x with interrupts enabled\n", __builtin_return_address(0));
         }
     }
 
@@ -205,7 +188,7 @@ pub unsafe fn allocproc() -> *mut Proc {
     // Set up new context to start executing at forkret,
     // which returns to trapret.
     sp = sp.offset(-4);
-    core::ptr::write(sp as *mut u32, trapret as u32);
+    core::ptr::write(sp as *mut usize, trapret as usize);
 
     sp = sp.offset(-(core::mem::size_of_val(&((*p).context)) as isize));
     (*p).context = sp as *mut Context;
@@ -214,7 +197,7 @@ pub unsafe fn allocproc() -> *mut Proc {
         0,
         core::mem::size_of_val(&((*p).context)),
     );
-    (*(*p).context).eip = forkret as u32;
+    (*(*p).context).eip = forkret as usize;
 
     p
 }
@@ -238,16 +221,16 @@ pub unsafe fn userinit() {
     inituvm(
         (*p).pgdir,
         &mut _binary_initcode_start,
-        &_binary_initcode_size as *const u8 as u32,
+        &_binary_initcode_size as *const u8 as usize,
     );
-    (*p).sz = PGSIZE as u32;
+    (*p).sz = PGSIZE as usize;
     memset((*p).tf as *mut u8, 0, core::mem::size_of_val(&(*(*p).tf)));
     (*(*p).tf).cs = (SEG_UCODE << 3) as u16 | DPL_USER as u16;
     (*(*p).tf).ds = (SEG_UDATA << 3) as u16 | DPL_USER as u16;
     (*(*p).tf).es = (*(*p).tf).ds;
     (*(*p).tf).ss = (*(*p).tf).ds;
     (*(*p).tf).eflags = FL_IF;
-    (*(*p).tf).esp = PGSIZE as u32;
+    (*(*p).tf).esp = PGSIZE as usize;
     (*(*p).tf).eip = 0; // beginning of initcode.S
 
     safestrcpy(
@@ -268,206 +251,207 @@ pub unsafe fn userinit() {
     release(&mut ptable.lock as *mut Spinlock);
 }
 
-// // Grow current process's memory by n bytes.
-// // Return 0 on success, -1 on failure.
-//// int
-//// growproc(int n)
-//// {
-////   uint sz;
-////   struct proc *curproc = myproc();
-////
-////   sz = curproc->sz;
-////   if(n > 0){
-////     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
-////       return -1;
-////   } else if(n < 0){
-////     if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
-////       return -1;
-////   }
-////   curproc->sz = sz;
-////   switchuvm(curproc);
-////   return 0;
-//// }
+// Grow current process's memory by n bytes.
+// Return 0 on success, -1 on failure.
+pub unsafe fn growproc(n: i32) -> i32 {
+    let curproc = myproc();
 
-// // Create a new process copying p as the parent.
-// // Sets up stack to return as if from system call.
-// // Caller must set state of returned proc to RUNNABLE.
-//// int
-//// fork(void)
-//// {
-////   int i, pid;
-////   struct proc *np;
-////   struct proc *curproc = myproc();
-////
-////   // Allocate process.
-////   if((np = allocproc()) == 0){
-////     return -1;
-////   }
-////
-////   // Copy process state from proc.
-////   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
-////     kfree(np->kstack);
-////     np->kstack = 0;
-////     np->state = UNUSED;
-////     return -1;
-////   }
-////   np->sz = curproc->sz;
-////   np->parent = curproc;
-////   *np->tf = *curproc->tf;
-////
-////   // Clear %eax so that fork returns 0 in the child.
-////   np->tf->eax = 0;
-////
-////   for(i = 0; i < NOFILE; i++)
-////     if(curproc->ofile[i])
-////       np->ofile[i] = filedup(curproc->ofile[i]);
-////   np->cwd = idup(curproc->cwd);
-////
-////   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
-////
-////   pid = np->pid;
-////
-////   acquire(&ptable.lock);
-////
-////   np->state = RUNNABLE;
-////
-////   release(&ptable.lock);
-////
-////   return pid;
-//// }
+    let mut sz = (*curproc).sz;
+    if (n > 0) {
+        sz = allocuvm((*curproc).pgdir, sz, sz + n as usize);
+        if sz == 0 {
+            return -1;
+        }
+    } else if (n < 0) {
+        sz = deallocuvm((*curproc).pgdir, sz, sz + n as usize);
+        if sz == 0 {
+            return -1;
+        }
+    }
+    (*curproc).sz = sz;
+    switchuvm(curproc);
+    return 0;
+}
+
+// Create a new process copying p as the parent.
+// Sets up stack to return as if from system call.
+// Caller must set state of returned proc to RUNNABLE.
+pub unsafe fn fork() -> i32 {
+    let curproc = myproc();
+
+    // Allocate process.
+    let np = allocproc();
+    if np == null_mut() {
+        return -1;
+    }
+
+    // Copy process state from proc.
+    (*np).pgdir = copyuvm((*curproc).pgdir, (*curproc).sz);
+    if ((*np).pgdir == null_mut()) {
+        kfree(V((*np).kstack as usize));
+        (*np).kstack = null_mut();
+        (*np).state = UNUSED;
+        return -1;
+    }
+    (*np).sz = (*curproc).sz;
+    (*np).parent = curproc;
+    *(*np).tf = (*(*curproc).tf).clone();
+
+    // Clear %eax so that fork returns 0 in the child.
+    (*(*np).tf).eax = 0;
+
+    for i in 0..NOFILE {
+        if ((*curproc).ofile[i]) != null_mut() {
+            (*np).ofile[i] = filedup((*curproc).ofile[i]);
+        }
+    }
+    (*np).cwd = idup((*curproc).cwd);
+
+    safestrcpy(
+        (*np).name.as_mut_ptr(),
+        (*curproc).name.as_ptr(),
+        size_of_val(&(*curproc).name) as i32,
+    );
+
+    let pid = (*np).pid;
+
+    acquire(&mut ptable.lock as *mut Spinlock);
+
+    (*np).state = RUNNABLE;
+
+    release(&mut ptable.lock as *mut Spinlock);
+
+    return pid;
+}
 
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 pub unsafe fn exit() {
-    // TODO: fix
     let curproc = myproc();
 
-    ////  if(curproc == initproc) {
-    ////    panic!("init exiting");
-    ////  }
-    ////
-    //// // Close all open files.
-    //// for fd in 0..NOFILE {
-    ////   if (*curproc).ofile[fd] {
-    ////     fileclose(curproc->ofile[fd]);
-    ////     (*curproc).ofile[fd] = 0;
-    ////   }
-    //// }
-    ////
-    //// begin_op();
-    //// iput(curproc->cwd);
-    //// end_op();
-    //// curproc->cwd = 0;
-    ////
-    //// acquire(&ptable.lock);
-    ////
-    //// // Parent might be sleeping in wait().
-    ////
-    //// wakeup1(curproc->parent);
-    ////
-    //// // Pass abandoned children to init.
-    //// for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    ////   if(p->parent == curproc){
-    ////     p->parent = initproc;
-    ////     if(p->state == ZOMBIE)
-    ////       wakeup1(initproc);
-    ////   }
-    //// }
+    if (curproc == initproc) {
+        panic!("init exiting");
+    }
 
-    //// Jump into the scheduler, never to return.
-    //// curproc->state = ZOMBIE;
-    //// sched();
-    //// panic("zombie exit");
+    // Close all open files.
+    for fd in 0..NOFILE {
+        if (*curproc).ofile[fd] != null_mut() {
+            fileclose((*curproc).ofile[fd]);
+            (*curproc).ofile[fd] = null_mut();
+        }
+    }
+
+    begin_op();
+    iput((*curproc).cwd);
+    end_op();
+    (*curproc).cwd = null_mut();
+
+    acquire(&mut ptable.lock as *mut Spinlock);
+
+    // Parent might be sleeping in wait().
+
+    wakeup1((*curproc).parent as *mut ());
+
+    // Pass abandoned children to init.
+    for i in 0..NPROC {
+        let p = &mut ptable.proc[i];
+        if (p.parent == curproc) {
+            p.parent = initproc;
+            if (p.state == ZOMBIE) {
+                wakeup1(initproc as *mut ());
+            }
+        }
+    }
+
+    // Jump into the scheduler, never to return.
+    (*curproc).state = ZOMBIE;
+    sched();
+    panic!("zombie exit");
 }
 
-// // Wait for a child process to exit and return its pid.
-// // Return -1 if this process has no children.
-//// int
-//// wait(void)
-//// {
-////   struct proc *p;
-////   int havekids, pid;
-////   struct proc *curproc = myproc();
-////
-////   acquire(&ptable.lock);
-////   for(;;){
-////     // Scan through table looking for exited children.
-////     havekids = 0;
-////     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-////       if(p->parent != curproc)
-////         continue;
-////       havekids = 1;
-////       if(p->state == ZOMBIE){
-////         // Found one.
-////         pid = p->pid;
-////         kfree(p->kstack);
-////         p->kstack = 0;
-////         freevm(p->pgdir);
-////         p->pid = 0;
-////         p->parent = 0;
-////         p->name[0] = 0;
-////         p->killed = 0;
-////         p->state = UNUSED;
-////         release(&ptable.lock);
-////         return pid;
-////       }
-////     }
-////
-////     // No point waiting if we don't have any children.
-////     if(!havekids || curproc->killed){
-////       release(&ptable.lock);
-////       return -1;
-////     }
-////
-////     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
-////     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
-////   }
-//// }
+// Wait for a child process to exit and return its pid.
+// Return -1 if this process has no children.
+pub unsafe fn wait() -> i32 {
+    let curproc = myproc();
 
-// //PAGEBREAK: 42
-// // Per-CPU process scheduler.
-// // Each CPU calls scheduler() after setting itself up.
-// // Scheduler never returns.  It loops, doing:
-// //  - choose a process to run
-// //  - swtch to start running that process
-// //  - eventually that process transfers control
-// //      via swtch back to the scheduler.
-//// void
-//// scheduler(void)
-//// {
-////   struct proc *p;
-////   struct cpu *c = mycpu();
-////   c->proc = 0;
-////
-////   for(;;){
-////     // Enable interrupts on this processor.
-////     sti();
-////
-////     // Loop over process table looking for process to run.
-////     acquire(&ptable.lock);
-////     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-////       if(p->state != RUNNABLE)
-////         continue;
-////
-////       // Switch to chosen process.  It is the process's job
-////       // to release ptable.lock and then reacquire it
-////       // before jumping back to us.
-////       c->proc = p;
-////       switchuvm(p);
-////       p->state = RUNNING;
-////
-////       swtch(&(c->scheduler), p->context);
-////       switchkvm();
-////
-////       // Process is done running for now.
-////       // It should have changed its p->state before coming back.
-////       c->proc = 0;
-////     }
-////     release(&ptable.lock);
-////
-////   }
-//// }
+    acquire(&mut ptable.lock as *mut Spinlock);
+    loop {
+        // Scan through table looking for exited children.
+        let mut havekids = 0;
+        for i in 0..NPROC {
+            let p = &mut ptable.proc[i];
+            if (p.parent != curproc) {
+                continue;
+            }
+            havekids = 1;
+            if (p.state == ZOMBIE) {
+                // Found one.
+                let pid = p.pid;
+                kfree(V(p.kstack as usize));
+                p.kstack = null_mut();
+                freevm(p.pgdir);
+                p.pid = 0;
+                p.parent = null_mut();
+                p.name[0] = 0;
+                p.killed = true;
+                p.state = UNUSED;
+                release(&mut ptable.lock as *mut Spinlock);
+                return pid;
+            }
+        }
+
+        // No point waiting if we don't have any children.
+        if (havekids == 0 || (*curproc).killed) {
+            release(&mut ptable.lock as *mut Spinlock);
+            return -1;
+        }
+
+        // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+        sleep(curproc as *mut (), &mut ptable.lock as *mut Spinlock);
+    }
+}
+
+// Per-CPU process scheduler.
+// Each CPU calls scheduler() after setting itself up.
+// Scheduler never returns.  It loops, doing:
+//  - choose a process to run
+//  - swtch to start running that process
+//  - eventually that process transfers control
+//      via swtch back to the scheduler.
+pub unsafe fn scheduler() {
+    let c = mycpu();
+    (*c).process = null_mut();
+
+    loop {
+        // Enable interrupts on this processor.
+        sti();
+
+        // Loop over process table looking for process to run.
+        acquire(&mut ptable.lock as *mut Spinlock);
+        for i in 0..NPROC {
+            let mut p = &mut ptable.proc[i];
+            if (p.state != RUNNABLE) {
+                continue;
+            }
+
+            // Switch to chosen process.  It is the process's job
+            // to release ptable.lock and then reacquire it
+            // before jumping back to us.
+            (*c).process = p;
+            switchuvm(p as *const Proc);
+            p.state = RUNNING;
+
+            //// swtch(&((*c).scheduler), (*p).context);
+            switchkvm();
+
+            // Process is done running for now.
+            // It should have changed its p->state before coming back.
+            (*c).process = null_mut();
+        }
+        release(&mut ptable.lock as *mut Spinlock);
+    }
+}
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores

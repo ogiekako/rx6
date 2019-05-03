@@ -68,14 +68,13 @@ pub unsafe fn lidt(p: *const Gatedesc, size: i32) {
     asm!("lidt ($0)" : : "r" (&pd) : : "volatile");
 }
 
-//// static inline void
-//// ltr(ushort sel)
-//// {
-////   asm volatile("ltr %0" : : "r" (sel));
-//// }
+#[inline]
+pub unsafe fn ltr(sel: u16) {
+    asm!("ltr $0" : : "r" (sel) ::"volatile");
+}
 
-pub unsafe fn readeflags() -> u32 {
-    let mut eflags = 0u32;
+pub unsafe fn readeflags() -> usize {
+    let mut eflags = 0usize;
     asm!("pushfl; popl $0" : "=r" (eflags)::::"volatile");
     eflags
 }
@@ -95,8 +94,8 @@ pub unsafe fn sti() {
 }
 
 #[inline]
-pub unsafe fn xchg(addr: *mut u32, newval: u32) -> u32 {
-    let result: u32;
+pub unsafe fn xchg(addr: *mut usize, newval: usize) -> usize {
+    let result: usize;
     // The + in "+m" denotes a read-modify-write operand.
     asm!("lock; xchgl $0, $1":
        "+*m"(addr), "={eax}"(result):
@@ -106,30 +105,29 @@ pub unsafe fn xchg(addr: *mut u32, newval: u32) -> u32 {
     result
 }
 
-//// static inline uint
-//// rcr2(void)
-//// {
-////   uint val;
-////   asm volatile("movl %%cr2,%0" : "=r" (val));
-////   return val;
-//// }
+pub unsafe fn rcr2() -> usize {
+    let val: usize;
+    asm!("movl %cr2,$0" : "=r" (val) ::: "volatile");
+    val
+}
 
-pub unsafe fn lcr3(val: u32) {
+pub unsafe fn lcr3(val: usize) {
     asm!("mov $0, %cr3"::"r"(val):"memory":"volatile");
 }
 
 // Layout of the trap frame built on the stack by the
 // hardware and by trapasm.S, and passed to trap().
+#[derive(Clone)]
 pub struct Trapframe {
     // registers as pushed by pusha
-    pub edi: u32,
-    pub esi: u32,
-    pub ebp: u32,
-    pub oesp: u32, // useless & ignored
-    pub ebx: u32,
-    pub edx: u32,
-    pub ecx: u32,
-    pub eax: u32,
+    pub edi: usize,
+    pub esi: usize,
+    pub ebp: usize,
+    pub oesp: usize, // useless & ignored
+    pub ebx: usize,
+    pub edx: usize,
+    pub ecx: usize,
+    pub eax: usize,
 
     // rest of trap frame
     pub gs: u16,
@@ -140,17 +138,17 @@ pub struct Trapframe {
     pub padding3: u16,
     pub ds: u16,
     pub padding4: u16,
-    pub trapno: u32,
+    pub trapno: usize,
 
     // below here defined by x86 hardware
-    pub err: u32,
-    pub eip: u32,
+    pub err: usize,
+    pub eip: usize,
     pub cs: u16,
     pub padding5: u16,
-    pub eflags: u32,
+    pub eflags: usize,
 
     // below here only when crossing rings, such as from user to kernel
-    pub esp: u32,
+    pub esp: usize,
     pub ss: u16,
     pub padding6: u16,
 }

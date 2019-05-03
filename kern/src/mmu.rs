@@ -55,27 +55,27 @@ impl AddAssign<usize> for P {
 }
 
 // Eflags register
-pub const FL_CF: u32 = 0x00000001; // Carry Flag
-pub const FL_PF: u32 = 0x00000004; // Parity Flag
-pub const FL_AF: u32 = 0x00000010; // Auxiliary carry Flag
-pub const FL_ZF: u32 = 0x00000040; // Zero Flag
-pub const FL_SF: u32 = 0x00000080; // Sign Flag
-pub const FL_TF: u32 = 0x00000100; // Trap Flag
-pub const FL_IF: u32 = 0x00000200; // Interrupt Enable
-pub const FL_DF: u32 = 0x00000400; // Direction Flag
-pub const FL_OF: u32 = 0x00000800; // Overflow Flag
-pub const FL_IOPL_MASK: u32 = 0x00003000; // I/O Privilege Level bitmask
-pub const FL_IOPL_0: u32 = 0x00000000; //   IOPL == 0
-pub const FL_IOPL_1: u32 = 0x00001000; //   IOPL == 1
-pub const FL_IOPL_2: u32 = 0x00002000; //   IOPL == 2
-pub const FL_IOPL_3: u32 = 0x00003000; //   IOPL == 3
-pub const FL_NT: u32 = 0x00004000; // Nested Task
-pub const FL_RF: u32 = 0x00010000; // Resume Flag
-pub const FL_VM: u32 = 0x00020000; // Virtual 8086 mode
-pub const FL_AC: u32 = 0x00040000; // Alignment Check
-pub const FL_VIF: u32 = 0x00080000; // Virtual Interrupt Flag
-pub const FL_VIP: u32 = 0x00100000; // Virtual Interrupt Pending
-pub const FL_ID: u32 = 0x00200000; // ID flag
+pub const FL_CF: usize = 0x00000001; // Carry Flag
+pub const FL_PF: usize = 0x00000004; // Parity Flag
+pub const FL_AF: usize = 0x00000010; // Auxiliary carry Flag
+pub const FL_ZF: usize = 0x00000040; // Zero Flag
+pub const FL_SF: usize = 0x00000080; // Sign Flag
+pub const FL_TF: usize = 0x00000100; // Trap Flag
+pub const FL_IF: usize = 0x00000200; // Interrupt Enable
+pub const FL_DF: usize = 0x00000400; // Direction Flag
+pub const FL_OF: usize = 0x00000800; // Overflow Flag
+pub const FL_IOPL_MASK: usize = 0x00003000; // I/O Privilege Level bitmask
+pub const FL_IOPL_0: usize = 0x00000000; //   IOPL == 0
+pub const FL_IOPL_1: usize = 0x00001000; //   IOPL == 1
+pub const FL_IOPL_2: usize = 0x00002000; //   IOPL == 2
+pub const FL_IOPL_3: usize = 0x00003000; //   IOPL == 3
+pub const FL_NT: usize = 0x00004000; // Nested Task
+pub const FL_RF: usize = 0x00010000; // Resume Flag
+pub const FL_VM: usize = 0x00020000; // Virtual 8086 mode
+pub const FL_AC: usize = 0x00040000; // Alignment Check
+pub const FL_VIF: usize = 0x00080000; // Virtual Interrupt Flag
+pub const FL_VIP: usize = 0x00100000; // Virtual Interrupt Pending
+pub const FL_ID: usize = 0x00200000; // ID flag
 
 // Control Register flags
 pub const CR0_PE: usize = 0x00000001; // Protection Enable
@@ -105,21 +105,21 @@ pub const NSEGS: usize = 6;
 // Segment Descriptor
 #[repr(C)]
 pub struct Segdesc {
-    lim_15_0: u16,  // Low bits of segment limit
-    base_15_0: u16, // Low bits of segment base address
-    base_23_16: u8, // Middle bits of segment base address
-    typ_s_dpl_p: u8,
+    pub lim_15_0: u16,  // Low bits of segment limit
+    pub base_15_0: u16, // Low bits of segment base address
+    pub base_23_16: u8, // Middle bits of segment base address
+    pub typ_s_dpl_p: u8,
     //// uint typ : 4;       // Segment type (see STS_ constants)
     //// uint s : 1;          // 0 = system, 1 = application
     //// uint dpl : 2;        // Descriptor Privilege Level
     //// uint p : 1;          // Present
-    lim_19_16_avl_rsv1_db_g: u8,
+    pub lim_19_16_avl_rsv1_db_g: u8,
     //// uint lim_19_16 : 4;  // High bits of segment limit
     //// uint avl : 1;        // Unused (available for software use)
     //// uint rsv1 : 1;       // Reserved
     //// uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
     //// uint g : 1;          // Granularity: limit scaled by 4K when set
-    base_31_24: u8, // High bits of segment base address
+    pub base_31_24: u8, // High bits of segment base address
 }
 
 impl Segdesc {
@@ -171,7 +171,7 @@ mod tests {
 }
 
 // Normal segment
-pub const fn seg(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
+pub const fn SEG(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     Segdesc::new(
         ((lim >> 12) & 0xffff) as u16,
         (base & 0xffff) as u16,
@@ -189,7 +189,7 @@ pub const fn seg(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
     )
 }
 
-pub unsafe fn seg16(typ: u8, base: usize, lim: u32, dpl: u8) -> Segdesc {
+pub unsafe fn SEG16(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     Segdesc::new(
         (lim & 0xffff) as u16,
         (base & 0xffff) as u16,
@@ -264,11 +264,11 @@ pub const PGSHIFT: usize = 12; // log2(PGSIZE)
 pub const PTXSHIFT: usize = 12; // offset of PTX in a linear address
 pub const PDXSHIFT: usize = 22; // offset of PDX in a linear address
 
-fn PGROUNDUP(sz: usize) -> usize {
+pub fn PGROUNDUP(sz: usize) -> usize {
     ((sz) + (PGSIZE - 1)) & (!(PGSIZE - 1))
 }
 
-fn PGROUNDDOWN(a: usize) -> usize {
+pub fn PGROUNDDOWN(a: usize) -> usize {
     a & (!(PGSIZE - 1))
 }
 
@@ -290,52 +290,53 @@ impl PTE {
     pub unsafe fn addr(&self) -> P {
         P(self.0 & (!0xFFF))
     }
-    fn flags(&self) -> usize {
+    pub fn flags(&self) -> usize {
         self.0 & 0xFFF
     }
 }
 
-//// typedef uint pte_t;
+pub type pte_t = usize;
 
 // Task state segment format
-pub struct taskstate {
-    //// uint link;         // Old ts selector
-//// uint esp0;         // Stack pointers and segment selectors
-//// ushort ss0;        //   after an increase in privilege level
-//// ushort padding1;
-//// uint *esp1;
-//// ushort ss1;
-//// ushort padding2;
-//// uint *esp2;
-//// ushort ss2;
-//// ushort padding3;
-//// void *cr3;         // Page directory base
-//// uint *eip;         // Saved state from last task switch
-//// uint eflags;
-//// uint eax;          // More saved state (registers)
-//// uint ecx;
-//// uint edx;
-//// uint ebx;
-//// uint *esp;
-//// uint *ebp;
-//// uint esi;
-//// uint edi;
-//// ushort es;         // Even more saved state (segment selectors)
-//// ushort padding4;
-//// ushort cs;
-//// ushort padding5;
-//// ushort ss;
-//// ushort padding6;
-//// ushort ds;
-//// ushort padding7;
-//// ushort fs;
-//// ushort padding8;
-//// ushort gs;
-//// ushort padding9;
-//// ushort ldt;
-//// ushort padding10;
-//// ushort t;          // Trap on task switch
-//// ushort iomb;       // I/O map base address
+#[repr(C)]
+pub struct Taskstate {
+    pub link: usize, // Old ts selector
+    pub esp0: usize, // Stack pointers and segment selectors
+    pub ss0: u16,    //   after an increase in privilege level
+    pub padding1: u16,
+    pub esp1: *mut usize,
+    pub ss1: u16,
+    pub padding2: u16,
+    pub esp2: *mut usize,
+    pub ss2: u16,
+    pub padding3: u16,
+    pub cr3: *mut (),    // Page directory base
+    pub eip: *mut usize, // Saved state from last task switch
+    pub eflags: usize,
+    pub eax: usize, // More saved state (registers)
+    pub ecx: usize,
+    pub edx: usize,
+    pub ebx: usize,
+    pub esp: *mut usize,
+    pub ebp: *mut usize,
+    pub esi: usize,
+    pub edi: usize,
+    pub es: u16, // Even more saved state (segment selectors)
+    pub padding4: u16,
+    pub cs: u16,
+    pub padding5: u16,
+    pub ss: u16,
+    pub padding6: u16,
+    pub ds: u16,
+    pub padding7: u16,
+    pub fs: u16,
+    pub padding8: u16,
+    pub gs: u16,
+    pub padding9: u16,
+    pub ldt: u16,
+    pub padding10: u16,
+    pub t: u16,    // Trap on task switch
+    pub iomb: u16, // I/O map base address
 }
 
 #[derive(Clone, Copy)]

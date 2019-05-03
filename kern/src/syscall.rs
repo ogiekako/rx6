@@ -138,7 +138,7 @@ pub unsafe fn syscall() {
 
     let num = (*(*curproc).tf).eax as usize;
     if (num > 0 && num < syscalls.len() && !syscalls[num].is_null()) {
-        (*(*curproc).tf).eax = (*syscalls[num])() as u32;
+        (*(*curproc).tf).eax = (*syscalls[num])() as usize;
     } else {
         cprintf(
             "%d %s: unknown sys call %d\n",
@@ -148,6 +148,6 @@ pub unsafe fn syscall() {
                 Arg::Int(num as i32),
             ],
         );
-        (*(*curproc).tf).eax = -1i32 as u32;
+        (*(*curproc).tf).eax = -1i32 as usize;
     }
 }

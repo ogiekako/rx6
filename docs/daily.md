@@ -1,4 +1,13 @@
- 2019-05-02
+2019-05-03
+
+残ったトリッキーな部分:
+
+- extern struct proc = asm(%gs)in (proc.h) *
+- extern struct cpu = asm(%gs)in (proc.h) *
+- swtch (swtch.S) *
+- segdesc の bit field *
+
+# 2019-05-02
 // 
 // 14:30 - startothers のデバッグを開始。
 // 
@@ -24,14 +33,13 @@ trapret はどこ？
 
 * : 途中 , + : 依存に対するコメントアウト以外おわり
 
-- userinit (process.rs)
-  - extern struct proc = asm(%gs)in (proc.h) *
-  - extern struct cpu = asm(%gs)in (proc.h) *
-  - sched +
-      - swtch (swtch.S) *
-  - namei * (fs.rs)
-    - namex *
-      - iget, idup, ilock ...
+- extern struct proc = asm(%gs)in (proc.h) *
+- extern struct cpu = asm(%gs)in (proc.h) *
+- swtch (swtch.S) *
+- segdesc の bit field *
+
+- readi (fs.rs)
+  - devsw  (file.rs)
 
 initcode.S の SYS_exec が存在しない。これどうしようかな。必要なとこだけ header でいいや。どうせ対して使わないし。
 
@@ -39,6 +47,9 @@ initcode.S の SYS_exec が存在しない。これどうしようかな。必�
 u32 は使わず、すべて usize に置き換えたほうが良かったかもしれない。あとでいいけど。
 
 ICE をみつけたので[報告した](https://github.com/rust-lang/rust/issues/60499)。
+-> update でなおっていた。
+
+pte まわり中途半端な抽象化のせいでよくわからない感じになっている。
 
 # 2019-05-01
 

@@ -10,10 +10,10 @@ pub unsafe fn seginit() {
     // because it would have to have DPL_USR, but the CPU forbids
     // an interrupt from CPL=0 to DPL=3.
     let mut c = &mut cpus[cpuid()];
-    c.gdt[SEG_KCODE] = seg(STA_X | STA_R, 0, 0xffffffff, 0);
-    c.gdt[SEG_KDATA] = seg(STA_W, 0, 0xffffffff, 0);
-    c.gdt[SEG_UCODE] = seg(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
-    c.gdt[SEG_UDATA] = seg(STA_W, 0, 0xffffffff, DPL_USER);
+    c.gdt[SEG_KCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, 0);
+    c.gdt[SEG_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
+    c.gdt[SEG_UCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
+    c.gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
     lgdt(c.gdt.as_ptr(), core::mem::size_of_val(&c.gdt) as u16);
 }
 
@@ -178,37 +178,43 @@ pub unsafe fn kvmalloc() {
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
 pub unsafe fn switchkvm() {
-    lcr3(v2p(kpgdir.pd).0 as u32); // switch to the kernel page table
+    lcr3(v2p(kpgdir.pd).0 as usize); // switch to the kernel page table
 }
 
-// // Switch TSS and h/w page table to correspond to process p.
-//// void
-//// switchuvm(struct proc *p)
-//// {
-////   if(p == 0)
-////     panic("switchuvm: no process");
-////   if(p->kstack == 0)
-////     panic("switchuvm: no kstack");
-////   if(p->pgdir == 0)
-////     panic("switchuvm: no pgdir");
-////
-////   pushcli();
-////   mycpu()->gdt[SEG_TSS] = SEG16(STS_T32A, &mycpu()->ts, sizeof(mycpu()->ts)-1, 0);
-////   mycpu()->gdt[SEG_TSS].s = 0;
-////   mycpu()->ts.ss0 = SEG_KDATA << 3;
-////   mycpu()->ts.esp0 = (uint)p->kstack + KSTACKSIZE;
-////   // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
-////   // forbids I/O instructions (e.g., inb and outb) from user space
-////   mycpu()->ts.iomb = (ushort) 0xFFFF;
-////   ltr(SEG_TSS << 3);
-////   lcr3(V2P(p->pgdir));  // switch to process's address space
-////   popcli();
-//// }
+// Switch TSS and h/w page table to correspond to process p.
+pub unsafe fn switchuvm(p: *const Proc) {
+    if (p == null_mut()) {
+        panic!("switchuvm: no process");
+    }
+    if ((*p).kstack == null_mut()) {
+        panic!("switchuvm: no kstack");
+    }
+    if ((*p).pgdir == null_mut()) {
+        panic!("switchuvm: no pgdir");
+    }
+
+    pushcli();
+    ((*mycpu()).gdt)[SEG_TSS] = SEG16(
+        STS_T32A,
+        (&(*mycpu()).ts as *const Taskstate) as usize,
+        size_of_val(&(*mycpu()).ts) - 1,
+        0,
+    );
+    //// (*mycpu()).gdt[SEG_TSS].s = 0;
+    (*mycpu()).ts.ss0 = (SEG_KDATA << 3) as u16;
+    (*mycpu()).ts.esp0 = (*p).kstack as usize + KSTACKSIZE;
+    // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
+    // forbids I/O instructions (e.g., inb and outb) from user space
+    (*mycpu()).ts.iomb = 0xFFFFu16;
+    ltr((SEG_TSS << 3) as u16);
+    lcr3(V2P((*p).pgdir as usize)); // switch to process's address space
+    popcli();
+}
 
 // Load the initcode into address 0 of pgdir.
 // sz must be less than a page.
-pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: u32) {
-    if sz >= PGSIZE as u32 {
+pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: usize) {
+    if sz >= PGSIZE {
         panic!("inituvm: more than a page");
     }
     let mem: *mut u8 = kalloc().map(|v| v.0).unwrap_or(0) as *mut u8;
@@ -244,170 +250,178 @@ pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: u32) {
 ////   }
 ////   return 0;
 //// }
-//
-// // Allocate page tables and physical memory to grow process from oldsz to
-// // newsz, which need not be page aligned.  Returns new size or 0 on error.
-//// int
-//// allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
-//// {
-////   char *mem;
-////   uint a;
-////
-////   if(newsz >= KERNBASE)
-////     return 0;
-////   if(newsz < oldsz)
-////     return oldsz;
-////
-////   a = PGROUNDUP(oldsz);
-////   for(; a < newsz; a += PGSIZE){
-////     mem = kalloc();
-////     if(mem == 0){
-////       cprintf("allocuvm out of memory\n");
-////       deallocuvm(pgdir, newsz, oldsz);
-////       return 0;
-////     }
-////     memset(mem, 0, PGSIZE);
-////     if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
-////       cprintf("allocuvm out of memory (2)\n");
-////       deallocuvm(pgdir, newsz, oldsz);
-////       kfree(mem);
-////       return 0;
-////     }
-////   }
-////   return newsz;
-//// }
-//
-// // Deallocate user pages to bring the process size from oldsz to
-// // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-// // need to be less than oldsz.  oldsz can be larger than the actual
-// // process size.  Returns the new process size.
-//// int
-//// deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
-//// {
-////   pte_t *pte;
-////   uint a, pa;
-////
-////   if(newsz >= oldsz)
-////     return oldsz;
-////
-////   a = PGROUNDUP(newsz);
-////   for(; a  < oldsz; a += PGSIZE){
-////     pte = walkpgdir(pgdir, (char*)a, 0);
-////     if(!pte)
-////       a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
-////     else if((*pte & PTE_P) != 0){
-////       pa = PTE_ADDR(*pte);
-////       if(pa == 0)
-////         panic("kfree");
-////       char *v = P2V(pa);
-////       kfree(v);
-////       *pte = 0;
-////     }
-////   }
-////   return newsz;
-//// }
 
-//// // Free a page table and all the physical memory pages
-//// // in the user part.
-//// void
-//// freevm(pde_t *pgdir)
-//// {
-////   uint i;
-////
-////   if(pgdir == 0)
-////     panic("freevm: no pgdir");
-////   deallocuvm(pgdir, KERNBASE, 0);
-////   for(i = 0; i < NPDENTRIES; i++){
-////     if(pgdir[i] & PTE_P){
-////       char * v = P2V(PTE_ADDR(pgdir[i]));
-////       kfree(v);
-////     }
-////   }
-////   kfree((char*)pgdir);
-//// }
-//
-// // Clear PTE_U on a page. Used to create an inaccessible
-// // page beneath the user stack.
-//// void
-//// clearpteu(pde_t *pgdir, char *uva)
-//// {
-////   pte_t *pte;
-////
-////   pte = walkpgdir(pgdir, uva, 0);
-////   if(pte == 0)
-////     panic("clearpteu");
-////   *pte &= ~PTE_U;
-//// }
-//
-// // Given a parent process's page table, create a copy
-// // of it for a child.
-//// pde_t*
-//// copyuvm(pde_t *pgdir, uint sz)
-//// {
-////   pde_t *d;
-////   pte_t *pte;
-////   uint pa, i, flags;
-////   char *mem;
-////
-////   if((d = setupkvm()) == 0)
-////     return 0;
-////   for(i = 0; i < sz; i += PGSIZE){
-////     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
-////       panic("copyuvm: pte should exist");
-////     if(!(*pte & PTE_P))
-////       panic("copyuvm: page not present");
-////     pa = PTE_ADDR(*pte);
-////     flags = PTE_FLAGS(*pte);
-////     if((mem = kalloc()) == 0)
-////       goto bad;
-////     memmove(mem, (char*)P2V(pa), PGSIZE);
-////     if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
-////       goto bad;
-////   }
-////   return d;
-////
-//// bad:
-////   freevm(d);
-////   return 0;
-//// }
-//
-// //PAGEBREAK!
-// // Map user virtual address to kernel address.
-//// char*
-//// uva2ka(pde_t *pgdir, char *uva)
-//// {
-////   pte_t *pte;
-////
-////   pte = walkpgdir(pgdir, uva, 0);
-////   if((*pte & PTE_P) == 0)
-////     return 0;
-////   if((*pte & PTE_U) == 0)
-////     return 0;
-////   return (char*)P2V(PTE_ADDR(*pte));
-//// }
-//
-// // Copy len bytes from p to user address va in page table pgdir.
-// // Most useful when pgdir is not the current page table.
-// // uva2ka ensures this only works for PTE_U pages.
-//// int
-//// copyout(pde_t *pgdir, uint va, void *p, uint len)
-//// {
-////   char *buf, *pa0;
-////   uint n, va0;
-////
-////   buf = (char*)p;
-////   while(len > 0){
-////     va0 = (uint)PGROUNDDOWN(va);
-////     pa0 = uva2ka(pgdir, (char*)va0);
-////     if(pa0 == 0)
-////       return -1;
-////     n = PGSIZE - (va - va0);
-////     if(n > len)
-////       n = len;
-////     memmove(pa0 + (va - va0), buf, n);
-////     len -= n;
-////     buf += n;
-////     va = va0 + PGSIZE;
-////   }
-////   return 0;
-//// }
+// Allocate page tables and physical memory to grow process from oldsz to
+// newsz, which need not be page aligned.  Returns new size or 0 on error.
+pub unsafe fn allocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
+    if (newsz >= KERNBASE.0) {
+        return 0;
+    }
+    if (newsz < oldsz) {
+        return oldsz;
+    }
+
+    let mut a = PGROUNDUP(oldsz);
+    while a < newsz {
+        let mem = kalloc();
+        if (mem.is_none()) {
+            cprintf("allocuvm out of memory\n", &[]);
+            deallocuvm(pgdir, newsz, oldsz);
+            return 0;
+        }
+        let mem = mem.unwrap();
+        memset(mem.0 as *mut u8, 0, PGSIZE);
+        if !((&mut PageDir {
+            pd: V(pgdir as usize),
+        })
+            .mappages(V(a), PGSIZE, v2p(mem), PTE_W | PTE_U))
+        {
+            cprintf("allocuvm out of memory (2)\n", &[]);
+            deallocuvm(pgdir, newsz, oldsz);
+            kfree(mem);
+            return 0;
+        }
+        a += PGSIZE;
+    }
+    return newsz;
+}
+
+// Deallocate user pages to bring the process size from oldsz to
+// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
+// need to be less than oldsz.  oldsz can be larger than the actual
+// process size.  Returns the new process size.
+pub unsafe fn deallocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
+    if (newsz >= oldsz) {
+        return oldsz;
+    }
+
+    let mut a = PGROUNDUP(newsz);
+    while a < oldsz {
+        let pte = (&mut PageDir {
+            pd: V(pgdir as usize),
+        })
+            .walkpgdir(V(a), false);
+        if (pte.is_none()) {
+            a = V::pgaddr(V(a).pdx() + 1, 0, 0).0 - PGSIZE;
+        } else if (*(pte.unwrap().0 as *const pte_t) & PTE_P) != 0 {
+            let pa = PTE(*(pte.unwrap().0 as *const pte_t)).addr();
+            if (pa.0 == 0) {
+                panic!("kfree");
+            }
+            let v = p2v(pa);
+            kfree(v);
+            *(pte.unwrap().0 as *mut pte_t) = 0;
+        }
+        a += PGSIZE;
+    }
+    return newsz;
+}
+
+// Free a page table and all the physical memory pages
+// in the user part.
+pub unsafe fn freevm(pgdir: *mut pde_t) {
+    if (pgdir == null_mut()) {
+        panic!("freevm: no pgdir");
+    }
+    deallocuvm(pgdir, KERNBASE.0, 0);
+    for i in 0..NPDENTRIES {
+        if (*(pgdir.add(i)) & PTE_P) != 0 {
+            let v = p2v(PTE(*(pgdir.add(i))).addr());
+            kfree(v);
+        }
+    }
+    kfree(V(pgdir as usize));
+}
+
+// Clear PTE_U on a page. Used to create an inaccessible
+// page beneath the user stack.
+pub unsafe fn clearpteu(pgdir: *mut pde_t, uva: *mut u8) {
+    let pte = (&mut PageDir {
+        pd: V(pgdir as usize),
+    })
+        .walkpgdir(V(uva as usize), false);
+    if (pte.is_none()) {
+        panic!("clearpteu");
+    }
+    *(pte.unwrap().0 as *mut pte_t) &= !PTE_U;
+}
+
+// Given a parent process's page table, create a copy
+// of it for a child.
+pub unsafe fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
+    let mut d = setupkvm();
+    if (d.is_none()) {
+        return null_mut();
+    }
+    let mut pgdir = d.unwrap();
+    let mut bad = false;
+    for i in (0..sz).step_by(PGSIZE) {
+        let pte = &pgdir.walkpgdir(V(i), false);
+        if pte.is_none() {
+            panic!("copyuvm: pte should exist");
+        }
+        let pte = pte.unwrap().0 as *mut pde_t;
+        if ((*pte & PTE_P) == 0) {
+            panic!("copyuvm: page not present");
+        }
+        let pa = PTE(*pte).addr();
+        let flags = PTE(*pte).flags();
+        let mem = kalloc();
+        if (mem.is_none()) {
+            bad = true;
+            break;
+        }
+        let mem = mem.unwrap();
+        memmove(mem.0 as *mut u8, p2v(pa).0 as *const u8, PGSIZE);
+        if !(&mut pgdir).mappages(V(i), PGSIZE, v2p(mem), flags) {
+            bad = true;
+            break;
+        }
+    }
+    if !bad {
+        return pgdir.pd.0 as *mut pde_t;
+    }
+
+    freevm(pgdir.pd.0 as *mut pde_t);
+    return null_mut();
+}
+
+// Map user virtual address to kernel address.
+pub unsafe fn uva2ka(pgdir: *mut pde_t, uva: *mut u8) -> *mut u8 {
+    let pte = (&mut PageDir {
+        pd: V(pgdir as usize),
+    })
+        .walkpgdir(V(uva as usize), false)
+        .unwrap()
+        .0 as *const pte_t;
+    if ((*pte & PTE_P) == 0) {
+        return null_mut();
+    }
+    if ((*pte & PTE_U) == 0) {
+        return null_mut();
+    }
+    return p2v(PTE(*pte).addr()).0 as *mut u8;
+}
+
+// Copy len bytes from p to user address va in page table pgdir.
+// Most useful when pgdir is not the current page table.
+// uva2ka ensures this only works for PTE_U pages.
+pub unsafe fn copyout(pgdir: *mut pde_t, mut va: usize, p: *mut (), mut len: usize) -> i32 {
+    let mut buf = p as *mut u8;
+    while (len > 0) {
+        let mut va0 = PGROUNDDOWN(va) as usize;
+        let pa0 = uva2ka(pgdir, va0 as *mut u8);
+        if (pa0 == null_mut()) {
+            return -1;
+        }
+        let mut n = PGSIZE - (va - va0);
+        if (n > len) {
+            n = len;
+        }
+        memmove(pa0.add(va - va0), buf, n);
+        len -= n;
+        buf = buf.add(n);
+        va = va0 + PGSIZE;
+    }
+    return 0;
+}

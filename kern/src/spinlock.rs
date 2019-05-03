@@ -4,11 +4,11 @@ use core::sync::atomic;
 
 // Mutual exclusion lock.
 pub struct Spinlock {
-    locked: u32, // Is the lock held?
+    locked: usize, // Is the lock held?
     // For debugging:
     name: *const str, // Name of lock.
     cpu: *mut Cpu,    // The cpu holding the lock.
-    pcs: [u32; 10],   // The call stack (an array of program counters)
+    pcs: [usize; 10], // The call stack (an array of program counters)
 }
 
 impl Spinlock {
@@ -42,7 +42,7 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
     //// }
 
     // The xchg is atomic.
-    while (xchg(&mut (*lk).locked as *mut u32, 1) != 0) {}
+    while (xchg(&mut (*lk).locked as *mut usize, 1) != 0) {}
 
     // Tell the C compiler and the processor to not move loads or stores
     // past this point, to ensure that the critical section's memory

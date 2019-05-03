@@ -36,7 +36,7 @@ pub unsafe fn idtinit() {
 
 #[no_mangle]
 pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
-    if (*tf).trapno == T_SYSCALL as u32 {
+    if (*tf).trapno == T_SYSCALL {
         if ((*myproc()).killed) {
             exit();
         }

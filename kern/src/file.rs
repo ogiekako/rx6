@@ -1,19 +1,23 @@
 use super::*;
 
+#[derive(Clone, PartialEq)]
 pub enum FileType {
     FD_NONE,
     FD_PIPE,
     FD_INODE,
 }
 
+pub use FileType::*;
+
+#[derive(Clone)]
 pub struct File {
-    pub _type: FileType,
-    pub _ref: i32, // reference count
+    pub type_: FileType,
+    pub ref_: i32, // reference count
 
     pub readable: u8,
     pub writable: u8,
-    //// struct pipe *pipe;
-    //// struct inode *ip;
+    pub pipe: *mut Pipe,
+    pub ip: *mut Inode,
     pub off: usize,
 }
 
@@ -33,33 +37,23 @@ pub struct Inode {
     pub addrs: [usize; NDIRECT + 1],
 }
 pub const I_VALID: i32 = 0x2;
-////
-//// // table mapping major device number to
-//// // device functions
-//// struct devsw {
-////   int (*read)(struct inode*, char*, int);
-////   int (*write)(struct inode*, char*, int);
-//// };
-////
+
+// table mapping major device number to
+// device functions
+pub struct Devsw {
+    pub read: Option<fn(*mut Inode, *mut u8, i32) -> i32>,
+    pub write: Option<fn(*mut Inode, *mut u8, i32) -> i32>,
+}
+
 //// extern struct devsw devsw[];
-////
-//// #define CONSOLE 1
-////
-//// //PAGEBREAK!
-//// // Blank page.
-//// //
-//// // File descriptors
-//// //
-////
-//// #include "types.h"
-//// #include "defs.h"
-//// #include "param.h"
-//// #include "fs.h"
-//// #include "spinlock.h"
-//// #include "sleeplock.h"
-//// #include "file.h"
-////
-//// struct devsw devsw[NDEV];
+
+const CONSOLE: usize = 1;
+
+// file.c
+//
+// File descriptors
+//
+pub static mut devsw: [Devsw; NDEV] = unsafe { transmute([0u8; size_of::<[Devsw; NDEV]>()]) };
 pub struct Ftable {
     pub lock: Spinlock,
     pub file: [File; NFILE],
@@ -80,136 +74,130 @@ pub unsafe fn fileinit() {
     initlock(&mut ftable.lock as *mut Spinlock, "ftable");
 }
 
-//// // Allocate a file structure.
-//// struct file*
-//// filealloc(void)
-//// {
-////   struct file *f;
-////
-////   acquire(&ftable.lock);
-////   for(f = ftable.file; f < ftable.file + NFILE; f++){
-////     if(f->ref == 0){
-////       f->ref = 1;
-////       release(&ftable.lock);
-////       return f;
-////     }
-////   }
-////   release(&ftable.lock);
-////   return 0;
-//// }
-////
-//// // Increment ref count for file f.
-//// struct file*
-//// filedup(struct file *f)
-//// {
-////   acquire(&ftable.lock);
-////   if(f->ref < 1)
-////     panic("filedup");
-////   f->ref++;
-////   release(&ftable.lock);
-////   return f;
-//// }
-////
-//// // Close file f.  (Decrement ref count, close when reaches 0.)
-//// void
-//// fileclose(struct file *f)
-//// {
-////   struct file ff;
-////
-////   acquire(&ftable.lock);
-////   if(f->ref < 1)
-////     panic("fileclose");
-////   if(--f->ref > 0){
-////     release(&ftable.lock);
-////     return;
-////   }
-////   ff = *f;
-////   f->ref = 0;
-////   f->type = FD_NONE;
-////   release(&ftable.lock);
-////
-////   if(ff.type == FD_PIPE)
-////     pipeclose(ff.pipe, ff.writable);
-////   else if(ff.type == FD_INODE){
-////     begin_op();
-////     iput(ff.ip);
-////     end_op();
-////   }
-//// }
-////
-//// // Get metadata about file f.
-//// int
-//// filestat(struct file *f, struct stat *st)
-//// {
-////   if(f->type == FD_INODE){
-////     ilock(f->ip);
-////     stati(f->ip, st);
-////     iunlock(f->ip);
-////     return 0;
-////   }
-////   return -1;
-//// }
-////
-//// // Read from file f.
-//// int
-//// fileread(struct file *f, char *addr, int n)
-//// {
-////   int r;
-////
-////   if(f->readable == 0)
-////     return -1;
-////   if(f->type == FD_PIPE)
-////     return piperead(f->pipe, addr, n);
-////   if(f->type == FD_INODE){
-////     ilock(f->ip);
-////     if((r = readi(f->ip, addr, f->off, n)) > 0)
-////       f->off += r;
-////     iunlock(f->ip);
-////     return r;
-////   }
-////   panic("fileread");
-//// }
-////
-//// //PAGEBREAK!
-//// // Write to file f.
-//// int
-//// filewrite(struct file *f, char *addr, int n)
-//// {
-////   int r;
-////
-////   if(f->writable == 0)
-////     return -1;
-////   if(f->type == FD_PIPE)
-////     return pipewrite(f->pipe, addr, n);
-////   if(f->type == FD_INODE){
-////     // write a few blocks at a time to avoid exceeding
-////     // the maximum log transaction size, including
-////     // i-node, indirect block, allocation blocks,
-////     // and 2 blocks of slop for non-aligned writes.
-////     // this really belongs lower down, since writei()
-////     // might be writing a device like the console.
-////     int max = ((LOGSIZE-1-1-2) / 2) * 512;
-////     int i = 0;
-////     while(i < n){
-////       int n1 = n - i;
-////       if(n1 > max)
-////         n1 = max;
-////
-////       begin_op();
-////       ilock(f->ip);
-////       if ((r = writei(f->ip, addr + i, f->off, n1)) > 0)
-////         f->off += r;
-////       iunlock(f->ip);
-////       end_op();
-////
-////       if(r < 0)
-////         break;
-////       if(r != n1)
-////         panic("short filewrite");
-////       i += r;
-////     }
-////     return i == n ? n : -1;
-////   }
-////   panic("filewrite");
-//// }
-////
+// Allocate a file structure.
+pub unsafe fn filealloc() -> *mut File {
+    acquire(&mut ftable.lock as *mut Spinlock);
+    for i in 0..NFILE {
+        let mut f = &mut ftable.file[i];
+        if (f.ref_ == 0) {
+            f.ref_ = 1;
+            release(&mut ftable.lock as *mut Spinlock);
+            return f as *mut File;
+        }
+    }
+    release(&mut ftable.lock as *mut Spinlock);
+    return null_mut();
+}
+
+// Increment ref count for file f.
+pub unsafe fn filedup(f: *mut File) -> *mut File {
+    acquire(&mut ftable.lock as *mut Spinlock);
+    if ((*f).ref_ < 1) {
+        panic!("filedup");
+    }
+    (*f).ref_ += 1;
+    release(&mut ftable.lock as *mut Spinlock);
+    return f;
+}
+
+// Close file f.  (Decrement ref count, close when reaches 0.)
+pub unsafe fn fileclose(f: *mut File) {
+    acquire(&mut ftable.lock as *mut Spinlock);
+    if ((*f).ref_ < 1) {
+        panic!("fileclose");
+    }
+    (*f).ref_ -= 1;
+    if ((*f).ref_ > 0) {
+        release(&mut ftable.lock as *mut Spinlock);
+        return;
+    }
+    let ff = (*f).clone();
+    (*f).ref_ = 0;
+    (*f).type_ = FD_NONE;
+    release(&mut ftable.lock as *mut Spinlock);
+
+    if (ff.type_ == FD_PIPE) {
+        pipeclose(ff.pipe, ff.writable as i32);
+    } else if (ff.type_ == FD_INODE) {
+        begin_op();
+        iput(ff.ip);
+        end_op();
+    }
+}
+
+// Get metadata about file f.
+pub unsafe fn filestat(f: *mut File, st: *mut Stat) -> i32 {
+    if ((*f).type_ == FD_INODE) {
+        ilock((*f).ip);
+        stati((*f).ip, st);
+        iunlock((*f).ip);
+        return 0;
+    }
+    return -1;
+}
+
+// Read from file f.
+pub unsafe fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
+    if ((*f).readable == 0) {
+        return -1;
+    }
+    if ((*f).type_ == FD_PIPE) {
+        return piperead((*f).pipe, addr, n);
+    }
+    if ((*f).type_ == FD_INODE) {
+        ilock((*f).ip);
+        let r = readi((*f).ip, addr, (*f).off, n as usize);
+        if (r > 0) {
+            (*f).off += r as usize;
+        }
+        iunlock((*f).ip);
+        return r;
+    }
+    panic!("fileread");
+}
+
+//PAGEBREAK!
+// Write to file f.
+pub unsafe fn filewrite(f: *mut File, addr: *mut u8, n: i32) -> i32 {
+    if ((*f).writable == 0) {
+        return -1;
+    }
+    if ((*f).type_ == FD_PIPE) {
+        return pipewrite((*f).pipe, addr, n);
+    }
+    if ((*f).type_ == FD_INODE) {
+        // write a few blocks at a time to avoid exceeding
+        // the maximum log transaction size, including
+        // i-node, indirect block, allocation blocks,
+        // and 2 blocks of slop for non-aligned writes.
+        // this really belongs lower down, since writei()
+        // might be writing a device like the console.
+        let max = ((LOGSIZE - 1 - 1 - 2) / 2) * 512;
+        let mut i = 0;
+        while (i < n) {
+            let mut n1 = n - i;
+            if (n1 > max as i32) {
+                n1 = max as i32;
+            }
+
+            begin_op();
+            ilock((*f).ip);
+            let r = writei((*f).ip, addr.offset(i as isize), (*f).off, n1 as usize);
+            if (r > 0) {
+                (*f).off += r as usize;
+            }
+            iunlock((*f).ip);
+            end_op();
+
+            if (r < 0) {
+                break;
+            }
+            if (r != n1) {
+                panic!("short filewrite");
+            }
+            i += r;
+        }
+        return if i == n { n } else { -1 };
+    }
+    panic!("filewrite");
+}
