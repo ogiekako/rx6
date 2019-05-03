@@ -14,7 +14,7 @@ pub struct File {
     pub writable: u8,
     //// struct pipe *pipe;
     //// struct inode *ip;
-    pub off: u32,
+    pub off: usize,
 }
 
 // in-memory copy of an inode
@@ -32,7 +32,7 @@ pub struct Inode {
     pub size: usize,
     pub addrs: [usize; NDIRECT + 1],
 }
-//// #define I_VALID 0x2
+pub const I_VALID: i32 = 0x2;
 ////
 //// // table mapping major device number to
 //// // device functions

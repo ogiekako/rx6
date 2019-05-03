@@ -83,8 +83,8 @@ pub struct Proc {
     pub killed: bool,          // If non-zero, have been killed
     // TODO:fix
     //// pub ofile: [File; NOFILE],  // Open files
-    pub cwd: *const Inode, // Current directory
-    pub name: [u8; 16],    // Process name (debugging)
+    pub cwd: *mut Inode, // Current directory
+    pub name: [u8; 16],  // Process name (debugging)
 }
 
 // Process memory is laid out contiguously, low addresses first:

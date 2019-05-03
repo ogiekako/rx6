@@ -35,7 +35,7 @@ mod tests {
     }
 }
 
-pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) {
+pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) -> *mut () {
     if src < dst && src.offset(n as isize) > dst {
         src = src.offset(n as isize);
         dst = dst.offset(n as isize);
@@ -51,37 +51,51 @@ pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) {
             src = src.offset(1);
         }
     }
+    dst as *mut ()
 }
 
-// // memcpy exists to placate GCC.  Use memmove.
-//// void*
-//// memcpy(void *dst, const void *src, uint n)
-//// {
-////   return memmove(dst, src, n);
-//// }
-//
-//// int
-//// strncmp(const char *p, const char *q, uint n)
-//// {
-////   while(n > 0 && *p && *p == *q)
-////     n--, p++, q++;
-////   if(n == 0)
-////     return 0;
-////   return (uchar)*p - (uchar)*q;
-//// }
-//
-//// char*
-//// strncpy(char *s, const char *t, int n)
-//// {
-////   char *os;
-////
-////   os = s;
-////   while(n-- > 0 && (*s++ = *t++) != 0)
-////     ;
-////   while(n-- > 0)
-////     *s++ = 0;
-////   return os;
-//// }
+// memcpy exists to placate GCC.  Use memmove.
+pub unsafe fn memcpy(dst: *mut (), src: *const (), n: usize) -> *mut () {
+    memmove(dst as *mut u8, src as *const u8, n)
+}
+
+pub unsafe fn strncmp(mut p: *const u8, mut q: *const u8, mut n: usize) -> i32 {
+    loop {
+        if n <= 0 || *p == 0 || *p != *q {
+            break;
+        }
+        n -= 1;
+        p = p.offset(1);
+        q = q.offset(1);
+    }
+    if (n == 0) {
+        return 0;
+    }
+    (*p as i32) - (*q as i32)
+}
+
+pub unsafe fn strncpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
+    let os = s;
+    loop {
+        n -= 1;
+        if n < 0 {
+            break;
+        }
+        *s = *t;
+        let x = *s;
+        s = s.offset(1);
+        t = t.offset(1);
+        if x == 0 {
+            break;
+        }
+    }
+    while n > 0 {
+        n -= 1;
+        *s = 0;
+        s = s.offset(1);
+    }
+    return os;
+}
 
 // Like strncpy but guaranteed to NUL-terminate.
 pub unsafe fn safestrcpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {

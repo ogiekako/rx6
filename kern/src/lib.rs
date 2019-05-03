@@ -11,6 +11,12 @@
 #[macro_use]
 extern crate lazy_static;
 
+pub use core::mem::size_of;
+pub use core::mem::size_of_val;
+pub use core::mem::transmute;
+pub use core::ptr::null;
+pub use core::ptr::null_mut;
+
 pub use bio::*;
 pub use buf::*;
 pub use console::*;
@@ -31,6 +37,7 @@ pub use picirq::*;
 pub use process::*;
 pub use sleeplock::*;
 pub use spinlock::*;
+pub use stat::*;
 pub use string::*;
 pub use syscall::*;
 pub use sysfile::*;
@@ -64,6 +71,7 @@ pub mod picirq;
 pub mod process;
 pub mod sleeplock;
 pub mod spinlock;
+pub mod stat;
 pub mod string;
 pub mod syscall;
 pub mod sysfile;
