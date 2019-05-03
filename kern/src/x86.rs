@@ -26,14 +26,12 @@ pub unsafe fn outb(port: u16, data: u8) {
 ////   asm volatile("out %0,%1" : : "a" (data), "d" (port));
 //// }
 
-//// static inline void
-//// outsl(int port, const void *addr, int cnt)
-//// {
-////   asm volatile("cld; rep outsl" :
-////                "=S" (addr), "=c" (cnt) :
-////                "d" (port), "0" (addr), "1" (cnt) :
-////                "cc");
-//// }
+pub unsafe fn outsl(port: i32, addr: *mut (), cnt: i32) {
+    asm!("cld; rep outsl" :
+               "={si}" (addr), "={ecx}" (cnt) :
+               "{edx}" (port), "0" (addr), "1" (cnt) :
+               "cc": "volatile");
+}
 
 #[allow(unused_assignments)]
 pub unsafe fn stosb(mut addr: *mut (), data: i32, mut cnt: i32) {

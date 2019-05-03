@@ -22,23 +22,27 @@ trapret はどこ？
 
 関数の依存グラフ
 
-* : 途中
+* : 途中 , + : 依存に対するコメントアウト以外おわり
 
 - userinit (process.rs)
   - allocproc (process.rs)
     - trapret (trapasm.S)
     - forkret (process.rs)
-      - iinit *
+      - iinit +
+        - readsb (fs.rs) *
+          - bread (bio.rs) *
+            - iderw (ide.rs) *
+          - brelse (bio.rs) *
       - initlog *
   - inituvm (vm.rs)
     - mappages
   - initcode (initcode.S)
-  - p.cwd *
-    - Inode (file.rs) *
-      - Sleeplock *
+  - p.cwd
+    - Inode (file.rs) +
+      - Sleeplock +
         - extern struct proc = asm(%gs)in (proc.h) *
-        - sleep,
-        - wakeup
+        - sleep *,
+        - wakeup *
   - namei * (fs.rs)
     - namex *
       - iget, idup, ilock ...

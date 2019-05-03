@@ -74,16 +74,16 @@ pub struct Dirent {
 pub static mut sb: Superblock =
     unsafe { core::mem::transmute([0u8; core::mem::size_of::<Superblock>()]) };
 
-//// // Read the super block.
-//// void
-//// readsb(int dev, struct superblock *sb)
-//// {
-////   struct buf *bp;
-////
-////   bp = bread(dev, 1);
-////   memmove(sb, bp->data, sizeof(*sb));
-////   brelse(bp);
-//// }
+// Read the super block.
+pub unsafe fn readsb(dev: i32, sb_: *mut Superblock) {
+    let bp = bread(dev as usize, 1);
+    memmove(
+        sb_ as *mut u8,
+        (*bp).data.as_ptr(),
+        core::mem::size_of_val(&(*sb_)),
+    );
+    brelse(bp);
+}
 ////
 //// // Zero a block.
 //// static void
@@ -208,22 +208,30 @@ struct Icache {
 }
 static mut icache: Icache = unsafe { core::mem::transmute([0u8; core::mem::size_of::<Icache>()]) };
 
-//// void
-//// iinit(int dev)
-//// {
-////   int i = 0;
-////
-////   initlock(&icache.lock, "icache");
-////   for(i = 0; i < NINODE; i++) {
-////     initsleeplock(&icache.inode[i].lock, "inode");
-////   }
-////
-////   readsb(dev, &sb);
-////   cprintf("sb: size %d nblocks %d ninodes %d nlog %d logstart %d\
-////  inodestart %d bmap start %d\n", sb.size, sb.nblocks,
-////           sb.ninodes, sb.nlog, sb.logstart, sb.inodestart,
-////           sb.bmapstart);
-//// }
+pub unsafe fn iinit(dev: i32) {
+    initlock(&mut icache.lock as *mut Spinlock, "icache");
+    for i in 0..NINODE {
+        initsleeplock(
+            &mut icache.inode[i].lock as *mut Sleeplock,
+            "inode\0".as_ptr(),
+        );
+    }
+
+    //// readsb(dev, &sb);
+    cprintf(
+        "sb: size %d nblocks %d ninodes %d nlog %d logstart %d\
+         inodestart %d bmap start %d\n",
+        &[
+            Arg::Int(sb.size as i32),
+            Arg::Int(sb.nblocks as i32),
+            Arg::Int(sb.ninodes as i32),
+            Arg::Int(sb.nlog as i32),
+            Arg::Int(sb.logstart as i32),
+            Arg::Int(sb.inodestart as i32),
+            Arg::Int(sb.bmapstart as i32),
+        ],
+    );
+}
 ////
 //// static struct inode* iget(uint dev, uint inum);
 ////

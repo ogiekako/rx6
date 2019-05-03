@@ -1,11 +1,12 @@
-use fs::*;
+use super::*;
 
 #[repr(C)]
 pub struct Buf {
     pub flags: i32,
-    pub dev: u32,
-    pub blockno: u32,
-    pub refcnt: u32,
+    pub dev: usize,
+    pub blockno: usize,
+    pub lock: Sleeplock,
+    pub refcnt: usize,
     pub prev: *mut Buf, // LRU cache list
     pub next: *mut Buf,
     pub qnext: *mut Buf, // disk queue
@@ -14,18 +15,7 @@ pub struct Buf {
 
 impl Buf {
     pub const unsafe fn uninit() -> Buf {
-        unsafe {
-            Buf {
-                flags: 0,
-                dev: 0,
-                blockno: 0,
-                refcnt: 0,
-                prev: core::ptr::null_mut(),
-                next: core::ptr::null_mut(),
-                qnext: core::ptr::null_mut(),
-                data: [0; BSIZE],
-            }
-        }
+        core::mem::transmute([0u8; core::mem::size_of::<Buf>()])
     }
 }
 

@@ -71,7 +71,6 @@ impl Bcache {
 static mut bcache: Bcache = unsafe { Bcache::uninit() };
 
 pub unsafe fn binit() {
-    
     initlock(&mut bcache.lock as *mut Spinlock, "bcache" as *const str);
 
     // Create linked list of buffers
@@ -81,7 +80,7 @@ pub unsafe fn binit() {
         let mut b = &mut bcache.buf[i] as *mut Buf;
         (*b).next = bcache.head.next;
         (*b).prev = &mut bcache.head as *mut Buf;
-        ////    initsleeplock(&b->lock, "buffer");
+        initsleeplock(&mut (*b).lock as *mut Sleeplock, "buffer".as_ptr());
         (*bcache.head.next).prev = b;
         bcache.head.next = b;
     }
@@ -90,84 +89,78 @@ pub unsafe fn binit() {
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
 // In either case, return locked buffer.
-//// static struct buf*
-//// bget(uint dev, uint blockno)
-//// {
-////   struct buf *b;
-////
-////   acquire(&bcache.lock);
-////
-////   // Is the block already cached?
-////   for(b = bcache.head.next; b != &bcache.head; b = b->next){
-////     if(b->dev == dev && b->blockno == blockno){
-////       b->refcnt++;
-////       release(&bcache.lock);
-////       acquiresleep(&b->lock);
-////       return b;
-////     }
-////   }
-////
-////   // Not cached; recycle some unused buffer and clean buffer
-////   // "clean" because B_DIRTY and not locked means log.c
-////   // hasn't yet committed the changes to the buffer.
-////   for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
-////     if(b->refcnt == 0 && (b->flags & B_DIRTY) == 0) {
-////       b->dev = dev;
-////       b->blockno = blockno;
-////       b->flags = 0;
-////       b->refcnt = 1;
-////       release(&bcache.lock);
-////       acquiresleep(&b->lock);
-////       return b;
-////     }
-////   }
-////   panic("bget: no buffers");
-//// }
-////
-//// // Return a locked buf with the contents of the indicated block.
-//// struct buf*
-//// bread(uint dev, uint blockno)
-//// {
-////   struct buf *b;
-////
-////   b = bget(dev, blockno);
-////   if(!(b->flags & B_VALID)) {
-////     iderw(b);
-////   }
-////   return b;
-//// }
-////
-//// // Write b's contents to disk.  Must be locked.
-//// void
-//// bwrite(struct buf *b)
-//// {
-////   if(!holdingsleep(&b->lock))
-////     panic("bwrite");
-////   b->flags |= B_DIRTY;
-////   iderw(b);
-//// }
-////
-//// // Release a locked buffer.
-//// // Move to the head of the MRU list.
-//// void
-//// brelse(struct buf *b)
-//// {
-////   if(!holdingsleep(&b->lock))
-////     panic("brelse");
-////
-////   releasesleep(&b->lock);
-////
-////   acquire(&bcache.lock);
-////   b->refcnt--;
-////   if (b->refcnt == 0) {
-////     // no one is waiting for it.
-////     b->next->prev = b->prev;
-////     b->prev->next = b->next;
-////     b->next = bcache.head.next;
-////     b->prev = &bcache.head;
-////     bcache.head.next->prev = b;
-////     bcache.head.next = b;
-////   }
-////
-////   release(&bcache.lock);
-//// }
+pub unsafe fn bget(dev: usize, blockno: usize) -> *mut Buf {
+    acquire(&mut bcache.lock as *mut Spinlock);
+
+    let mut b = bcache.head.next;
+    // Is the block already cached?
+    while b != &mut bcache.head as *mut Buf {
+        if ((*b).dev == dev && (*b).blockno == blockno) {
+            (*b).refcnt += 1;
+            release(&mut bcache.lock as *mut Spinlock);
+            acquiresleep(&mut (*b).lock as *mut Sleeplock);
+            return b;
+        }
+        b = (*b).next;
+    }
+
+    // Not cached; recycle some unused buffer and clean buffer
+    // "clean" because B_DIRTY and not locked means log.c
+    // hasn't yet committed the changes to the buffer.
+    b = bcache.head.prev;
+    while b != &mut bcache.head as *mut Buf {
+        if ((*b).refcnt == 0 && ((*b).flags & B_DIRTY) == 0) {
+            (*b).dev = dev;
+            (*b).blockno = blockno;
+            (*b).flags = 0;
+            (*b).refcnt = 1;
+            release(&mut bcache.lock as *mut Spinlock);
+            acquiresleep(&mut (*b).lock as *mut Sleeplock);
+            return b;
+        }
+        b = (*b).prev;
+    }
+    panic!("bget: no buffers");
+}
+
+// Return a locked buf with the contents of the indicated block.
+pub unsafe fn bread(dev: usize, blockno: usize) -> *mut Buf {
+    let b = bget(dev, blockno);
+    if (!((*b).flags & B_VALID)) != 0 {
+        iderw(b);
+    }
+    b
+}
+
+// Write b's contents to disk.  Must be locked.
+pub unsafe fn bwrite(b: *mut Buf) {
+    if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
+        panic!("bwrite");
+    }
+    (*b).flags |= B_DIRTY;
+    iderw(b);
+}
+
+// Release a locked buffer.
+// Move to the head of the MRU list.
+pub unsafe fn brelse(b: *mut Buf) {
+    if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
+        panic!("brelse");
+    }
+
+    releasesleep(&mut (*b).lock as *mut Sleeplock);
+
+    acquire(&mut bcache.lock as *mut Spinlock);
+    (*b).refcnt -= 1;
+    if ((*b).refcnt == 0) {
+        // no one is waiting for it.
+        (*(*b).next).prev = (*b).prev;
+        (*(*b).prev).next = (*b).next;
+        (*b).next = bcache.head.next;
+        (*b).prev = &mut bcache.head as *mut Buf;
+        (*bcache.head.next).prev = b;
+        bcache.head.next = b;
+    }
+
+    release(&mut bcache.lock as *mut Spinlock);
+}
