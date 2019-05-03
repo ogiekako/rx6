@@ -25,7 +25,7 @@ trapret はどこ？
 * : 途中 , + : 依存に対するコメントアウト以外おわり
 
 - userinit (process.rs)
-      - initlog *
+      - initlog
   - p.cwd
     - Inode (file.rs) +
       - Sleeplock +
