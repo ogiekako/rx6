@@ -17,6 +17,8 @@ extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
 
 gs:0 の意味を as のリファレンスに見つけられなかった。
 
+cmostime は使われていないようにみえるけど、まさかQEMUが使っているのか？ -> exercise 用らしい。
+
 
 # 2019-05-03
 

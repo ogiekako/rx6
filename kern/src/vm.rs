@@ -200,7 +200,7 @@ pub unsafe fn switchuvm(p: *const Proc) {
         size_of_val(&(*mycpu()).ts) - 1,
         0,
     );
-    //// (*mycpu()).gdt[SEG_TSS].s = 0;
+    (*mycpu()).gdt[SEG_TSS].set_s(0);
     (*mycpu()).ts.ss0 = (SEG_KDATA << 3) as u16;
     (*mycpu()).ts.esp0 = (*p).kstack as usize + KSTACKSIZE;
     // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit

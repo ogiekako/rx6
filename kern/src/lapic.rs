@@ -156,7 +156,7 @@ pub unsafe fn lapicstartap(apicid: u8, addr: usize) {
         microdelay(200);
     }
 }
-////
+
 //// #define CMOS_STATA   0x0a
 //// #define CMOS_STATB   0x0b
 //// #define CMOS_UIP    (1 << 7)        // RTC update in progress

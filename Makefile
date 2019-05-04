@@ -1,5 +1,6 @@
 OBJS = trapasm.o \
-  vectors.o
+  vectors.o \
+  swtch.o
 
 # If the makefile can't find QEMU, specify its path here
 # QEMU = qemu-system-i386

@@ -33,8 +33,3 @@ pub struct Proghdr {
 
 // Values for Proghdr type
 pub const ELF_PROG_LOAD: usize = 1;
-
-// Flag bits for Proghdr flags
-//// pub const ELF_PROG_FLAG_EXEC      1
-//// pub const ELF_PROG_FLAG_WRITE     2
-//// pub const ELF_PROG_FLAG_READ      4

@@ -109,16 +109,16 @@ pub struct Segdesc {
     pub base_15_0: u16, // Low bits of segment base address
     pub base_23_16: u8, // Middle bits of segment base address
     pub typ_s_dpl_p: u8,
-    //// uint typ : 4;       // Segment type (see STS_ constants)
-    //// uint s : 1;          // 0 = system, 1 = application
-    //// uint dpl : 2;        // Descriptor Privilege Level
-    //// uint p : 1;          // Present
+    // uint typ : 4;       // Segment type (see STS_ constants)
+    // uint s : 1;          // 0 = system, 1 = application
+    // uint dpl : 2;        // Descriptor Privilege Level
+    // uint p : 1;          // Present
     pub lim_19_16_avl_rsv1_db_g: u8,
-    //// uint lim_19_16 : 4;  // High bits of segment limit
-    //// uint avl : 1;        // Unused (available for software use)
-    //// uint rsv1 : 1;       // Reserved
-    //// uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
-    //// uint g : 1;          // Granularity: limit scaled by 4K when set
+    // uint lim_19_16 : 4;  // High bits of segment limit
+    // uint avl : 1;        // Unused (available for software use)
+    // uint rsv1 : 1;       // Reserved
+    // uint db : 1;         // 0 = 16-bit segment, 1 = 32-bit segment
+    // uint g : 1;          // Granularity: limit scaled by 4K when set
     pub base_31_24: u8, // High bits of segment base address
 }
 
@@ -157,6 +157,14 @@ impl Segdesc {
             lim_19_16_avl_rsv1_db_g: lim_19_16 | avl << 4 | rsv1 << 5 | db << 6 | g << 7,
             base_31_24,
         }
+    }
+
+    pub fn set_s(&mut self, x: u8) {
+        if x > 1 {
+            panic!("set_s");
+        }
+        self.typ_s_dpl_p &= !(1 << 4);
+        self.typ_s_dpl_p |= x << 4;
     }
 }
 
@@ -345,13 +353,13 @@ pub struct Gatedesc {
     off_15_0: u16, // low 16 bits of offset in segment
     cs: u16,       // code segment selector
     args_rsv1: u8,
-    //// args : u5;        // # args, 0 for interrupt/trap gates
-    //// rsv1 : u3;        // reserved(should be zero I guess)
+    // args : u5;        // # args, 0 for interrupt/trap gates
+    // rsv1 : u3;        // reserved(should be zero I guess)
     type_s_dpl_p: u8,
-    //// type : u4;        // type(STS_{TG,IG32,TG32})
-    //// s : u1;           // must be 0 (system)
-    //// dpl : u2;         // descriptor(meaning new) privilege level
-    //// p : u1;           // Present
+    // type : u4;        // type(STS_{TG,IG32,TG32})
+    // s : u1;           // must be 0 (system)
+    // dpl : u2;         // descriptor(meaning new) privilege level
+    // p : u1;           // Present
     off_31_16: u16, // high bits of offset in segment
 }
 

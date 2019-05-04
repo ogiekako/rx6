@@ -52,7 +52,7 @@ pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
     } else if t == T_IRQ0 + IRQ_IDE + 1 {
         // Bochs generates spurious IDE1 interrupts.
     } else if t == T_IRQ0 + IRQ_KBD {
-        //// kbdintr();
+        kbdintr();
         lapiceoi();
     } else if t == T_IRQ0 + IRQ_COM1 {
         uartintr();

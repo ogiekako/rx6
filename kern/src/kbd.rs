@@ -199,7 +199,7 @@ pub unsafe fn kbdgetc() -> i32 {
     let mut c = charcode[(shift & (CTL | SHIFT)) as usize][data as usize];
     if (shift & CAPSLOCK) != 0 {
         if (b'a' <= c && c <= b'z') {
-            c += b'A' - b'a';
+            c -= b'a' - b'A';
         } else if (b'A' <= c && c <= b'Z') {
             c += b'a' - b'A';
         }

@@ -58,6 +58,7 @@ pub unsafe fn proc() -> *mut Proc {
 // The layout of the context matches the layout of the stack in swtch.S
 // at the "Switch stacks" comment. Switch doesn't save eip explicitly,
 // but it is on the stack and allocproc() manipulates it.
+#[repr(C)]
 pub struct Context {
     pub edi: usize,
     pub esi: usize,
@@ -439,6 +440,11 @@ pub unsafe fn wait() -> i32 {
     }
 }
 
+extern "C" {
+    #[no_mangle]
+    fn swtch(old: *mut *mut Context, new: *mut Context);
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -469,7 +475,7 @@ pub unsafe fn scheduler() {
             switchuvm(p as *const Proc);
             p.state = RUNNING;
 
-            //// swtch(&((*c).scheduler), (*p).context);
+            swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
             switchkvm();
 
             // Process is done running for now.
@@ -503,7 +509,7 @@ pub unsafe fn sched() {
         panic!("sched interruptible");
     }
     let intena = (*mycpu()).intena;
-    //// swtch(&(*p).context, (*mycpu()).scheduler);
+    swtch(&mut (*p).context as *mut *mut Context, (*mycpu()).scheduler);
     (*mycpu()).intena = intena;
 }
 
