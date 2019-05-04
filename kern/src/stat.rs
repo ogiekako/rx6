@@ -1,6 +1,6 @@
-pub const T_DIR: usize = 1; // Directory
-pub const T_FILE: usize = 2; // File
-pub const T_DEV: usize = 3; // Device
+pub const T_DIR: i16 = 1; // Directory
+pub const T_FILE: i16 = 2; // File
+pub const T_DEV: i16 = 3; // Device
 
 pub struct Stat {
     pub type_: i16,  // Type of file

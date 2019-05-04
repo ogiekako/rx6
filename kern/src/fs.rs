@@ -576,7 +576,7 @@ pub unsafe fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *m
 }
 
 // Write a new directory entry (name, inum) into the directory dp.
-pub unsafe fn dirlink(dp: *mut Inode, name: *mut u8, inum: usize) -> i32 {
+pub unsafe fn dirlink(dp: *mut Inode, name: *const u8, inum: usize) -> i32 {
     let mut de: Dirent = transmute([0u8; size_of::<Dirent>()]);
 
     // Check that name is not present.
