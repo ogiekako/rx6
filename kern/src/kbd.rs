@@ -73,28 +73,42 @@ const fn C(x: u8) -> u8 {
 ////   [0x97] KEY_HOME,  [0xCF] KEY_END,
 ////   [0xD2] KEY_INS,   [0xD3] KEY_DEL
 //// };
-////
-//// static uchar shiftmap[256] =
-//// {
-////   NO,   033,  '!',  '@',  '#',  '$',  '%',  '^',  // 0x00
-////   '&',  '*',  '(',  ')',  '_',  '+',  '\b', '\t',
-////   'Q',  'W',  'E',  'R',  'T',  'Y',  'U',  'I',  // 0x10
-////   'O',  'P',  '{',  '}',  '\n', NO,   'A',  'S',
-////   'D',  'F',  'G',  'H',  'J',  'K',  'L',  ':',  // 0x20
-////   '"',  '~',  NO,   '|',  'Z',  'X',  'C',  'V',
-////   'B',  'N',  'M',  '<',  '>',  '?',  NO,   '*',  // 0x30
-////   NO,   ' ',  NO,   NO,   NO,   NO,   NO,   NO,
-////   NO,   NO,   NO,   NO,   NO,   NO,   NO,   '7',  // 0x40
-////   '8',  '9',  '-',  '4',  '5',  '6',  '+',  '1',
-////   '2',  '3',  '0',  '.',  NO,   NO,   NO,   NO,   // 0x50
-////   [0x9C] '\n',      // KP_Enter
-////   [0xB5] '/',       // KP_Div
-////   [0xC8] KEY_UP,    [0xD0] KEY_DN,
-////   [0xC9] KEY_PGUP,  [0xD1] KEY_PGDN,
-////   [0xCB] KEY_LF,    [0xCD] KEY_RT,
-////   [0x97] KEY_HOME,  [0xCF] KEY_END,
-////   [0xD2] KEY_INS,   [0xD3] KEY_DEL
-//// };
+
+#[rustfmt::skip]
+static shiftmap: [u8;256] = [
+  NO,   033 /* esc */,  b'!',  b'@',  b'#',  b'$',  b'%',  b'^',  // 0x00
+  b'&',  b'*',  b'(',  b')',  b'_',  b'+',  8 /* Backspace */, b'\t',
+  b'Q',  b'W',  b'E',  b'R',  b'T',  b'Y',  b'U',  b'I',  // 0x10
+  b'O',  b'P',  b'{',  b'}',  b'\n', NO,   b'A',  b'S',
+  b'D',  b'F',  b'G',  b'H',  b'J',  b'K',  b'L',  b':',  // 0x20
+  b'"',  b'~',  NO,   b'|',  b'Z',  b'X',  b'C',  b'V',
+  b'B',  b'N',  b'M',  b'<',  b'>',  b'?',  NO,   b'*',  // 0x30
+  NO,   b' ',  NO,   NO,   NO,   NO,   NO,   NO,
+  NO,   NO,   NO,   NO,   NO,   NO,   NO,   b'7',  // 0x40
+  b'8',  b'9',  b'-',  b'4',  b'5',  b'6',  b'+',  b'1',
+  b'2',  b'3',  b'0',  b'.',  NO,   NO,   NO,   NO,   // 0x50
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0x60
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0x70
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0x80
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, KEY_HOME, // 0x90
+  NO, NO, NO, NO, b'\n' /* KP_Enter */, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0xa0
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, b'/' /* KP_Div */, NO, NO, // 0xb0
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0xc0
+  KEY_UP, KEY_PGUP, NO, KEY_LF, NO, KEY_RT, NO, KEY_END,
+  KEY_DN, KEY_PGDN, KEY_INS, KEY_DEL, NO, NO, NO, NO, // 0xd0
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0xe0
+  NO, NO, NO, NO, NO, NO, NO, NO,
+  NO, NO, NO, NO, NO, NO, NO, NO, // 0xf0
+  NO, NO, NO, NO, NO, NO, NO, NO,
+];
 
 #[rustfmt::skip]
 static ctlmap: [u8; 256] = [
