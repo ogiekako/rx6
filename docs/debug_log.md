@@ -1,4 +1,34 @@
- 2019-05-04 22:13
+2019-05-05 8:24
+
+scheduler 内で死んでいる。
+
+unexpected trap 0 from cpu 1 eip 10 (cr2=0x0)
+cpu 1: panic: trap
+ 656d6974 0 0 0 0 0 0 0 0 0
+
+
+
+
+
+# 2019-05-05 0:19
+
+release で stack がこわれて死んでいる。
+
+```
+(gdb) bt
+#0  kern::console::cpanic (s=...) at src/console.rs:127
+#1  0x80125176 in kern::spinlock::release (lk=0x8015ce74 <kern::console::cons>) at src/spinlock.rs:60
+#2  0x00000007 in ?? ()
+#3  0x80167c6c in ?? ()
+#4  0x80121a1f in kern::kernmain::mpmain () at src/kernmain.rs:41
+#5  0x80121960 in kern::kernmain::mpenter () at src/kernmain.rs:36
+```
+
+done: uartinit   Starting cpu 1  stack: 0x803be000.
+
+cprintf の release の位置がおかしいだけだった。
+
+# 2019-05-04 22:13
 
  startothers 内部で止まっている。
  mpmain の
@@ -16,6 +46,8 @@ The target architecture is assumed to be i8086
 [f000:d09b]    0xfd09b: cli
 0x0000d09b in ?? ()
 ```
+
+cpu けすパッチを持ってきて当てた。
 
 # 2019-05-04 22:08
 

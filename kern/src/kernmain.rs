@@ -12,6 +12,7 @@ pub unsafe fn kernmain() {
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
+    cprintf("  done: uartinit   ", &[]);
     pinit(); // process table
     tvinit(); // trap vectors
     binit(); // buffer cache
@@ -85,6 +86,10 @@ unsafe fn startothers() {
         core::ptr::write(
             code.offset(-12) as *mut usize,
             v2p(V(&entrypgdir as *const u8 as usize)).0 as usize,
+        );
+        cprintf(
+            "Starting cpu %d  stack: 0x%x.  ",
+            &[Arg::Int(i as i32), Arg::Int(stack.0 as i32)],
         );
 
         lapicstartap((*c).apicid, v2p(V(code as usize)).0 as usize);

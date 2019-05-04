@@ -132,6 +132,9 @@ pub unsafe fn mycpu() -> *mut Cpu {
         let nn = n_mycpu;
         n_mycpu += 1;
         if (nn == 0) {
+            cpanic("mycpu called with interrupts enabled\n");
+            // , __builtin_return_address(0));
+
             // TODO: fix
             // cprintf("mycpu called from %x with interrupts enabled\n", __builtin_return_address(0));
         }

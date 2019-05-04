@@ -9,14 +9,14 @@ static mut panicked: bool = false;
 
 struct Cons {
     lock: Spinlock,
-    locking: i32,
+    locking: bool,
 }
 
 impl Cons {
     const unsafe fn uninit() -> Cons {
         Cons {
             lock: Spinlock::uninit(),
-            locking: 0,
+            locking: false,
         }
     }
 }
@@ -63,7 +63,7 @@ pub enum Arg<'a> {
 // Print to the console. only understands %d, %x, %p, %s.
 pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     let locking = cons.locking;
-    if (locking != 0) {
+    if (locking) {
         acquire(&mut cons.lock as *mut Spinlock);
     }
 
@@ -116,10 +116,9 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
                 consputc(c as u16);
             }
         }
-
-        if (locking != 0) {
-            release(&mut cons.lock as *mut Spinlock);
-        }
+    }
+    if (locking) {
+        release(&mut cons.lock as *mut Spinlock);
     }
 }
 
@@ -128,7 +127,7 @@ pub unsafe fn cpanic(s: &str) -> ! {
     let mut i = 0;
 
     cli();
-    cons.locking = 0;
+    cons.locking = false;
     cprintf("cpu %d: panic: ", &[Arg::Int(cpuid() as i32)]);
     cprintf(s, &[]);
     cprintf("\n", &[]);
@@ -318,8 +317,10 @@ pub unsafe fn consoleinit() {
 
     devsw[CONSOLE].write = Some(consolewrite);
     devsw[CONSOLE].read = Some(consoleread);
-    cons.locking = 1;
+    cons.locking = true;
 
     picenable(IRQ_KBD as i32);
     ioapicenable(IRQ_KBD, 0);
+
+    cprintf("done: consoleinit", &[]);
 }

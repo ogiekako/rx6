@@ -116,6 +116,7 @@ pub unsafe fn lcr3(val: usize) {
 // Layout of the trap frame built on the stack by the
 // hardware and by trapasm.S, and passed to trap().
 #[derive(Clone)]
+#[repr(C)]
 pub struct Trapframe {
     // registers as pushed by pusha
     pub edi: usize,
