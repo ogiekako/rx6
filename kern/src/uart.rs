@@ -12,7 +12,7 @@ pub unsafe fn uartinit() {
 
     // 9600 baud, 8 data bits, 1 stop bit, parity off.
     outb(COM1 + 3, 0x80); // Unlock divisor
-    outb(COM1 + 0, (115200u32 / 9600u32) as u8);
+    outb(COM1 + 0, (115200usize / 9600usize) as u8);
     outb(COM1 + 1, 0);
     outb(COM1 + 3, 0x03); // Lock divisor, 8 data bits.
     outb(COM1 + 4, 0);

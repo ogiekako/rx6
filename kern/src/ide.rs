@@ -42,7 +42,7 @@ pub unsafe fn ideinit() {
     initlock(&mut idelock as *mut Spinlock, "ide");
 
     picenable(IRQ_IDE as i32);
-    ioapicenable(IRQ_IDE, ncpu as u32 - 1);
+    ioapicenable(IRQ_IDE, ncpu as usize - 1);
     idewait(0);
 
     // Check if disk 1 is present

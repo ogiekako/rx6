@@ -10,40 +10,40 @@ const VER: usize = (0x0030 / 4); // Version
 const TPR: usize = (0x0080 / 4); // Task Priority
 const EOI: usize = (0x00B0 / 4); // EOI
 const SVR: usize = (0x00F0 / 4); // Spurious Interrupt Vector
-const ENABLE: u32 = 0x00000100; // Unit Enable
+const ENABLE: usize = 0x00000100; // Unit Enable
 const ESR: usize = (0x0280 / 4); // Error Status
 const ICRLO: usize = (0x0300 / 4); // Interrupt Command
-const INIT: u32 = 0x00000500; // INIT/RESET
-const STARTUP: u32 = 0x00000600; // Startup IPI
-const DELIVS: u32 = 0x00001000; // Delivery status
-const ASSERT: u32 = 0x00004000; // Assert interrupt (vs deassert)
-const DEASSERT: u32 = 0x00000000;
-const LEVEL: u32 = 0x00008000; // Level triggered
-const BCAST: u32 = 0x00080000; // Send to all APICs, including self.
-const BUSY: u32 = 0x00001000;
-const FIXED: u32 = 0x00000000;
+const INIT: usize = 0x00000500; // INIT/RESET
+const STARTUP: usize = 0x00000600; // Startup IPI
+const DELIVS: usize = 0x00001000; // Delivery status
+const ASSERT: usize = 0x00004000; // Assert interrupt (vs deassert)
+const DEASSERT: usize = 0x00000000;
+const LEVEL: usize = 0x00008000; // Level triggered
+const BCAST: usize = 0x00080000; // Send to all APICs, including self.
+const BUSY: usize = 0x00001000;
+const FIXED: usize = 0x00000000;
 const ICRHI: usize = (0x0310 / 4); // Interrupt Command [63:32]
 const TIMER: usize = (0x0320 / 4); // Local Vector Table 0 (TIMER)
-const X1: u32 = 0x0000000B; // divide counts by 1
-const PERIODIC: u32 = 0x00020000; // Periodic
+const X1: usize = 0x0000000B; // divide counts by 1
+const PERIODIC: usize = 0x00020000; // Periodic
 const PCINT: usize = (0x0340 / 4); // Performance Counter LVT
 const LINT0: usize = (0x0350 / 4); // Local Vector Table 1 (LINT0)
 const LINT1: usize = (0x0360 / 4); // Local Vector Table 2 (LINT1)
 const ERROR: usize = (0x0370 / 4); // Local Vector Table 3 (ERROR)
-const MASKED: u32 = 0x00010000; // Interrupt masked
+const MASKED: usize = 0x00010000; // Interrupt masked
 const TICR: usize = (0x0380 / 4); // Timer Initial Count
 const TCCR: usize = (0x0390 / 4); // Timer Current Count
 const TDCR: usize = (0x03E0 / 4); // Timer Divide Configuration
 
 // volatile read/write
-pub static mut lapic: *mut u32 = 0 as *mut u32; // Initialized in mp.c
+pub static mut lapic: *mut usize = 0 as *mut usize; // Initialized in mp.c
 
-unsafe fn lapicw(index: usize, value: u32) {
+unsafe fn lapicw(index: usize, value: usize) {
     core::ptr::write_volatile(lapic.offset(index as isize), value);
     lapicr(ID); // wait for write to finish, by reading
 }
 
-unsafe fn lapicr(index: usize) -> u32 {
+unsafe fn lapicr(index: usize) -> usize {
     assert!(lapic as usize != 0);
     core::ptr::read_volatile(lapic.offset(index as isize))
 }
@@ -128,7 +128,7 @@ const CMOS_RETURN: u16 = 0x71;
 
 // Start additional processor running entry code at addr.
 // See Appendix B of MultiProcessor Specification.
-pub unsafe fn lapicstartap(apicid: u8, addr: u32) {
+pub unsafe fn lapicstartap(apicid: u8, addr: usize) {
     // "The BSP must initialize CMOS shutdown code to 0AH
     // and the warm reset vector (DWORD based at 40:67) to point at
     // the AP startup code prior to the [universal startup algorithm]."
@@ -140,7 +140,7 @@ pub unsafe fn lapicstartap(apicid: u8, addr: u32) {
 
     // "Universal startup algorithm."
     // Send INIT (level-triggered) interrupt to reset other CPU.
-    lapicw(ICRHI, ((apicid as u32) << 24) as u32);
+    lapicw(ICRHI, ((apicid as usize) << 24) as usize);
     lapicw(ICRLO, INIT | LEVEL | ASSERT);
     microdelay(200);
     lapicw(ICRLO, INIT | LEVEL);
@@ -152,7 +152,7 @@ pub unsafe fn lapicstartap(apicid: u8, addr: u32) {
     // should be ignored, but it is part of the official Intel algorithm.
     // Bochs complains about the second one.  Too bad for Bochs.
     for i in 0..2 {
-        lapicw(ICRHI, ((apicid as u32) << 24) as u32);
+        lapicw(ICRHI, ((apicid as usize) << 24) as usize);
         lapicw(ICRLO, STARTUP | (addr >> 12));
         microdelay(200);
     }

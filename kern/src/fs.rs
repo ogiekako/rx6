@@ -466,10 +466,13 @@ pub unsafe fn stati(ip: *mut Inode, st: *mut Stat) {
 // Read data from inode.
 pub unsafe fn readi(ip: *mut Inode, mut dst: *mut u8, mut off: usize, mut n: usize) -> i32 {
     if ((*ip).type_ == T_DEV as i16) {
-        //// if( (*ip).major < 0 || (*ip).major >= NDEV as i16|| !devsw[ (*ip).major].read) {
-        ////   return -1;
-        //// }
-        //// return devsw[ (*ip).major].read(ip, dst, n);
+        if ((*ip).major < 0
+            || (*ip).major >= NDEV as i16
+            || devsw[(*ip).major as usize].read.is_none())
+        {
+            return -1;
+        }
+        return devsw[(*ip).major as usize].read.unwrap()(ip, dst, n as i32);
     }
 
     if (off > (*ip).size || off + n < off) {
@@ -501,10 +504,13 @@ pub unsafe fn readi(ip: *mut Inode, mut dst: *mut u8, mut off: usize, mut n: usi
 // Write data to inode.
 pub unsafe fn writei(ip: *mut Inode, mut src: *mut u8, mut off: usize, n: usize) -> i32 {
     if ((*ip).type_ == T_DEV as i16) {
-        //// if( (*ip).major < 0 || (*ip).major >= NDEV as i16 || !devsw[ (*ip).major].write) {
-        ////   return -1;
-        //// }
-        //// return devsw[ (*ip).major].write(ip, src, n);
+        if ((*ip).major < 0
+            || (*ip).major >= NDEV as i16
+            || devsw[(*ip).major as usize].write.is_none())
+        {
+            return -1;
+        }
+        return devsw[(*ip).major as usize].write.unwrap()(ip, src, n as i32);
     }
 
     if (off > (*ip).size || off + n < off) {

@@ -31,17 +31,17 @@ struct Mp {
 #[repr(C)]
 struct Mpconf {
     // configuration table header
-    signature: [u8; 4],    // "PCMP"
-    length: u16,           // total table length
-    version: u8,           // [14]
-    checksum: u8,          // all bytes must add up to 0
-    product: [u8; 20],     // product id
-    oemtable: *const u32,  // OEM table pointer
-    oemlength: u16,        // OEM table length
-    entry: u16,            // entry count
-    lapicaddr: *const u32, // address of local APIC
-    xlength: u16,          // extended table length
-    xchecksum: u8,         // extended table checksum
+    signature: [u8; 4],      // "PCMP"
+    length: u16,             // total table length
+    version: u8,             // [14]
+    checksum: u8,            // all bytes must add up to 0
+    product: [u8; 20],       // product id
+    oemtable: *const usize,  // OEM table pointer
+    oemlength: u16,          // OEM table length
+    entry: u16,              // entry count
+    lapicaddr: *const usize, // address of local APIC
+    xlength: u16,            // extended table length
+    xchecksum: u8,           // extended table checksum
     reserved: u8,
 }
 
@@ -54,18 +54,18 @@ struct Mpproc {
     version: u8,        // local APIC verison
     flags: u8,          // CPU flags
     signature: [u8; 4], // CPU signature
-    feature: u32,       // feature flags from CPUID instruction
+    feature: usize,     // feature flags from CPUID instruction
     reserved: [u8; 8],
 }
 
 #[repr(C)]
 struct Mpioapic {
     // I/O APIC table entry
-    typ: u8,          // entry type (2)
-    apicno: u8,       // I/O APIC id
-    version: u8,      // I/O APIC version
-    flags: u8,        // I/O APIC flags
-    addr: *const u32, // I/O APIC address
+    typ: u8,            // entry type (2)
+    apicno: u8,         // I/O APIC id
+    version: u8,        // I/O APIC version
+    flags: u8,          // I/O APIC flags
+    addr: *const usize, // I/O APIC address
 }
 
 // Table entry types
@@ -178,7 +178,7 @@ pub unsafe fn mpinit() {
     };
 
     ismp = true;
-    lapic = (*conf).lapicaddr as *mut u32;
+    lapic = (*conf).lapicaddr as *mut usize;
 
     let mut p = conf.offset(1) as usize as *const u8;
     let e = (conf as usize as *const u8).offset((*conf).length as isize);
@@ -212,7 +212,7 @@ pub unsafe fn mpinit() {
     if (!ismp) {
         // Didn't like what we found; fall back to no MP.
         ncpu = 1;
-        lapic = 0 as *mut u32;
+        lapic = 0 as *mut usize;
         ioapicid = 0;
         panic!("unexpected");
         return;

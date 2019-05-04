@@ -23,13 +23,13 @@ impl Cons {
 
 static mut cons: Cons = unsafe { Cons::uninit() };
 
-unsafe fn printint(xx: i32, base: u32, sign: bool) {
+unsafe fn printint(xx: i32, base: usize, sign: bool) {
     let mut negative = false;
     let mut x = if (sign && xx < 0) {
         negative = true;
-        -xx as u32
+        -xx as usize
     } else {
-        xx as u32
+        xx as usize
     };
 
     let digits = "0123456789abcdef";

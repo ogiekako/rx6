@@ -89,10 +89,6 @@ pub mod uart;
 pub mod vm;
 pub mod x86;
 
-type unit = u32;
-type char = u8;
-type int = i32;
-
 #[cfg(not(test))]
 #[lang = "eh_personality"]
 #[no_mangle]

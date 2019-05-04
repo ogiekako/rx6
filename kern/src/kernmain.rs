@@ -88,11 +88,11 @@ unsafe fn startothers() {
             mpenter as *const unsafe fn() as usize,
         );
         core::ptr::write(
-            code.offset(-12) as *mut u32,
-            v2p(V(&entrypgdir as *const u8 as usize)).0 as u32,
+            code.offset(-12) as *mut usize,
+            v2p(V(&entrypgdir as *const u8 as usize)).0 as usize,
         );
 
-        lapicstartap((*c).apicid, v2p(V(code as usize)).0 as u32);
+        lapicstartap((*c).apicid, v2p(V(code as usize)).0 as usize);
 
         // wait for cpu to finish mpmain()
         while ((*c).started == 0) {}
