@@ -157,67 +157,73 @@ pub unsafe fn lapicstartap(apicid: u8, addr: usize) {
     }
 }
 
-//// #define CMOS_STATA   0x0a
-//// #define CMOS_STATB   0x0b
-//// #define CMOS_UIP    (1 << 7)        // RTC update in progress
-////
-//// #define SECS    0x00
-//// #define MINS    0x02
-//// #define HOURS   0x04
-//// #define DAY     0x07
-//// #define MONTH   0x08
-//// #define YEAR    0x09
-////
-//// static uint cmos_read(uint reg)
-//// {
-////   outb(CMOS_PORT,  reg);
-////   microdelay(200);
-////
-////   return inb(CMOS_RETURN);
-//// }
-////
-//// static void fill_rtcdate(struct rtcdate *r)
-//// {
-////   r->second = cmos_read(SECS);
-////   r->minute = cmos_read(MINS);
-////   r->hour   = cmos_read(HOURS);
-////   r->day    = cmos_read(DAY);
-////   r->month  = cmos_read(MONTH);
-////   r->year   = cmos_read(YEAR);
-//// }
-////
-//// // qemu seems to use 24-hour GWT and the values are BCD encoded
-//// void cmostime(struct rtcdate *r)
-//// {
-////   struct rtcdate t1, t2;
-////   int sb, bcd;
-////
-////   sb = cmos_read(CMOS_STATB);
-////
-////   bcd = (sb & (1 << 2)) == 0;
-////
-////   // make sure CMOS doesn't modify time while we read it
-////   for(;;) {
-////     fill_rtcdate(&t1);
-////     if(cmos_read(CMOS_STATA) & CMOS_UIP)
-////         continue;
-////     fill_rtcdate(&t2);
-////     if(memcmp(&t1, &t2, sizeof(t1)) == 0)
-////       break;
-////   }
-////
-////   // convert
-////   if(bcd) {
-//// #define    CONV(x)     (t1.x = ((t1.x >> 4) * 10) + (t1.x & 0xf))
-////     CONV(second);
-////     CONV(minute);
-////     CONV(hour  );
-////     CONV(day   );
-////     CONV(month );
-////     CONV(year  );
-//// #undef     CONV
-////   }
-////
-////   *r = t1;
-////   r->year += 2000;
-//// }
+const CMOS_STATA: usize = 0x0a;
+const CMOS_STATB: usize = 0x0b;
+const CMOS_UIP: usize = (1 << 7); // RTC update in progress
+
+const SECS: usize = 0x00;
+const MINS: usize = 0x02;
+const HOURS: usize = 0x04;
+const DAY: usize = 0x07;
+const MONTH: usize = 0x08;
+const YEAR: usize = 0x09;
+
+unsafe fn cmos_read(reg: usize) -> usize {
+    outb(CMOS_PORT, reg as u8);
+    microdelay(200);
+
+    return inb(CMOS_RETURN) as usize;
+}
+
+unsafe fn fill_rtcdate(r: *mut Rtcdate) {
+    (*r).second = cmos_read(SECS);
+    (*r).minute = cmos_read(MINS);
+    (*r).hour = cmos_read(HOURS);
+    (*r).day = cmos_read(DAY);
+    (*r).month = cmos_read(MONTH);
+    (*r).year = cmos_read(YEAR);
+}
+
+// qemu seems to use 24-hour GWT and the values are BCD encoded
+pub unsafe fn cmostime(r: *mut Rtcdate) {
+    let mut t1: Rtcdate = core::mem::zeroed();
+    let mut t2: Rtcdate = core::mem::zeroed();
+    let sb_ = cmos_read(CMOS_STATB);
+
+    let bcd = (sb_ & (1 << 2)) == 0;
+
+    // make sure CMOS doesn't modify time while we read it
+    loop {
+        fill_rtcdate(&mut t1 as *mut Rtcdate);
+        if (cmos_read(CMOS_STATA) & CMOS_UIP) != 0 {
+            continue;
+        }
+        fill_rtcdate(&mut t2 as *mut Rtcdate);
+        if (memcmp(
+            &mut t1 as *mut Rtcdate as *mut u8,
+            &mut t2 as *mut Rtcdate as *mut u8,
+            size_of_val(&t1),
+        ) == 0)
+        {
+            break;
+        }
+    }
+
+    // convert
+    if (bcd) {
+        macro_rules! CONV {
+            ($x: ident) => {
+                (t1.$x = ((t1.$x >> 4) * 10) + (t1.$x & 0xf));
+            };
+        }
+        CONV!(second);
+        CONV!(minute);
+        CONV!(hour);
+        CONV!(day);
+        CONV!(month);
+        CONV!(year);
+    }
+
+    *r = t1;
+    (*r).year += 2000;
+}
