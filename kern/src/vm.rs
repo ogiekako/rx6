@@ -15,10 +15,7 @@ pub unsafe fn seginit() {
     c.gdt[SEG_UCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
     c.gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
 
-    // Map cpu and proc -- these are private per cpu.
-    c.gdt[SEG_KCPU] = SEG(STA_W, (*c).cpu as usize, 8, 0);
     lgdt(c.gdt.as_ptr(), core::mem::size_of_val(&c.gdt) as u16);
-    loadgs((SEG_KCPU << 3) as u16);
 }
 
 // for use in scheduler()

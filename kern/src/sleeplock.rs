@@ -28,7 +28,7 @@ pub unsafe fn acquiresleep(lk: *mut Sleeplock) {
         sleep(lk as *mut (), &mut (*lk).lk as *mut Spinlock);
     }
     (*lk).locked = 1;
-    (*lk).pid = (*proc()).pid;
+    (*lk).pid = (*myproc()).pid;
     release(&mut (*lk).lk as *mut Spinlock);
 }
 

@@ -50,7 +50,7 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
     atomic::fence(atomic::Ordering::SeqCst);
 
     // Record info about lock acquisition for debugging.
-    (*lk).cpu = cpu();
+    (*lk).cpu = mycpu();
     getcallerpcs(lk as *const (), &mut (*lk).pcs);
 }
 
@@ -102,7 +102,7 @@ pub unsafe fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
 
 // Check whether this cpu is holding the lock.
 pub unsafe fn holding(lock: *mut Spinlock) -> bool {
-    (*lock).locked != 0 && (*lock).cpu == cpu()
+    (*lock).locked != 0 && (*lock).cpu == mycpu()
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:

@@ -95,10 +95,9 @@ pub const CR4_PSE: usize = 0x00000010; // Page size extension
 // various segment selectors.
 pub const SEG_KCODE: usize = 1; // kernel code
 pub const SEG_KDATA: usize = 2; // kernel data+stack
-pub const SEG_KCPU: usize = 3; // kernel per-cpu data
-pub const SEG_UCODE: usize = 4; // user code
-pub const SEG_UDATA: usize = 5; // user data+stack
-pub const SEG_TSS: usize = 6; // this process's task state
+pub const SEG_UCODE: usize = 3; // user code
+pub const SEG_UDATA: usize = 4; // user data+stack
+pub const SEG_TSS: usize = 5; // this process's task state
 
 // cpu->gdt[NSEGS] holds the above segments.
 pub const NSEGS: usize = 7;

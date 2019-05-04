@@ -15,8 +15,6 @@ pub struct Cpu {
     pub ncli: i32,      // Depth of pushcli nesting.
     pub intena: i32,    // Were interrupts enabled before pushcli?
 
-    // Cpu-local storage variables; see below
-    pub cpu: *mut Cpu,
     pub process: *mut Proc, // The process running on this cpu or null
 }
 
@@ -24,31 +22,6 @@ impl Cpu {
     pub const unsafe fn zero() -> Cpu {
         transmute([0u8; size_of::<Cpu>()])
     }
-}
-
-// Per-CPU variables, holding pointers to the
-// current cpu and to the current process.
-// The asm suffix tells gcc to use "%gs:0" to refer to cpu
-// and "%gs:4" to refer to proc.  seginit sets up the
-// %gs segment register so that %gs refers to the memory
-// holding those two variables in the local cpu's struct cpu.
-// This is similar to how thread-local variables are implemented
-// in thread libraries such as Linux pthreads.
-
-// &cpus[cpunum()]
-#[inline(always)]
-pub unsafe fn cpu() -> *mut Cpu {
-    let res: *mut Cpu;
-    asm!("movl %gs:0, $0": "=r"(res) :::: "volatile");
-    res
-}
-
-// cpus[cpunum()].process
-#[inline(always)]
-pub unsafe fn proc() -> *mut Proc {
-    let res: *mut Proc;
-    asm!("movl %gs:4, $0": "=r"(res) :::: "volatile");
-    res
 }
 
 // Saved registers for kernel context switches.

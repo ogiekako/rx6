@@ -108,7 +108,6 @@ pub unsafe fn ideintr() {
     let mut b = idequeue;
     if b == core::ptr::null_mut() {
         release(&mut idelock as *mut Spinlock);
-        // cprintf("spurious IDE interrupt\n");
         return;
     }
     idequeue = (*b).qnext;
