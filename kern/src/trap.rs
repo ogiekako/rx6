@@ -8,8 +8,8 @@ extern "C" {
     static mut vectors: [usize; 256]; // in vectors.S: array of 256 entry pointers
 }
 
-static mut tickslock: Spinlock = unsafe { transmute([0u8; size_of::<Spinlock>()]) };
-static mut ticks: usize = 0;
+pub static mut tickslock: Spinlock = unsafe { transmute([0u8; size_of::<Spinlock>()]) };
+pub static mut ticks: usize = 0;
 
 pub unsafe fn tvinit() {
     for i in 0..256 {
