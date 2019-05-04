@@ -9,7 +9,8 @@ pub unsafe fn kernmain() {
     lapicinit(); // interrupt controller
     seginit(); // segment descriptors
     picinit(); // another interrupt controller
-               //// cprintf("\ncpu%d: starting xv6\n\n", &[Arg::Int(cpunum())]);
+               // TODO: fix.
+               // cprintf("\ncpu%d: starting xv6\n\n", &[Arg::Int(cpunum())]);
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
@@ -45,7 +46,7 @@ pub unsafe fn mpmain() {
     );
     idtinit(); // load idt register
     xchg(&mut ((*mycpu()).started) as *mut usize, 1); // tell startothers() we're up
-                                                      //// scheduler();     // start running processes
+    scheduler(); // start running processes
 }
 
 extern "C" {
@@ -53,10 +54,6 @@ extern "C" {
     static mut _binary_entryother_size: u8;
     static mut entrypgdir: u8;
 }
-
-// unsafe fn hoge() -> usize {
-//     &_binary_entryother_size as *const () as usize
-// }
 
 // Start the non-boot (AP) processors.
 unsafe fn startothers() {
@@ -105,10 +102,11 @@ unsafe fn startothers() {
 // // hence the __aligned__ attribute.
 // // PTE_PS in a page directory entry enables 4Mbyte pages.
 //
-//// __attribute__((__aligned__(PGSIZE)))
-//// pde_t entrypgdir[NPDENTRIES] = {
-////   // Map VA's [0, 4MB) to PA's [0, 4MB)
-////   [0] = (0) | PTE_P | PTE_W | PTE_PS,
-////   // Map VA's [KERNBASE, KERNBASE+4MB) to PA's [0, 4MB)
-////   [KERNBASE>>PDXSHIFT] = (0) | PTE_P | PTE_W | PTE_PS,
-//// };
+// TODO: remove?
+// __attribute__((__aligned__(PGSIZE)))
+// pde_t entrypgdir[NPDENTRIES] = {
+//   // Map VA's [0, 4MB) to PA's [0, 4MB)
+//   [0] = (0) | PTE_P | PTE_W | PTE_PS,
+//   // Map VA's [KERNBASE, KERNBASE+4MB) to PA's [0, 4MB)
+//   [KERNBASE>>PDXSHIFT] = (0) | PTE_P | PTE_W | PTE_PS,
+// };

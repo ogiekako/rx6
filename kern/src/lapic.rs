@@ -111,13 +111,12 @@ pub unsafe fn lapiccpunum() -> usize {
     panic!("unknown apicid");
 }
 
-// // Acknowledge interrupt.
-//// void
-//// lapiceoi(void)
-//// {
-////   if(lapic)
-////     lapicw(EOI, 0);
-//// }
+// Acknowledge interrupt.
+pub unsafe fn lapiceoi() {
+    if (!lapic.is_null()) {
+        lapicw(EOI, 0);
+    }
+}
 
 // Spin for a given number of microseconds.
 // On real hardware would want to tune this dynamically.

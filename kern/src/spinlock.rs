@@ -27,7 +27,7 @@ impl Spinlock {
 pub unsafe fn initlock(lk: *mut Spinlock, name: *const str) {
     (*lk).name = name;
     (*lk).locked = 0;
-    //// lk.cpu = 0;
+    (*lk).cpu = null_mut();
 }
 
 // Acquire the lock.
@@ -37,9 +37,9 @@ pub unsafe fn initlock(lk: *mut Spinlock, name: *const str) {
 pub unsafe fn acquire(lk: *mut Spinlock) {
     pushcli(); // disable interrupts to avoid deadlock.
 
-    //// if holding(lk) {
-    ////     panic("acquire");
-    //// }
+    if holding(lk) {
+        panic!("acquire");
+    }
 
     // The xchg is atomic.
     while (xchg(&mut (*lk).locked as *mut usize, 1) != 0) {}
@@ -50,18 +50,18 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
     atomic::fence(atomic::Ordering::SeqCst);
 
     // Record info about lock acquisition for debugging.
-    //// lk->cpu = cpu;
-    //// getcallerpcs(&lk, lk->pcs);
+    (*lk).cpu = cpu();
+    getcallerpcs(lk as *const (), &mut (*lk).pcs);
 }
 
 // Release the lock.
 pub unsafe fn release(lk: *mut Spinlock) {
-    //// if !holding(lk) {
-    ////   panic("release");
-    //// }
+    if !holding(lk) {
+        panic!("release");
+    }
 
     (*lk).pcs[0] = 0;
-    //// lk.cpu = 0;
+    (*lk).cpu = null_mut();
 
     // Tell the C compiler and the processor to not move loads or stores
     // past this point, to ensure that all the stores in the critical
@@ -103,7 +103,7 @@ pub unsafe fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
 // Check whether this cpu is holding the lock.
 pub unsafe fn holding(lock: *mut Spinlock) -> bool {
     panic!("unimplemented");
-    //// (*lock).locked != 0 && (*lock).cpu == cpu
+    (*lock).locked != 0 && (*lock).cpu == cpu()
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:

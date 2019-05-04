@@ -23,6 +23,31 @@ impl Cpu {
     }
 }
 
+// Per-CPU variables, holding pointers to the
+// current cpu and to the current process.
+// The asm suffix tells gcc to use "%gs:0" to refer to cpu
+// and "%gs:4" to refer to proc.  seginit sets up the
+// %gs segment register so that %gs refers to the memory
+// holding those two variables in the local cpu's struct cpu.
+// This is similar to how thread-local variables are implemented
+// in thread libraries such as Linux pthreads.
+
+// &cpus[cpunum()]
+#[inline(always)]
+pub unsafe fn cpu() -> *mut Cpu {
+    let res: *mut Cpu;
+    asm!("movl %gs:0, $0": "=r"(res) :::: "volatile");
+    res
+}
+
+// cpus[cpunum()].process
+#[inline(always)]
+pub unsafe fn proc() -> *mut Proc {
+    let res: *mut Proc;
+    asm!("movl %gs:4, $0": "=r"(res) :::: "volatile");
+    res
+}
+
 // Saved registers for kernel context switches.
 // Don't need to save all the segment registers (%cs, etc),
 // because they are constant across kernel contexts.
@@ -50,6 +75,8 @@ pub enum Procstate {
     RUNNING,
     ZOMBIE,
 }
+
+pub use Procstate::*;
 
 impl Procstate {
     fn to_str(&self) -> &'static str {
@@ -129,7 +156,7 @@ pub unsafe fn mycpu() -> *mut Cpu {
         n_mycpu += 1;
         if (nn == 0) {
             // TODO: fix
-            //// cprintf("mycpu called from %x with interrupts enabled\n", __builtin_return_address(0));
+            // cprintf("mycpu called from %x with interrupts enabled\n", __builtin_return_address(0));
         }
     }
 
@@ -502,8 +529,8 @@ pub unsafe extern "C" fn forkret() {
         // of a regular process (e.g., they call sleep), and thus cannot
         // be run from main().
         first = 0;
-        //// iinit(ROOTDEV);
-        //// initlog(ROOTDEV);
+        iinit(ROOTDEV as i32);
+        initlog(ROOTDEV as i32);
     }
 
     // Return to "caller", actually trapret (see allocproc).

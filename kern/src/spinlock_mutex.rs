@@ -30,8 +30,7 @@ impl<T> Mutex<T> {
         }
     }
     unsafe fn acquire(&self) {
-        // TODO: disable interrupt without breaking test (and the first call scenario)
-        //// pushcli(); // disable interrupts to avoid deadlock.
+        pushcli(); // disable interrupts to avoid deadlock.
 
         // The xchg is atomic.
         while self.lock.swap(true, Ordering::Acquire) {}
@@ -75,8 +74,7 @@ impl<'a, T: 'a> Drop for Obj<'a, T> {
         //// lk->cpu = 0;
 
         self.lock.store(false, Ordering::Release);
-        // TODO: enable interrupt.
-        //// popcli();
+        popcli();
     }
 }
 

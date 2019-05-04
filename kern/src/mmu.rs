@@ -139,15 +139,15 @@ impl Segdesc {
         base_31_24: u8,
     ) -> Segdesc {
         // TODO: fix
-        //// assert!(typ < 1<<4);
-        //// assert!(s   < 1<<1);
-        //// assert!(dpl < 1<<2);
-        //// assert!(p < 1<<1);
-        //// assert!(lim_19_16 < 1<<4);
-        //// assert!(avl < 1<<1);
-        //// assert!(rsv1 < 1<<1);
-        //// assert!(db < 1<<1);
-        //// assert!(g < 1<<1);
+        // assert!(typ < 1<<4);
+        // assert!(s   < 1<<1);
+        // assert!(dpl < 1<<2);
+        // assert!(p < 1<<1);
+        // assert!(lim_19_16 < 1<<4);
+        // assert!(avl < 1<<1);
+        // assert!(rsv1 < 1<<1);
+        // assert!(db < 1<<1);
+        // assert!(g < 1<<1);
 
         Segdesc {
             lim_15_0,

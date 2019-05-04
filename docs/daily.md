@@ -1,8 +1,24 @@
 2019-05-04
 
-6:56 - 開始。
+6:56 - 開始。まず segdesc を bitfield をつかって解決するか。
 
-2019-05-03
+トリッキーな部分を解決して、
+trap.rs ができれば、それなりに動くのではという気がしてきた。
+とはいえ、気合で全部コメント外したほうがスムーズそうだけど。
+
+```
+extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
+```
+
+このシンタックスの意味がわからない。
+これは、[Asm Label] を使った [hack](https://gcc.gnu.org/ml/gcc/2015-08/msg00075.html) である。
+
+[Asm Label]: https://gcc.gnu.org/onlinedocs/gcc/Asm-Labels.html#Asm-Labels
+
+gs:0 の意味を as のリファレンスに見つけられなかった。
+
+
+# 2019-05-03
 
 残ったトリッキーな部分:
 

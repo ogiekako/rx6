@@ -21,7 +21,7 @@ static freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
 pub unsafe fn kinit1(vstart: V, vend: V) {
     assert!(vstart < vend);
     // TODO: allow not to use lock for sped up. Currently we always take lock for freelist.
-    //// freelist.use_lock = 0;
+    // freelist.use_lock = 0;
     freerange(vstart, vend);
 }
 

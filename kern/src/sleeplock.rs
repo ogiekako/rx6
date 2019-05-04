@@ -24,11 +24,11 @@ pub unsafe fn initsleeplock(lk: *mut Sleeplock, name: *const u8) {
 
 pub unsafe fn acquiresleep(lk: *mut Sleeplock) {
     acquire(&mut ((*lk).lk) as *mut Spinlock);
-    //// while (*lk).locked {
-    ////     sleep(lk, &mut (*lk).lk as *mut Spinlock);
-    //// }
+    while (*lk).locked != 0 {
+        sleep(lk as *mut (), &mut (*lk).lk as *mut Spinlock);
+    }
     (*lk).locked = 1;
-    //// (*lk).pid = (*proc).pid;
+    (*lk).pid = (*proc()).pid;
     release(&mut (*lk).lk as *mut Spinlock);
 }
 

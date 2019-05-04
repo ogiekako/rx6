@@ -1,13 +1,4 @@
-// use types::*;
-// use defs::*;
-// use param::*;
-use memlayout::*;
-use mmu::*;
-use process::*;
-use syscall::*;
-use traps::*;
-use x86::*;
-// use spinlock::*;
+use super::*;
 
 // Interrupt descriptor table (shared by all CPUs).
 static mut idt: [Gatedesc; 256] = [Gatedesc::zero(); 256];
@@ -17,8 +8,8 @@ extern "C" {
     static mut vectors: [usize; 256]; // in vectors.S: array of 256 entry pointers
 }
 
-//// struct spinlock tickslock;
-//// uint ticks;
+static mut tickslock: Spinlock = unsafe { transmute([0u8; size_of::<Spinlock>()]) };
+static mut ticks: usize = 0;
 
 pub unsafe fn tvinit() {
     for i in 0..256 {
@@ -26,8 +17,7 @@ pub unsafe fn tvinit() {
     }
     idt[T_SYSCALL].setgate(true, (SEG_KCODE as u16) << 3, vectors[T_SYSCALL], DPL_USER);
 
-    // TODO: lock
-    //// initlock(&tickslock, "time");
+    initlock(&mut tickslock as *mut Spinlock, "time");
 }
 
 pub unsafe fn idtinit() {
@@ -47,67 +37,81 @@ pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
         }
         return;
     }
+    let t = (*tf).trapno;
+    if t == T_IRQ0 + IRQ_TIMER {
+        if (cpuid() == 0) {
+            acquire(&mut tickslock as *mut Spinlock);
+            ticks += 1;
+            wakeup(&mut ticks as *mut usize as *mut ());
+            release(&mut tickslock as *mut Spinlock);
+        }
+        lapiceoi();
+    } else if t == T_IRQ0 + IRQ_IDE {
+        ideintr();
+        lapiceoi();
+    } else if t == T_IRQ0 + IRQ_IDE + 1 {
+        // Bochs generates spurious IDE1 interrupts.
+    } else if t == T_IRQ0 + IRQ_KBD {
+        //// kbdintr();
+        lapiceoi();
+    } else if t == T_IRQ0 + IRQ_COM1 {
+        uartintr();
+        lapiceoi();
+    } else if t == T_IRQ0 + 7 || t == T_IRQ0 + IRQ_SPURIOUS {
+        cprintf(
+            "cpu%d: spurious interrupt at %x:%x\n",
+            &[
+                Arg::Int(cpuid() as i32),
+                Arg::Int((*tf).cs as i32),
+                Arg::Int((*tf).eip as i32),
+            ],
+        );
+        lapiceoi();
+    } else {
+        if (myproc().is_null() || ((*tf).cs & 3) == 0) {
+            // In kernel, it must be our mistake.
+            cprintf(
+                "unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
+                &[
+                    Arg::Int((*tf).trapno as i32),
+                    Arg::Int(cpuid() as i32),
+                    Arg::Int((*tf).eip as i32),
+                    Arg::Int(rcr2() as i32),
+                ],
+            );
+            panic!("trap");
+        }
+        // In user space, assume process misbehaved.
+        cprintf(
+            "pid %d %s: trap %d err %d on cpu %d eip 0x%x addr 0x%x--kill proc\n",
+            &[
+                Arg::Int((*myproc()).pid),
+                Arg::Str(core::str::from_utf8(&(*myproc()).name).unwrap()),
+                Arg::Int((*tf).trapno as i32),
+                Arg::Int((*tf).err as i32),
+                Arg::Int(cpuid() as i32),
+                Arg::Int((*tf).eip as i32),
+                Arg::Int(rcr2() as i32),
+            ],
+        );
+        (*myproc()).killed = true;
+    }
 
-    //// switch(tf->trapno){
-    //// case T_IRQ0 + IRQ_TIMER:
-    ////   if(cpuid() == 0){
-    ////     acquire(&tickslock);
-    ////     ticks++;
-    ////     wakeup(&ticks);
-    ////     release(&tickslock);
-    ////   }
-    ////   lapiceoi();
-    ////   break;
-    //// case T_IRQ0 + IRQ_IDE:
-    ////   ideintr();
-    ////   lapiceoi();
-    ////   break;
-    //// case T_IRQ0 + IRQ_IDE+1:
-    ////   // Bochs generates spurious IDE1 interrupts.
-    ////   break;
-    //// case T_IRQ0 + IRQ_KBD:
-    ////   kbdintr();
-    ////   lapiceoi();
-    ////   break;
-    //// case T_IRQ0 + IRQ_COM1:
-    ////   uartintr();
-    ////   lapiceoi();
-    ////   break;
-    //// case T_IRQ0 + 7:
-    //// case T_IRQ0 + IRQ_SPURIOUS:
-    ////   cprintf("cpu%d: spurious interrupt at %x:%x\n",
-    ////           cpuid(), tf->cs, tf->eip);
-    ////   lapiceoi();
-    ////   break;
-    ////
-    //// //PAGEBREAK: 13
-    //// default:
-    ////   if(myproc() == 0 || (tf->cs&3) == 0){
-    ////     // In kernel, it must be our mistake.
-    ////     cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
-    ////             tf->trapno, cpuid(), tf->eip, rcr2());
-    ////     panic("trap");
-    ////   }
-    ////   // In user space, assume process misbehaved.
-    ////   cprintf("pid %d %s: trap %d err %d on cpu %d "
-    ////           "eip 0x%x addr 0x%x--kill proc\n",
-    ////           myproc()->pid, myproc()->name, tf->trapno, tf->err, cpuid(), tf->eip,
-    ////           rcr2());
-    ////   myproc()->killed = 1;
-    //// }
-    ////
-    //// // Force process exit if it has been killed and is in user space.
-    //// // (If it is still executing in the kernel, let it keep running
-    //// // until it gets to the regular system call return.)
-    //// if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
-    ////   exit();
-    ////
-    //// // Force process to give up CPU on clock tick.
-    //// // If interrupts were on while locks held, would need to check nlock.
-    //// if(myproc() && myproc()->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
-    ////   yield();
-    ////
-    //// // Check if the process has been killed since we yielded
-    //// if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
-    ////   exit();
+    // Force process exit if it has been killed and is in user space.
+    // (If it is still executing in the kernel, let it keep running
+    // until it gets to the regular system call return.)
+    if (!myproc().is_null() && (*myproc()).killed && ((*tf).cs & 3) == DPL_USER as u16) {
+        exit();
+    }
+
+    // Force process to give up CPU on clock tick.
+    // If interrupts were on while locks held, would need to check nlock.
+    if (!myproc().is_null() && (*myproc()).state == RUNNING && (*tf).trapno == T_IRQ0 + IRQ_TIMER) {
+        yield_();
+    }
+
+    // Check if the process has been killed since we yielded
+    if (!myproc().is_null() && (*myproc()).killed && ((*tf).cs & 3) == DPL_USER as u16) {
+        exit();
+    }
 }
