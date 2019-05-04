@@ -102,7 +102,6 @@ pub unsafe fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
 
 // Check whether this cpu is holding the lock.
 pub unsafe fn holding(lock: *mut Spinlock) -> bool {
-    panic!("unimplemented");
     (*lock).locked != 0 && (*lock).cpu == cpu()
 }
 

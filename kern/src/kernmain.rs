@@ -1,5 +1,5 @@
-/// main.c in xv6
 use super::*;
+// main.c in xv6
 
 // main in main.c
 pub unsafe fn kernmain() {

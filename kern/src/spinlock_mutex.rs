@@ -12,13 +12,15 @@ use super::*;
 pub struct Mutex<T> {
     lock: AtomicBool,
     val: UnsafeCell<T>,
+
+    pub use_lock: bool,
 }
 
 // For test
 unsafe impl<T> Sync for Mutex<T> {}
 
 pub struct Obj<'a, T: 'a> {
-    lock: &'a AtomicBool,
+    lock: Option<&'a AtomicBool>,
     data: &'a mut T,
 }
 
@@ -27,6 +29,7 @@ impl<T> Mutex<T> {
         Mutex {
             lock: AtomicBool::new(false),
             val: UnsafeCell::new(val),
+            use_lock: true,
         }
     }
     unsafe fn acquire(&self) {
@@ -41,9 +44,15 @@ impl<T> Mutex<T> {
     }
     pub fn lock(&self) -> Obj<T> {
         unsafe {
+            if !self.use_lock {
+                return Obj {
+                    lock: None,
+                    data: &mut *self.val.get(),
+                };
+            }
             self.acquire();
             Obj {
-                lock: &self.lock,
+                lock: Some(&self.lock),
                 data: &mut *self.val.get(),
             }
         }
@@ -66,6 +75,9 @@ impl<'a, T: 'a> DerefMut for Obj<'a, T> {
 impl<'a, T: 'a> Drop for Obj<'a, T> {
     // Release the lock.
     fn drop(&mut self) {
+        if self.lock.is_none() {
+            return;
+        }
         // TODO: uncomment the following for debug
         //// if(!holding(lk))
         ////     panic("release");
@@ -73,7 +85,7 @@ impl<'a, T: 'a> Drop for Obj<'a, T> {
         //// lk->pcs[0] = 0;
         //// lk->cpu = 0;
 
-        self.lock.store(false, Ordering::Release);
+        self.lock.unwrap().store(false, Ordering::Release);
         popcli();
     }
 }

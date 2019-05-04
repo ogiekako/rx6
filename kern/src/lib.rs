@@ -99,11 +99,19 @@ pub mod x86;
 #[lang = "eh_personality"]
 #[no_mangle]
 pub extern "C" fn eh_personality() {}
+
 #[cfg(not(test))]
 #[panic_handler]
 #[no_mangle]
 pub extern "C" fn panic(info: &core::panic::PanicInfo) -> ! {
-    loop {}
+    unsafe {
+        if let Some(s) = info.payload().downcast_ref::<&str>() {
+            console::panic(s);
+        } else {
+            console::panic("");
+        }
+        loop {}
+    }
 }
 
 // For debug binary

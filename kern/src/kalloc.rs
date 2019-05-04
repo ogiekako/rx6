@@ -11,7 +11,7 @@ struct Run {
     next: Option<&'static mut Run>,
 }
 
-static freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
+static mut freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
 
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
@@ -20,13 +20,13 @@ static freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
 // after installing a full page table that maps them on all cores.
 pub unsafe fn kinit1(vstart: V, vend: V) {
     assert!(vstart < vend);
-    // TODO: allow not to use lock for sped up. Currently we always take lock for freelist.
-    // freelist.use_lock = 0;
+    freelist.use_lock = false;
     freerange(vstart, vend);
 }
 
 pub unsafe fn kinit2(vstart: V, vend: V) {
     freerange(vstart, vend);
+    freelist.use_lock = true;
 }
 
 unsafe fn freerange(vstart: V, vend: V) {
@@ -62,7 +62,7 @@ pub unsafe fn kfree(v: V) {
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns None if the memory cannot be allocated.
-pub fn kalloc() -> Option<V> {
+pub unsafe fn kalloc() -> Option<V> {
     let mut head = freelist.lock();
     let a = &mut head.take()?.next;
     let p = V(a as *const Option<&'static mut Run> as usize);

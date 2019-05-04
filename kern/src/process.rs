@@ -11,9 +11,12 @@ pub struct Cpu {
     pub ts: Taskstate,           // Used by x86 to find stack for interrupt
     pub gdt: [Segdesc; NSEGS],   // x86 global descriptor table
     // TODO volatile
-    pub started: usize,     // Has the CPU started?
-    pub ncli: i32,          // Depth of pushcli nesting.
-    pub intena: i32,        // Were interrupts enabled before pushcli?
+    pub started: usize, // Has the CPU started?
+    pub ncli: i32,      // Depth of pushcli nesting.
+    pub intena: i32,    // Were interrupts enabled before pushcli?
+
+    // Cpu-local storage variables; see below
+    pub cpu: *mut Cpu,
     pub process: *mut Proc, // The process running on this cpu or null
 }
 

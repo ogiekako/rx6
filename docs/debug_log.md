@@ -1,4 +1,29 @@
- 2019-05-02 14:39
+ 2019-05-04 22:13
+
+ startothers 内部で止まっている。
+ mpmain の
+ thread2 による acquire に失敗している。
+ cpu() 命令で死んでいる。
+
+```
+=> 0x801250e8 <kern::spinlock::acquire+120>:    movb   $0x4,0x23(%esp)
+50          atomic::fence(atomic::Ordering::SeqCst);
+(gdb)
+=> 0x8012510b <kern::spinlock::acquire+155>:    mov    %gs:0x0,%eax
+53          (*lk).cpu = cpu();
+(gdb)
+The target architecture is assumed to be i8086
+[f000:d09b]    0xfd09b: cli
+0x0000d09b in ?? ()
+```
+
+# 2019-05-04 22:08
+
+seginit で落ちている。
+loadgs か。写し忘れだった。
+解決。
+
+# 2019-05-02 14:39
 
 ```
 => 0x8011c2c2 <kern::kernmain::startothers+114>:        mov    -0x20(%eax),%ecx

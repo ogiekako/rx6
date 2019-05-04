@@ -59,6 +59,7 @@ pub enum Arg<'a> {
     Str(&'a str),
 }
 
+
 // Print to the console. only understands %d, %x, %p, %s.
 pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     let locking = cons.locking;
