@@ -50,7 +50,7 @@ unsafe fn lapicr(index: usize) -> usize {
 
 pub unsafe fn lapicinit() {
     if (lapic as usize == 0) {
-        panic!("lapicinit");
+        cpanic("lapicinit");
         return;
     }
 
@@ -98,7 +98,7 @@ pub unsafe fn lapicinit() {
 // rescheduled between reading lapic[ID] and checking against cpu array.
 pub unsafe fn lapiccpunum() -> usize {
     if (lapic as usize == 0) {
-        panic!("cpunum");
+        cpanic("cpunum");
         return 0;
     }
 
@@ -108,7 +108,7 @@ pub unsafe fn lapiccpunum() -> usize {
             return i;
         }
     }
-    panic!("unknown apicid");
+    cpanic("unknown apicid");
 }
 
 // Acknowledge interrupt.

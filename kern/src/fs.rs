@@ -120,7 +120,7 @@ pub unsafe fn balloc(dev: usize) -> usize {
         }
         brelse(bp);
     }
-    panic!("balloc: out of blocks");
+    cpanic("balloc: out of blocks");
 }
 
 // Free a disk block.
@@ -130,7 +130,7 @@ pub unsafe fn bfree(dev: usize, b: usize) {
     let bi = b % BPB;
     let m = 1 << (bi % 8);
     if (((*bp).data[bi / 8] & m) == 0) {
-        panic!("freeing free block");
+        cpanic("freeing free block");
     }
     (*bp).data[bi / 8] &= !m;
     log_write(bp);
@@ -244,7 +244,7 @@ pub unsafe fn ialloc(dev: usize, type_: i16) -> *mut Inode {
         }
         brelse(bp);
     }
-    panic!("ialloc: no inodes");
+    cpanic("ialloc: no inodes");
 }
 
 // Copy a modified in-memory inode to disk.
@@ -289,7 +289,7 @@ pub unsafe fn iget(dev: usize, inum: usize) -> *mut Inode {
 
     // Recycle an inode cache entry.
     if (empty == core::ptr::null_mut()) {
-        panic!("iget: no inodes");
+        cpanic("iget: no inodes");
     }
 
     ip = empty;
@@ -315,7 +315,7 @@ pub unsafe fn idup(ip: *mut Inode) -> *mut Inode {
 // Reads the inode from disk if necessary.
 pub unsafe fn ilock(ip: *mut Inode) {
     if (ip == core::ptr::null_mut() || (*ip).ref_ < 1) {
-        panic!("ilock");
+        cpanic("ilock");
     }
 
     acquiresleep(&mut (*ip).lock as *mut Sleeplock);
@@ -336,7 +336,7 @@ pub unsafe fn ilock(ip: *mut Inode) {
         brelse(bp);
         (*ip).flags |= I_VALID;
         if ((*ip).type_ == 0) {
-            panic!("ilock: no type");
+            cpanic("ilock: no type");
         }
     }
 }
@@ -347,7 +347,7 @@ pub unsafe fn iunlock(ip: *mut Inode) {
         || holdingsleep(&mut (*ip).lock as *mut Sleeplock) == 0
         || (*ip).ref_ < 1)
     {
-        panic!("iunlock");
+        cpanic("iunlock");
     }
 
     releasesleep(&mut (*ip).lock as *mut Sleeplock);
@@ -420,7 +420,7 @@ pub unsafe fn bmap(ip: *mut Inode, mut bn: usize) -> usize {
         return addr;
     }
 
-    panic!("bmap: out of range");
+    cpanic("bmap: out of range");
 }
 
 // Truncate inode (discard contents).
@@ -548,7 +548,7 @@ pub unsafe fn namecmp(s: *const u8, t: *const u8) -> i32 {
 // If found, set *poff to byte offset of entry.
 pub unsafe fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *mut Inode {
     if ((*dp).type_ != T_DIR as i16) {
-        panic!("dirlookup not DIR");
+        cpanic("dirlookup not DIR");
     }
 
     let mut de: Dirent = core::mem::transmute([0u8; core::mem::size_of::<Dirent>()]);
@@ -557,7 +557,7 @@ pub unsafe fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *m
         if (readi(dp, &mut de as *mut Dirent as *mut u8, off, size_of_val(&de))
             != size_of_val(&de) as i32)
         {
-            panic!("dirlink read");
+            cpanic("dirlink read");
         }
         if (de.inum == 0) {
             continue;
@@ -592,7 +592,7 @@ pub unsafe fn dirlink(dp: *mut Inode, name: *const u8, inum: usize) -> i32 {
         if (readi(dp, &mut de as *mut Dirent as *mut u8, off, size_of_val(&de))
             != size_of_val(&de) as i32)
         {
-            panic!("dirlink read");
+            cpanic("dirlink read");
         }
         if (de.inum == 0) {
             break;
@@ -605,7 +605,7 @@ pub unsafe fn dirlink(dp: *mut Inode, name: *const u8, inum: usize) -> i32 {
     if (writei(dp, &mut de as *mut Dirent as *mut u8, off, size_of_val(&de))
         != size_of_val(&de) as i32)
     {
-        panic!("dirlink");
+        cpanic("dirlink");
     }
 
     return 0;

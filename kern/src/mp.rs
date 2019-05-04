@@ -3,6 +3,7 @@
 // http://developer.intel.com/design/pentium/datashts/24201606.pdf
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/MPspec.pdf
 
+use console::cpanic;
 use lapic::*;
 use memlayout::*;
 use mmu::*;
@@ -214,7 +215,7 @@ pub unsafe fn mpinit() {
         ncpu = 1;
         lapic = 0 as *mut usize;
         ioapicid = 0;
-        panic!("unexpected");
+        cpanic("unexpected");
         return;
     }
 
@@ -223,7 +224,7 @@ pub unsafe fn mpinit() {
         // But it would on real hardware.
         outb(0x22, 0x70); // Select IMCR
         outb(0x23, inb(0x23) | 1); // Mask external interrupts.
-        panic!("unexpected");
+        cpanic("unexpected");
     }
     assert_eq!(ncpu, 2);
 }

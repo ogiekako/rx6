@@ -106,9 +106,9 @@ pub extern "C" fn eh_personality() {}
 pub extern "C" fn panic(info: &core::panic::PanicInfo) -> ! {
     unsafe {
         if let Some(s) = info.payload().downcast_ref::<&str>() {
-            console::panic(s);
+            console::cpanic(s);
         } else {
-            console::panic("");
+            console::cpanic("panic");
         }
         loop {}
     }

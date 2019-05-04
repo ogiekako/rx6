@@ -175,7 +175,7 @@ pub unsafe fn isdirempty(dp: *mut Inode) -> i32 {
         if (readi(dp, &mut de as *mut Dirent as *mut u8, off, size_of_val(&de))
             != size_of_val(&de) as i32)
         {
-            panic!("isdirempty: readi");
+            cpanic("isdirempty: readi");
         }
         if (de.inum != 0) {
             return 0;
@@ -217,7 +217,7 @@ pub unsafe fn sys_unlink() -> i32 {
         ilock(ip);
 
         if ((*ip).nlink < 1) {
-            panic!("unlink: nlink < 1");
+            cpanic("unlink: nlink < 1");
         }
         if ((*ip).type_ == T_DIR as i16 && isdirempty(ip) == 0) {
             iunlockput(ip);
@@ -228,7 +228,7 @@ pub unsafe fn sys_unlink() -> i32 {
         if (writei(dp, &mut de as *mut Dirent as *mut u8, off, size_of_val(&de))
             != size_of_val(&de) as i32)
         {
-            panic!("unlink: writei");
+            cpanic("unlink: writei");
         }
         if ((*ip).type_ == T_DIR as i16) {
             (*dp).nlink -= 1;
@@ -273,7 +273,7 @@ unsafe fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -> *mut Inod
 
     let ip = ialloc((*dp).dev, type_);
     if ip.is_null() {
-        panic!("create: ialloc");
+        cpanic("create: ialloc");
     }
 
     ilock(ip);
@@ -289,12 +289,12 @@ unsafe fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -> *mut Inod
         // No ip->nlink++ for ".": avoid cyclic ref count.
         if (dirlink(ip, ".".as_ptr(), (*ip).inum) < 0 || dirlink(ip, "..".as_ptr(), (*dp).inum) < 0)
         {
-            panic!("create dots");
+            cpanic("create dots");
         }
     }
 
     if (dirlink(dp, name.as_mut_ptr(), (*ip).inum) < 0) {
-        panic!("create: dirlink");
+        cpanic("create: dirlink");
     }
 
     iunlockput(dp);

@@ -46,7 +46,7 @@ pub unsafe fn kfree(v: V) {
     #[cfg(not(test))]
     {
         if (v.0 % PGSIZE != 0 || v < linker::end() || v2p(v) >= PHYSTOP) {
-            panic!("kfree");
+            cpanic("kfree");
         }
     }
 

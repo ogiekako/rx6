@@ -220,7 +220,7 @@ pub unsafe fn userinit() {
     initproc = p;
     (*p).pgdir = setupkvm().map(|p| p.pd.0).unwrap_or(0) as *mut pde_t;
     if ((*p).pgdir == core::ptr::null_mut()) {
-        panic!("userinit: out of memory?");
+        cpanic("userinit: out of memory?");
     }
     inituvm(
         (*p).pgdir,
@@ -335,7 +335,7 @@ pub unsafe fn exit() {
     let curproc = myproc();
 
     if (curproc == initproc) {
-        panic!("init exiting");
+        cpanic("init exiting");
     }
 
     // Close all open files.
@@ -371,7 +371,7 @@ pub unsafe fn exit() {
     // Jump into the scheduler, never to return.
     (*curproc).state = ZOMBIE;
     sched();
-    panic!("zombie exit");
+    cpanic("zombie exit");
 }
 
 // Wait for a child process to exit and return its pid.
@@ -473,16 +473,16 @@ pub unsafe fn sched() {
     let p = myproc();
 
     if (!holding(&mut ptable.lock as *mut Spinlock)) {
-        panic!("sched ptable.lock");
+        cpanic("sched ptable.lock");
     }
     if ((*mycpu()).ncli != 1) {
-        panic!("sched locks");
+        cpanic("sched locks");
     }
     if ((*p).state == RUNNING) {
-        panic!("sched running");
+        cpanic("sched running");
     }
     if (readeflags() & FL_IF) != 0 {
-        panic!("sched interruptible");
+        cpanic("sched interruptible");
     }
     let intena = (*mycpu()).intena;
     swtch(&mut (*p).context as *mut *mut Context, (*mycpu()).scheduler);
@@ -524,11 +524,11 @@ pub unsafe fn sleep(chan: *mut (), lk: *mut Spinlock) {
     let p = myproc();
 
     if (p == core::ptr::null_mut()) {
-        panic!("sleep");
+        cpanic("sleep");
     }
 
     if (lk == core::ptr::null_mut()) {
-        panic!("sleep without lk");
+        cpanic("sleep without lk");
     }
 
     // Must acquire ptable.lock in order to

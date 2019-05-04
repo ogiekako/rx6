@@ -88,14 +88,14 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
                 if let Some(Arg::Int(i)) = argit.next() {
                     printint(*i, 10, true);
                 } else {
-                    panic!();
+                    cpanic("cprintf [d]");
                 }
             }
             'x' | 'p' => {
                 if let Some(Arg::Int(i)) = argit.next() {
                     printint(*i, 16, false);
                 } else {
-                    panic!();
+                    cpanic("cprintf [xp]");
                 }
             }
             's' => {
@@ -104,7 +104,7 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
                         consputc(c as u16);
                     }
                 } else {
-                    panic!();
+                    cpanic("cprintf [s]");
                 }
             }
             '%' => {
@@ -123,7 +123,7 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     }
 }
 
-pub unsafe fn panic(s: &str) {
+pub unsafe fn cpanic(s: &str) -> ! {
     let mut pcs = [0usize; 10];
     let mut i = 0;
 
@@ -163,7 +163,7 @@ unsafe fn cgaputc(c: i32) {
     }
 
     if (pos < 0 || pos > 25 * 80) {
-        panic!("pos under/overflow");
+        cpanic("pos under/overflow");
     }
 
     if ((pos / 80) >= 24) {
@@ -201,7 +201,7 @@ unsafe fn consputc(c: u16) {
     } else if c < 0xff {
         uartputc(c as u8);
     } else {
-        panic!();
+        cpanic("consputc");
     }
     cgaputc(c.into());
 }

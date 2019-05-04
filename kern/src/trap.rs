@@ -79,7 +79,7 @@ pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
                     Arg::Int(rcr2() as i32),
                 ],
             );
-            panic!("trap");
+            cpanic("trap");
         }
         // In user space, assume process misbehaved.
         cprintf(

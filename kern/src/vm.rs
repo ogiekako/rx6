@@ -153,7 +153,7 @@ pub unsafe fn setupkvm() -> Option<PageDir> {
     }
 
     if p2v(PHYSTOP).0 > DEVSPACE {
-        panic!("PHYSTOP too high");
+        cpanic("PHYSTOP too high");
     }
 
     for k in kmap().into_iter() {
@@ -185,13 +185,13 @@ pub unsafe fn switchkvm() {
 // Switch TSS and h/w page table to correspond to process p.
 pub unsafe fn switchuvm(p: *const Proc) {
     if (p == null_mut()) {
-        panic!("switchuvm: no process");
+        cpanic("switchuvm: no process");
     }
     if ((*p).kstack == null_mut()) {
-        panic!("switchuvm: no kstack");
+        cpanic("switchuvm: no kstack");
     }
     if ((*p).pgdir == null_mut()) {
-        panic!("switchuvm: no pgdir");
+        cpanic("switchuvm: no pgdir");
     }
 
     pushcli();
@@ -216,7 +216,7 @@ pub unsafe fn switchuvm(p: *const Proc) {
 // sz must be less than a page.
 pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: usize) {
     if sz >= PGSIZE {
-        panic!("inituvm: more than a page");
+        cpanic("inituvm: more than a page");
     }
     let mem: *mut u8 = kalloc().map(|v| v.0).unwrap_or(0) as *mut u8;
     memset(mem, 0, PGSIZE);
@@ -238,7 +238,7 @@ pub unsafe fn loaduvm(
     sz: usize,
 ) -> i32 {
     if ((addr as usize) % PGSIZE != 0) {
-        panic!("loaduvm: addr must be page aligned");
+        cpanic("loaduvm: addr must be page aligned");
     }
     for i in (0..sz).step_by(PGSIZE) {
         let pte = (&mut PageDir {
@@ -246,7 +246,7 @@ pub unsafe fn loaduvm(
         })
             .walkpgdir(V(addr.add(i) as usize), false);
         if pte.is_none() {
-            panic!("loaduvm: address should exist");
+            cpanic("loaduvm: address should exist");
         }
         let pte = pte.unwrap().0 as *mut pte_t;
         let pa = PTE(pte as usize).addr().0;
@@ -318,7 +318,7 @@ pub unsafe fn deallocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize
         } else if (*(pte.unwrap().0 as *const pte_t) & PTE_P) != 0 {
             let pa = PTE(*(pte.unwrap().0 as *const pte_t)).addr();
             if (pa.0 == 0) {
-                panic!("kfree");
+                cpanic("kfree");
             }
             let v = p2v(pa);
             kfree(v);
@@ -333,7 +333,7 @@ pub unsafe fn deallocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize
 // in the user part.
 pub unsafe fn freevm(pgdir: *mut pde_t) {
     if (pgdir == null_mut()) {
-        panic!("freevm: no pgdir");
+        cpanic("freevm: no pgdir");
     }
     deallocuvm(pgdir, KERNBASE.0, 0);
     for i in 0..NPDENTRIES {
@@ -353,7 +353,7 @@ pub unsafe fn clearpteu(pgdir: *mut pde_t, uva: *mut u8) {
     })
         .walkpgdir(V(uva as usize), false);
     if (pte.is_none()) {
-        panic!("clearpteu");
+        cpanic("clearpteu");
     }
     *(pte.unwrap().0 as *mut pte_t) &= !PTE_U;
 }
@@ -370,11 +370,11 @@ pub unsafe fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
     for i in (0..sz).step_by(PGSIZE) {
         let pte = &pgdir.walkpgdir(V(i), false);
         if pte.is_none() {
-            panic!("copyuvm: pte should exist");
+            cpanic("copyuvm: pte should exist");
         }
         let pte = pte.unwrap().0 as *mut pde_t;
         if ((*pte & PTE_P) == 0) {
-            panic!("copyuvm: page not present");
+            cpanic("copyuvm: page not present");
         }
         let pa = PTE(*pte).addr();
         let flags = PTE(*pte).flags();

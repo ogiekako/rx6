@@ -38,7 +38,7 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
     pushcli(); // disable interrupts to avoid deadlock.
 
     if holding(lk) {
-        panic!("acquire");
+        cpanic("acquire");
     }
 
     // The xchg is atomic.
@@ -57,7 +57,7 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
 // Release the lock.
 pub unsafe fn release(lk: *mut Spinlock) {
     if !holding(lk) {
-        panic!("release");
+        cpanic("release");
     }
 
     (*lk).pcs[0] = 0;
@@ -121,11 +121,11 @@ pub unsafe fn pushcli() {
 pub fn popcli() {
     unsafe {
         if (readeflags() & FL_IF > 0) {
-            panic!("popcli - interruptible");
+            cpanic("popcli - interruptible");
         }
         (*mycpu()).ncli -= 1;
         if ((*mycpu()).ncli < 0) {
-            panic!("popcli");
+            cpanic("popcli");
         }
         if ((*mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
             sti();

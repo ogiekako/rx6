@@ -61,10 +61,10 @@ pub unsafe fn ideinit() {
 // Start the request for b.  Caller must hold idelock.
 pub unsafe fn idestart(b: *mut Buf) {
     if (b == core::ptr::null_mut()) {
-        panic!("idestart");
+        cpanic("idestart");
     }
     if ((*b).blockno >= FSSIZE) {
-        panic!("incorrect blockno");
+        cpanic("incorrect blockno");
     }
     let mut sector_per_block = BSIZE / SECTOR_SIZE;
     let mut sector = (*b).blockno * sector_per_block;
@@ -80,7 +80,7 @@ pub unsafe fn idestart(b: *mut Buf) {
     };
 
     if (sector_per_block > 7) {
-        panic!("idestart");
+        cpanic("idestart");
     }
 
     idewait(0);
@@ -135,13 +135,13 @@ pub unsafe fn ideintr() {
 // Else if B_VALID is not set, read buf from disk, set B_VALID.
 pub unsafe fn iderw(b: *mut Buf) {
     if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
-        panic!("iderw: buf not locked");
+        cpanic("iderw: buf not locked");
     }
     if ((*b).flags & (B_VALID | B_DIRTY)) == B_VALID {
-        panic!("iderw: nothing to do");
+        cpanic("iderw: nothing to do");
     }
     if (*b).dev != 0 && havedisk1 == 0 {
-        panic!("iderw: ide disk 1 not present");
+        cpanic("iderw: ide disk 1 not present");
     }
 
     acquire(&mut idelock as *mut Spinlock);

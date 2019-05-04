@@ -1,6 +1,7 @@
 // This file contains definitions for the
 // x86 memory management unit (MMU).
 
+use console::cpanic;
 use core::ops::{Add, AddAssign};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Debug)]
@@ -159,9 +160,9 @@ impl Segdesc {
         }
     }
 
-    pub fn set_s(&mut self, x: u8) {
+    pub unsafe fn set_s(&mut self, x: u8) {
         if x > 1 {
-            panic!("set_s");
+            cpanic("set_s");
         }
         self.typ_s_dpl_p &= !(1 << 4);
         self.typ_s_dpl_p |= x << 4;

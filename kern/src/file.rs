@@ -91,7 +91,7 @@ pub unsafe fn filealloc() -> *mut File {
 pub unsafe fn filedup(f: *mut File) -> *mut File {
     acquire(&mut ftable.lock as *mut Spinlock);
     if ((*f).ref_ < 1) {
-        panic!("filedup");
+        cpanic("filedup");
     }
     (*f).ref_ += 1;
     release(&mut ftable.lock as *mut Spinlock);
@@ -102,7 +102,7 @@ pub unsafe fn filedup(f: *mut File) -> *mut File {
 pub unsafe fn fileclose(f: *mut File) {
     acquire(&mut ftable.lock as *mut Spinlock);
     if ((*f).ref_ < 1) {
-        panic!("fileclose");
+        cpanic("fileclose");
     }
     (*f).ref_ -= 1;
     if ((*f).ref_ > 0) {
@@ -151,7 +151,7 @@ pub unsafe fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
         iunlock((*f).ip);
         return r;
     }
-    panic!("fileread");
+    cpanic("fileread");
 }
 
 //PAGEBREAK!
@@ -191,11 +191,11 @@ pub unsafe fn filewrite(f: *mut File, addr: *mut u8, n: i32) -> i32 {
                 break;
             }
             if (r != n1) {
-                panic!("short filewrite");
+                cpanic("short filewrite");
             }
             i += r;
         }
         return if i == n { n } else { -1 };
     }
-    panic!("filewrite");
+    cpanic("filewrite");
 }

@@ -44,7 +44,7 @@ pub static mut log: Log = unsafe { core::mem::transmute([0u8; core::mem::size_of
 
 pub unsafe fn initlog(dev: i32) {
     if (core::mem::size_of::<Logheader>() >= BSIZE) {
-        panic!("initlog: too big logheader");
+        cpanic("initlog: too big logheader");
     }
 
     let sp: Superblock = core::mem::transmute([0u8; core::mem::size_of::<Superblock>()]);
@@ -131,7 +131,7 @@ pub unsafe fn end_op() {
     acquire(&mut log.lock as *mut Spinlock);
     log.outstanding -= 1;
     if (log.committing != 0) {
-        panic!("log.committing");
+        cpanic("log.committing");
     }
     if (log.outstanding == 0) {
         do_commit = 1;
@@ -186,10 +186,10 @@ pub unsafe fn commit() {
 //   brelse(bp)
 pub unsafe fn log_write(b: *mut Buf) {
     if (log.lh.n >= LOGSIZE as i32 || log.lh.n >= log.size - 1) {
-        panic!("too big a transaction");
+        cpanic("too big a transaction");
     }
     if (log.outstanding < 1) {
-        panic!("log_write outside of trans");
+        cpanic("log_write outside of trans");
     }
 
     acquire(&mut log.lock as *mut Spinlock);

@@ -120,7 +120,7 @@ pub unsafe fn bget(dev: usize, blockno: usize) -> *mut Buf {
         }
         b = (*b).prev;
     }
-    panic!("bget: no buffers");
+    cpanic("bget: no buffers");
 }
 
 // Return a locked buf with the contents of the indicated block.
@@ -135,7 +135,7 @@ pub unsafe fn bread(dev: usize, blockno: usize) -> *mut Buf {
 // Write b's contents to disk.  Must be locked.
 pub unsafe fn bwrite(b: *mut Buf) {
     if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
-        panic!("bwrite");
+        cpanic("bwrite");
     }
     (*b).flags |= B_DIRTY;
     iderw(b);
@@ -145,7 +145,7 @@ pub unsafe fn bwrite(b: *mut Buf) {
 // Move to the head of the MRU list.
 pub unsafe fn brelse(b: *mut Buf) {
     if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
-        panic!("brelse");
+        cpanic("brelse");
     }
 
     releasesleep(&mut (*b).lock as *mut Sleeplock);
