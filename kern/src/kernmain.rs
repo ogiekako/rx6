@@ -9,8 +9,9 @@ pub unsafe fn kernmain() {
     lapicinit(); // interrupt controller
     seginit(); // segment descriptors
     picinit(); // another interrupt controller
-               // TODO: fix.
-               // cprintf("\ncpu%d: starting xv6\n\n", &[Arg::Int(cpunum())]);
+
+    // TODO: fix.
+    // cprintf("\ncpu%d: starting xv6\n\n", &[Arg::Int(cpunum())]);
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
@@ -24,8 +25,8 @@ pub unsafe fn kernmain() {
     //   timerinit();   // uniprocessor timer (TODO)
     startothers(); // start other processors
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
-    userinit(); // first user process (TODO)
-    mpmain(); // finish this processor's setup (TODO)
+    userinit(); // first user process
+    mpmain(); // finish this processor's setup
     cprintf("looping\n", &[]);
     loop {}
 }

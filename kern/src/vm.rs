@@ -15,6 +15,7 @@ pub unsafe fn seginit() {
     c.gdt[SEG_UCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
     c.gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
     lgdt(c.gdt.as_ptr(), core::mem::size_of_val(&c.gdt) as u16);
+    loadgs((SEG_KCPU << 3) as u16);
 }
 
 // for use in scheduler()

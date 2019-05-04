@@ -79,11 +79,9 @@ pub unsafe fn readeflags() -> usize {
     eflags
 }
 
-//// static inline void
-//// loadgs(ushort v)
-//// {
-////   asm volatile("movw %0, %%gs" : : "r" (v));
-//// }
+pub unsafe fn loadgs(v: u16) {
+    asm!("movw $0, %gs" : : "r" (v) : : : "volatile");
+}
 
 pub unsafe fn cli() {
     asm!("cli":::::"volatile");
