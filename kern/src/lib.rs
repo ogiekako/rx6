@@ -8,9 +8,6 @@
 #![allow(non_camel_case_types)]
 #![allow(unused)]
 
-#[macro_use]
-extern crate lazy_static;
-
 pub use core::mem::size_of;
 pub use core::mem::size_of_val;
 pub use core::mem::transmute;
