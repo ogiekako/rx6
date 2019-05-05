@@ -33,7 +33,7 @@ pub const SYS_num: usize = 22;
 // to a saved program counter, and then the first argument.
 
 // Fetch the int at addr from the current process.
-pub unsafe fn fetchint(addr: usize, ip: *mut i32) -> i32 {
+pub unsafe extern "C" fn fetchint(addr: usize, ip: *mut i32) -> i32 {
     let curproc = myproc();
 
     if (addr >= (*curproc).sz || addr + 4 > (*curproc).sz) {
@@ -46,7 +46,7 @@ pub unsafe fn fetchint(addr: usize, ip: *mut i32) -> i32 {
 // Fetch the nul-terminated string at addr from the current process.
 // Doesn't actually copy the string - just sets *pp to point at it.
 // Returns length of string, not including nul.
-pub unsafe fn fetchstr(addr: usize, pp: *mut *mut u8) -> i32 {
+pub unsafe extern "C" fn fetchstr(addr: usize, pp: *mut *mut u8) -> i32 {
     let mut curproc = myproc();
 
     if (addr >= (*curproc).sz) {
@@ -65,14 +65,14 @@ pub unsafe fn fetchstr(addr: usize, pp: *mut *mut u8) -> i32 {
 }
 
 // Fetch the nth 32-bit system call argument.
-pub unsafe fn argint(n: i32, ip: *mut i32) -> i32 {
+pub unsafe extern "C" fn argint(n: i32, ip: *mut i32) -> i32 {
     return fetchint(((*(*myproc()).tf).esp) + 4 + 4 * n as usize, ip);
 }
 
 // Fetch the nth word-sized system call argument as a pointer
 // to a block of memory of size bytes.  Check that the pointer
 // lies within the process address space.
-pub unsafe fn argptr(n: i32, pp: *mut *mut u8, size: i32) -> i32 {
+pub unsafe extern "C" fn argptr(n: i32, pp: *mut *mut u8, size: i32) -> i32 {
     let mut i = 0;
     let curproc = myproc();
 
@@ -90,7 +90,7 @@ pub unsafe fn argptr(n: i32, pp: *mut *mut u8, size: i32) -> i32 {
 // Check that the pointer is valid and the string is nul-terminated.
 // (There is no shared writable memory, so the string can't change
 // between this check and being used by the kernel.)
-pub unsafe fn argstr(n: i32, pp: *mut *mut u8) -> i32 {
+pub unsafe extern "C" fn argstr(n: i32, pp: *mut *mut u8) -> i32 {
     let mut addr = 0i32;
     if (argint(n, &mut addr as *mut i32) < 0) {
         return -1;
@@ -98,7 +98,7 @@ pub unsafe fn argstr(n: i32, pp: *mut *mut u8) -> i32 {
     return fetchstr(addr as usize, pp);
 }
 
-pub unsafe fn syscall() {
+pub unsafe extern "C" fn syscall() {
     // TODO: 1. index with SYS_* enums.
     // 2. make it lazy_static.
     let syscalls: [*const fn() -> i32; SYS_num] = [

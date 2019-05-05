@@ -23,7 +23,7 @@ impl Cons {
 
 static mut cons: Cons = unsafe { Cons::uninit() };
 
-unsafe fn printint(xx: i32, base: usize, sign: bool) {
+unsafe extern "C" fn printint(xx: i32, base: usize, sign: bool) {
     let mut negative = false;
     let mut x = if (sign && xx < 0) {
         negative = true;
@@ -61,7 +61,7 @@ pub enum Arg<'a> {
 
 
 // Print to the console. only understands %d, %x, %p, %s.
-pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
+pub unsafe extern "C" fn cprintf(fmt: &str, args: &[Arg]) {
     let locking = cons.locking;
     if (locking) {
         acquire(&mut cons.lock as *mut Spinlock);
@@ -122,7 +122,7 @@ pub unsafe fn cprintf(fmt: &str, args: &[Arg]) {
     }
 }
 
-pub unsafe fn cpanic(s: &str) -> ! {
+pub unsafe extern "C" fn cpanic(s: &str) -> ! {
     let mut pcs = [0usize; 10];
     let mut i = 0;
 
@@ -143,7 +143,7 @@ pub const BACKSPACE: u16 = 0x100;
 pub const CRTPORT: u16 = 0x3d4;
 static mut crt: *mut u16 = p2v(P(0xb8000)).as_ptr() as *mut u16; // CGA memory
 
-unsafe fn cgaputc(c: i32) {
+unsafe extern "C" fn cgaputc(c: i32) {
     // Cursor position: col + 80*row.
     outb(CRTPORT, 14);
     let mut pos = (inb(CRTPORT + 1) as isize) << 8;
@@ -187,7 +187,7 @@ unsafe fn cgaputc(c: i32) {
     *(crt.offset(pos)) = ' ' as u16 | 0x0700;
 }
 
-unsafe fn consputc(c: u16) {
+unsafe extern "C" fn consputc(c: u16) {
     if (panicked) {
         cli();
         loop {}
@@ -219,7 +219,7 @@ const fn C(x: u8) -> i32 {
     (x - b'@') as i32
 }
 
-pub unsafe fn consoleintr(getc: unsafe fn()->i32)
+pub unsafe extern "C" fn consoleintr(getc: unsafe extern "C" fn()->i32)
 {
     acquire(&mut cons.lock as *mut Spinlock);
     let mut doprocdump = 0;
@@ -264,7 +264,7 @@ pub unsafe fn consoleintr(getc: unsafe fn()->i32)
     }
 }
 
-pub unsafe fn consoleread(ip: *mut Inode, mut dst: *mut u8, mut n: i32) -> i32 {
+pub unsafe extern "C" fn consoleread(ip: *mut Inode, mut dst: *mut u8, mut n: i32) -> i32 {
   iunlock(ip);
   let mut target = n;
   acquire(&mut cons.lock as *mut Spinlock);
@@ -300,7 +300,7 @@ pub unsafe fn consoleread(ip: *mut Inode, mut dst: *mut u8, mut n: i32) -> i32 {
   return target - n;
 }
 
-pub unsafe fn consolewrite(ip: *mut Inode, buf: *mut u8, n: i32) -> i32 {
+pub unsafe extern "C" fn consolewrite(ip: *mut Inode, buf: *mut u8, n: i32) -> i32 {
   iunlock(ip);
   acquire(&mut cons.lock as *mut Spinlock);
   for i in 0..n {
@@ -312,7 +312,7 @@ pub unsafe fn consolewrite(ip: *mut Inode, buf: *mut u8, n: i32) -> i32 {
   return n;
 }
 
-pub unsafe fn consoleinit() {
+pub unsafe extern "C" fn consoleinit() {
     initlock(&mut cons.lock as *mut Spinlock, "console");
 
     devsw[CONSOLE].write = Some(consolewrite);

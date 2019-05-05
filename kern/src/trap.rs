@@ -11,7 +11,7 @@ extern "C" {
 pub static mut tickslock: Spinlock = unsafe { transmute([0u8; size_of::<Spinlock>()]) };
 pub static mut ticks: usize = 0;
 
-pub unsafe fn tvinit() {
+pub unsafe extern "C" fn tvinit() {
     for i in 0..256 {
         idt[i].setgate(false, (SEG_KCODE as u16) << 3, vectors[i], 0);
     }
@@ -20,7 +20,7 @@ pub unsafe fn tvinit() {
     initlock(&mut tickslock as *mut Spinlock, "time");
 }
 
-pub unsafe fn idtinit() {
+pub unsafe extern "C" fn idtinit() {
     lidt(&idt as *const Gatedesc, core::mem::size_of_val(&idt) as i32);
 }
 

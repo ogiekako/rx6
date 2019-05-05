@@ -23,7 +23,7 @@ pub static mut idequeue: *mut Buf = unsafe { core::ptr::null_mut() };
 pub static mut havedisk1: i32 = 0;
 
 // Wait for IDE disk to become ready.
-pub unsafe fn idewait(checkerr: i32) -> i32 {
+pub unsafe extern "C" fn idewait(checkerr: i32) -> i32 {
     let mut r;
     loop {
         r = inb(0x1f7);
@@ -38,7 +38,7 @@ pub unsafe fn idewait(checkerr: i32) -> i32 {
     return 0;
 }
 
-pub unsafe fn ideinit() {
+pub unsafe extern "C" fn ideinit() {
     initlock(&mut idelock as *mut Spinlock, "ide");
 
     picenable(IRQ_IDE as i32);
@@ -59,7 +59,7 @@ pub unsafe fn ideinit() {
 }
 
 // Start the request for b.  Caller must hold idelock.
-pub unsafe fn idestart(b: *mut Buf) {
+pub unsafe extern "C" fn idestart(b: *mut Buf) {
     if (b == core::ptr::null_mut()) {
         cpanic("idestart");
     }
@@ -102,7 +102,7 @@ pub unsafe fn idestart(b: *mut Buf) {
 }
 
 // Interrupt handler.
-pub unsafe fn ideintr() {
+pub unsafe extern "C" fn ideintr() {
     // First queued buffer is the active request.
     acquire(&mut idelock as *mut Spinlock);
     let mut b = idequeue;
@@ -133,7 +133,7 @@ pub unsafe fn ideintr() {
 // Sync buf with disk.
 // If B_DIRTY is set, write buf to disk, clear B_DIRTY, set B_VALID.
 // Else if B_VALID is not set, read buf from disk, set B_VALID.
-pub unsafe fn iderw(b: *mut Buf) {
+pub unsafe extern "C" fn iderw(b: *mut Buf) {
     if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
         cpanic("iderw: buf not locked");
     }

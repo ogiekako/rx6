@@ -2,21 +2,21 @@
 
 use mmu::*;
 
-pub unsafe fn inb(port: u16) -> u8 {
+pub unsafe extern "C" fn inb(port: u16) -> u8 {
     let data: u8;
     asm!("inb %dx, %al" : "={ax}" (data) : "{dx}"(port) :: "volatile");
     data
 }
 
 #[allow(unused_assignments)]
-pub unsafe fn insl(port: i32, mut addr: *mut (), mut cnt: i32) {
+pub unsafe extern "C" fn insl(port: i32, mut addr: *mut (), mut cnt: i32) {
     asm!("cld; rep insl" :
          "={di}" (addr), "={ecx}" (cnt) :
          "{edx}" (port), "0" (addr), "1" (cnt) :
          "memory", "cc" : "volatile");
 }
 
-pub unsafe fn outb(port: u16, data: u8) {
+pub unsafe extern "C" fn outb(port: u16, data: u8) {
     asm!("outb %al, %dx" :: "{dx}"(port), "{al}"(data) :: "volatile");
 }
 
@@ -26,7 +26,7 @@ pub unsafe fn outb(port: u16, data: u8) {
 ////   asm volatile("out %0,%1" : : "a" (data), "d" (port));
 //// }
 
-pub unsafe fn outsl(port: i32, mut addr: *mut (), mut cnt: i32) {
+pub unsafe extern "C" fn outsl(port: i32, mut addr: *mut (), mut cnt: i32) {
     asm!("cld; rep outsl" :
                "={si}" (addr), "={ecx}" (cnt) :
                "{edx}" (port), "0" (addr), "1" (cnt) :
@@ -34,7 +34,7 @@ pub unsafe fn outsl(port: i32, mut addr: *mut (), mut cnt: i32) {
 }
 
 #[allow(unused_assignments)]
-pub unsafe fn stosb(mut addr: *mut (), data: i32, mut cnt: i32) {
+pub unsafe extern "C" fn stosb(mut addr: *mut (), data: i32, mut cnt: i32) {
     asm!("cld; rep stosb" :
          "={di}" (addr), "={ecx}" (cnt) :
          "0" (addr), "1" (cnt), "{eax}" (data) :
@@ -42,14 +42,14 @@ pub unsafe fn stosb(mut addr: *mut (), data: i32, mut cnt: i32) {
 }
 
 #[allow(unused_assignments)]
-pub unsafe fn stosl(mut addr: *mut (), data: i32, mut cnt: i32) {
+pub unsafe extern "C" fn stosl(mut addr: *mut (), data: i32, mut cnt: i32) {
     asm!("cld; rep stosl" :
          "={di}" (addr), "={ecx}" (cnt) :
          "0" (addr), "1" (cnt), "{eax}" (data) :
          "memory", "cc": "volatile");
 }
 
-pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
+pub unsafe extern "C" fn lgdt(p: *const Segdesc, size: u16) {
     let mut pd = [0u16; 3];
     pd[0] = size - 1;
     pd[1] = p as usize as u16;
@@ -58,7 +58,7 @@ pub unsafe fn lgdt(p: *const Segdesc, size: u16) {
     asm!("lgdt ($0)" :: "r" (&pd) : "memory":"volatile");
 }
 
-pub unsafe fn lidt(p: *const Gatedesc, size: i32) {
+pub unsafe extern "C" fn lidt(p: *const Gatedesc, size: i32) {
     let mut pd: [u16; 3] = [
         (size - 1) as u16,
         p as usize as u16,
@@ -69,30 +69,30 @@ pub unsafe fn lidt(p: *const Gatedesc, size: i32) {
 }
 
 #[inline]
-pub unsafe fn ltr(sel: u16) {
+pub unsafe extern "C" fn ltr(sel: u16) {
     asm!("ltr $0" : : "r" (sel) ::"volatile");
 }
 
-pub unsafe fn readeflags() -> usize {
+pub unsafe extern "C" fn readeflags() -> usize {
     let mut eflags = 0usize;
     asm!("pushfl; popl $0" : "=r" (eflags)::::"volatile");
     eflags
 }
 
-pub unsafe fn loadgs(v: u16) {
+pub unsafe extern "C" fn loadgs(v: u16) {
     asm!("movw $0, %gs" : : "r" (v) : : : "volatile");
 }
 
-pub unsafe fn cli() {
+pub unsafe extern "C" fn cli() {
     asm!("cli":::::"volatile");
 }
 
-pub unsafe fn sti() {
+pub unsafe extern "C" fn sti() {
     asm!("sti":::::"volatile");
 }
 
 #[inline]
-pub unsafe fn xchg(addr: *mut usize, newval: usize) -> usize {
+pub unsafe extern "C" fn xchg(addr: *mut usize, newval: usize) -> usize {
     let result: usize;
     // The + in "+m" denotes a read-modify-write operand.
     asm!("lock; xchgl $0, $1":
@@ -103,13 +103,13 @@ pub unsafe fn xchg(addr: *mut usize, newval: usize) -> usize {
     result
 }
 
-pub unsafe fn rcr2() -> usize {
+pub unsafe extern "C" fn rcr2() -> usize {
     let val: usize;
     asm!("movl %cr2,$0" : "=r" (val) ::: "volatile");
     val
 }
 
-pub unsafe fn lcr3(val: usize) {
+pub unsafe extern "C" fn lcr3(val: usize) {
     asm!("mov $0, %cr3"::"r"(val):"memory":"volatile");
 }
 

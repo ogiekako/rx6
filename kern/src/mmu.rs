@@ -8,10 +8,10 @@ use core::ops::{Add, AddAssign};
 pub struct V(pub usize);
 
 impl V {
-    pub unsafe fn pgroundup(self) -> V {
+    pub unsafe extern "C" fn pgroundup(self) -> V {
         V(PGROUNDUP(self.0))
     }
-    pub unsafe fn pgrounddown(self) -> V {
+    pub unsafe extern "C" fn pgrounddown(self) -> V {
         V(PGROUNDDOWN(self.0))
     }
 
@@ -161,7 +161,7 @@ impl Segdesc {
         }
     }
 
-    pub unsafe fn set_s(&mut self, x: u8) {
+    pub unsafe extern "C" fn set_s(&mut self, x: u8) {
         if x > 1 {
             cpanic("set_s");
         }
@@ -201,7 +201,7 @@ pub const fn SEG(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
 }
 
 #[inline(always)]
-pub unsafe fn SEG16(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
+pub unsafe extern "C" fn SEG16(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     Segdesc::new(
         (lim & 0xffff) as u16,
         (base & 0xffff) as u16,
@@ -254,15 +254,15 @@ pub const STS_TG32: u8 = 0xF; // 32-bit Trap Gate
 
 impl V {
     // page directory index
-    pub unsafe fn pdx(self) -> usize {
+    pub unsafe extern "C" fn pdx(self) -> usize {
         (self.0 >> PDXSHIFT) & 0x3FF
     }
     // page table index
-    pub unsafe fn ptx(self) -> usize {
+    pub unsafe extern "C" fn ptx(self) -> usize {
         (self.0 >> PTXSHIFT) & 0x3FF
     }
     // construct virtual address from indexes and offset
-    pub unsafe fn pgaddr(d: usize, t: usize, o: usize) -> V {
+    pub unsafe extern "C" fn pgaddr(d: usize, t: usize, o: usize) -> V {
         V((d << PDXSHIFT) | (t << PTXSHIFT) | o)
     }
 }
@@ -299,7 +299,7 @@ pub struct PTE(pub usize);
 
 // Address in page table or page directory entry
 impl PTE {
-    pub unsafe fn addr(&self) -> P {
+    pub unsafe extern "C" fn addr(&self) -> P {
         P(self.0 & (!0xFFF))
     }
     pub fn flags(&self) -> usize {
@@ -386,7 +386,7 @@ impl Gatedesc {
     // - dpl: Descriptor Privilege Level -
     //        the privilege level required for software to invoke
     //        this interrupt/trap gate explicitly using an int instruction.
-    pub unsafe fn setgate(&mut self, istrap: bool, sel: u16, off: usize, dpl: u8) {
+    pub unsafe extern "C" fn setgate(&mut self, istrap: bool, sel: u16, off: usize, dpl: u8) {
         assert!(dpl < 1 << 2);
         self.off_15_0 = (off & 0xffff) as u16;
         self.cs = sel;

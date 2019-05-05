@@ -1,6 +1,6 @@
 use x86::*;
 
-pub unsafe fn memset(dst: *mut u8, mut c: i32, n: usize) {
+pub unsafe extern "C" fn memset(dst: *mut u8, mut c: i32, n: usize) {
     if dst as usize % 4 == 0 && n % 4 == 0 {
         c &= 0xFF;
         stosl(
@@ -13,7 +13,7 @@ pub unsafe fn memset(dst: *mut u8, mut c: i32, n: usize) {
     }
 }
 
-pub unsafe fn memcmp(mut v1: *const u8, mut v2: *const u8, n: usize) -> u8 {
+pub unsafe extern "C" fn memcmp(mut v1: *const u8, mut v2: *const u8, n: usize) -> u8 {
     for i in 0..n {
         if *v1 != *v2 {
             return (*v1).wrapping_sub(*v2);
@@ -35,7 +35,7 @@ mod tests {
     }
 }
 
-pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) -> *mut () {
+pub unsafe extern "C" fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) -> *mut () {
     if src < dst && src.offset(n as isize) > dst {
         src = src.offset(n as isize);
         dst = dst.offset(n as isize);
@@ -55,11 +55,11 @@ pub unsafe fn memmove(mut dst: *mut u8, mut src: *const u8, n: usize) -> *mut ()
 }
 
 // memcpy exists to placate GCC.  Use memmove.
-pub unsafe fn memcpy(dst: *mut (), src: *const (), n: usize) -> *mut () {
+pub unsafe extern "C" fn memcpy(dst: *mut (), src: *const (), n: usize) -> *mut () {
     memmove(dst as *mut u8, src as *const u8, n)
 }
 
-pub unsafe fn strncmp(mut p: *const u8, mut q: *const u8, mut n: usize) -> i32 {
+pub unsafe extern "C" fn strncmp(mut p: *const u8, mut q: *const u8, mut n: usize) -> i32 {
     loop {
         if n <= 0 || *p == 0 || *p != *q {
             break;
@@ -74,7 +74,7 @@ pub unsafe fn strncmp(mut p: *const u8, mut q: *const u8, mut n: usize) -> i32 {
     (*p as i32) - (*q as i32)
 }
 
-pub unsafe fn strncpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
+pub unsafe extern "C" fn strncpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
     let os = s;
     loop {
         n -= 1;
@@ -98,7 +98,7 @@ pub unsafe fn strncpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
 }
 
 // Like strncpy but guaranteed to NUL-terminate.
-pub unsafe fn safestrcpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
+pub unsafe extern "C" fn safestrcpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u8 {
     let mut os = s;
     if n <= 0 {
         return os;
@@ -119,7 +119,7 @@ pub unsafe fn safestrcpy(mut s: *mut u8, mut t: *const u8, mut n: i32) -> *mut u
     os
 }
 
-pub unsafe fn strlen(s: *const u8) -> i32 {
+pub unsafe extern "C" fn strlen(s: *const u8) -> i32 {
     let mut n = 0;
     while *(s.offset(n)) != 0 {
         n += 1;

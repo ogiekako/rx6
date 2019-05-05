@@ -4,7 +4,7 @@ use super::*;
 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
-pub unsafe fn seginit() {
+pub unsafe extern "C" fn seginit() {
     // Map "logical" addresses to virtual addresses using identity map.
     // Cannot share a CODE descriptor for both kernel and user
     // because it would have to have DPL_USR, but the CPU forbids
@@ -29,7 +29,7 @@ impl PageDir {
     // Return the address of the PTE in page table pgdir
     // that corresponds to virtual address va.  If alloc!=0,
     // create any required page table pages.
-    pub unsafe fn walkpgdir(&mut self, va: V, alloc: bool) -> Option<V> {
+    pub unsafe extern "C" fn walkpgdir(&mut self, va: V, alloc: bool) -> Option<V> {
         let pde = (self.pd.0 + va.pdx() * 4) as *mut PTE;
         let mut pgtab: V;
         if ((*pde).0 & PTE_P > 0) {
@@ -64,7 +64,7 @@ impl PageDir {
     // physical addresses starting at pa. va and size might not
     // be page-aligned.
     // returns success or not.
-    pub unsafe fn mappages(&mut self, va: V, size: usize, mut pa: P, perm: usize) -> bool {
+    pub unsafe extern "C" fn mappages(&mut self, va: V, size: usize, mut pa: P, perm: usize) -> bool {
         {
             assert!(size > 0);
 
@@ -141,7 +141,7 @@ pub fn kmap() -> [Kmap; 4] {
 }
 
 // Set up kernel part of a page table.
-pub unsafe fn setupkvm() -> Option<PageDir> {
+pub unsafe extern "C" fn setupkvm() -> Option<PageDir> {
     let p = kalloc();
     if p.is_none() {
         return None;
@@ -171,19 +171,19 @@ pub unsafe fn setupkvm() -> Option<PageDir> {
 
 // Allocate one page table for the machine for the kernel address
 // space for scheduler processes.
-pub unsafe fn kvmalloc() {
+pub unsafe extern "C" fn kvmalloc() {
     kpgdir = setupkvm().expect("kvmalloc");
     switchkvm();
 }
 
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
-pub unsafe fn switchkvm() {
+pub unsafe extern "C" fn switchkvm() {
     lcr3(v2p(kpgdir.pd).0 as usize); // switch to the kernel page table
 }
 
 // Switch TSS and h/w page table to correspond to process p.
-pub unsafe fn switchuvm(p: *const Proc) {
+pub unsafe extern "C" fn switchuvm(p: *const Proc) {
     if (p == null_mut()) {
         cpanic("switchuvm: no process");
     }
@@ -214,7 +214,7 @@ pub unsafe fn switchuvm(p: *const Proc) {
 
 // Load the initcode into address 0 of pgdir.
 // sz must be less than a page.
-pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: usize) {
+pub unsafe extern "C" fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: usize) {
     if sz >= PGSIZE {
         cpanic("inituvm: more than a page");
     }
@@ -230,7 +230,7 @@ pub unsafe fn inituvm(pgdir: *mut pde_t, init: *mut u8, sz: usize) {
 
 // Load a program segment into pgdir.  addr must be page-aligned
 // and the pages from addr to addr+sz must already be mapped.
-pub unsafe fn loaduvm(
+pub unsafe extern "C" fn loaduvm(
     pgdir: *mut pde_t,
     addr: *mut u8,
     ip: *mut Inode,
@@ -265,7 +265,7 @@ pub unsafe fn loaduvm(
 
 // Allocate page tables and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.
-pub unsafe fn allocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
+pub unsafe extern "C" fn allocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
     if (newsz >= KERNBASE.0) {
         return 0;
     }
@@ -302,7 +302,7 @@ pub unsafe fn allocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
 // need to be less than oldsz.  oldsz can be larger than the actual
 // process size.  Returns the new process size.
-pub unsafe fn deallocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
+pub unsafe extern "C" fn deallocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize {
     if (newsz >= oldsz) {
         return oldsz;
     }
@@ -331,7 +331,7 @@ pub unsafe fn deallocuvm(pgdir: *mut pde_t, oldsz: usize, newsz: usize) -> usize
 
 // Free a page table and all the physical memory pages
 // in the user part.
-pub unsafe fn freevm(pgdir: *mut pde_t) {
+pub unsafe extern "C" fn freevm(pgdir: *mut pde_t) {
     if (pgdir == null_mut()) {
         cpanic("freevm: no pgdir");
     }
@@ -347,7 +347,7 @@ pub unsafe fn freevm(pgdir: *mut pde_t) {
 
 // Clear PTE_U on a page. Used to create an inaccessible
 // page beneath the user stack.
-pub unsafe fn clearpteu(pgdir: *mut pde_t, uva: *mut u8) {
+pub unsafe extern "C" fn clearpteu(pgdir: *mut pde_t, uva: *mut u8) {
     let pte = (&mut PageDir {
         pd: V(pgdir as usize),
     })
@@ -360,7 +360,7 @@ pub unsafe fn clearpteu(pgdir: *mut pde_t, uva: *mut u8) {
 
 // Given a parent process's page table, create a copy
 // of it for a child.
-pub unsafe fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
+pub unsafe extern "C" fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
     let mut d = setupkvm();
     if (d.is_none()) {
         return null_mut();
@@ -399,7 +399,7 @@ pub unsafe fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
 }
 
 // Map user virtual address to kernel address.
-pub unsafe fn uva2ka(pgdir: *mut pde_t, uva: *mut u8) -> *mut u8 {
+pub unsafe extern "C" fn uva2ka(pgdir: *mut pde_t, uva: *mut u8) -> *mut u8 {
     let pte = (&mut PageDir {
         pd: V(pgdir as usize),
     })
@@ -418,7 +418,7 @@ pub unsafe fn uva2ka(pgdir: *mut pde_t, uva: *mut u8) -> *mut u8 {
 // Copy len bytes from p to user address va in page table pgdir.
 // Most useful when pgdir is not the current page table.
 // uva2ka ensures this only works for PTE_U pages.
-pub unsafe fn copyout(pgdir: *mut pde_t, mut va: usize, p: *mut (), mut len: usize) -> i32 {
+pub unsafe extern "C" fn copyout(pgdir: *mut pde_t, mut va: usize, p: *mut (), mut len: usize) -> i32 {
     let mut buf = p as *mut u8;
     while (len > 0) {
         let mut va0 = PGROUNDDOWN(va) as usize;

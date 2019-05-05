@@ -81,7 +81,7 @@ pub static mut sb: Superblock =
     unsafe { core::mem::transmute([0u8; core::mem::size_of::<Superblock>()]) };
 
 // Read the super block.
-pub unsafe fn readsb(dev: i32, sb_: *mut Superblock) {
+pub unsafe extern "C" fn readsb(dev: i32, sb_: *mut Superblock) {
     let bp = bread(dev as usize, 1);
     memmove(
         sb_ as *mut u8,
@@ -92,7 +92,7 @@ pub unsafe fn readsb(dev: i32, sb_: *mut Superblock) {
 }
 
 // Zero a block.
-pub unsafe fn bzero(dev: i32, bno: i32) {
+pub unsafe extern "C" fn bzero(dev: i32, bno: i32) {
     let bp = bread(dev as usize, bno as usize);
     memset((*bp).data.as_mut_ptr(), 0, BSIZE);
     log_write(bp);
@@ -102,7 +102,7 @@ pub unsafe fn bzero(dev: i32, bno: i32) {
 // Blocks.
 
 // Allocate a zeroed disk block.
-pub unsafe fn balloc(dev: usize) -> usize {
+pub unsafe extern "C" fn balloc(dev: usize) -> usize {
     for b in (0..(sb.size)).step_by(BPB) {
         let bp = bread(dev, BBLOCK!(b, sb));
         let mut bi = 0;
@@ -124,7 +124,7 @@ pub unsafe fn balloc(dev: usize) -> usize {
 }
 
 // Free a disk block.
-pub unsafe fn bfree(dev: usize, b: usize) {
+pub unsafe extern "C" fn bfree(dev: usize, b: usize) {
     readsb(dev as i32, &mut sb as *mut Superblock);
     let bp = bread(dev, BBLOCK!(b, sb));
     let bi = b % BPB;
@@ -203,7 +203,7 @@ struct Icache {
 }
 static mut icache: Icache = unsafe { core::mem::transmute([0u8; core::mem::size_of::<Icache>()]) };
 
-pub unsafe fn iinit(dev: i32) {
+pub unsafe extern "C" fn iinit(dev: i32) {
     initlock(&mut icache.lock as *mut Spinlock, "icache");
     for i in 0..NINODE {
         initsleeplock(
@@ -230,7 +230,7 @@ pub unsafe fn iinit(dev: i32) {
 //PAGEBREAK!
 // Allocate a new inode with the given type on device dev.
 // A free inode has a type of zero.
-pub unsafe fn ialloc(dev: usize, type_: i16) -> *mut Inode {
+pub unsafe extern "C" fn ialloc(dev: usize, type_: i16) -> *mut Inode {
     for inum in 1..(sb.ninodes) {
         let bp = bread(dev, IBLOCK!(inum, sb));
         let dip = ((*bp).data.as_mut_ptr() as *mut Dinode).add(inum % IPB);
@@ -248,7 +248,7 @@ pub unsafe fn ialloc(dev: usize, type_: i16) -> *mut Inode {
 }
 
 // Copy a modified in-memory inode to disk.
-pub unsafe fn iupdate(ip: *mut Inode) {
+pub unsafe extern "C" fn iupdate(ip: *mut Inode) {
     let bp = bread((*ip).dev, IBLOCK!((*ip).inum, sb));
     let dip = ((*bp).data.as_mut_ptr() as *mut Dinode).offset(((*ip).inum % IPB) as isize);
     (*dip).type_ = (*ip).type_;
@@ -268,7 +268,7 @@ pub unsafe fn iupdate(ip: *mut Inode) {
 // Find the inode with number inum on device dev
 // and return the in-memory copy. Does not lock
 // the inode and does not read it from disk.
-pub unsafe fn iget(dev: usize, inum: usize) -> *mut Inode {
+pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
     acquire(&mut icache.lock as *mut Spinlock);
 
     // Is the inode already cached?
@@ -304,7 +304,7 @@ pub unsafe fn iget(dev: usize, inum: usize) -> *mut Inode {
 
 // Increment reference count for ip.
 // Returns ip to enable ip = idup(ip1) idiom.
-pub unsafe fn idup(ip: *mut Inode) -> *mut Inode {
+pub unsafe extern "C" fn idup(ip: *mut Inode) -> *mut Inode {
     acquire(&mut icache.lock as *mut Spinlock);
     (*ip).ref_ += 1;
     release(&mut icache.lock as *mut Spinlock);
@@ -313,7 +313,7 @@ pub unsafe fn idup(ip: *mut Inode) -> *mut Inode {
 
 // Lock the given inode.
 // Reads the inode from disk if necessary.
-pub unsafe fn ilock(ip: *mut Inode) {
+pub unsafe extern "C" fn ilock(ip: *mut Inode) {
     if (ip == core::ptr::null_mut() || (*ip).ref_ < 1) {
         cpanic("ilock");
     }
@@ -342,7 +342,7 @@ pub unsafe fn ilock(ip: *mut Inode) {
 }
 
 // Unlock the given inode.
-pub unsafe fn iunlock(ip: *mut Inode) {
+pub unsafe extern "C" fn iunlock(ip: *mut Inode) {
     if (ip == core::ptr::null_mut()
         || holdingsleep(&mut (*ip).lock as *mut Sleeplock) == 0
         || (*ip).ref_ < 1)
@@ -360,7 +360,7 @@ pub unsafe fn iunlock(ip: *mut Inode) {
 // to it, free the inode (and its content) on disk.
 // All calls to iput() must be inside a transaction in
 // case it has to free the inode.
-pub unsafe fn iput(ip: *mut Inode) {
+pub unsafe extern "C" fn iput(ip: *mut Inode) {
     acquire(&mut icache.lock as *mut Spinlock);
     if ((*ip).ref_ == 1 && ((*ip).flags & I_VALID) != 0 && (*ip).nlink == 0) {
         // inode has no links and no other references: truncate and free.
@@ -376,7 +376,7 @@ pub unsafe fn iput(ip: *mut Inode) {
 }
 
 // Common idiom: unlock, then put.
-pub unsafe fn iunlockput(ip: *mut Inode) {
+pub unsafe extern "C" fn iunlockput(ip: *mut Inode) {
     iunlock(ip);
     iput(ip);
 }
@@ -390,7 +390,7 @@ pub unsafe fn iunlockput(ip: *mut Inode) {
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
-pub unsafe fn bmap(ip: *mut Inode, mut bn: usize) -> usize {
+pub unsafe extern "C" fn bmap(ip: *mut Inode, mut bn: usize) -> usize {
     if (bn < NDIRECT) {
         let mut addr = (*ip).addrs[bn];
         if (addr == 0) {
@@ -428,7 +428,7 @@ pub unsafe fn bmap(ip: *mut Inode, mut bn: usize) -> usize {
 // to it (no directory entries referring to it)
 // and has no in-memory reference to it (is
 // not an open file or current directory).
-pub unsafe fn itrunc(ip: *mut Inode) {
+pub unsafe extern "C" fn itrunc(ip: *mut Inode) {
     for i in 0..NDIRECT {
         if ((*ip).addrs[i]) != 0 {
             bfree((*ip).dev, (*ip).addrs[i]);
@@ -454,7 +454,7 @@ pub unsafe fn itrunc(ip: *mut Inode) {
 }
 
 // Copy stat information from inode.
-pub unsafe fn stati(ip: *mut Inode, st: *mut Stat) {
+pub unsafe extern "C" fn stati(ip: *mut Inode, st: *mut Stat) {
     (*st).dev = (*ip).dev as i32;
     (*st).ino = (*ip).inum;
     (*st).type_ = (*ip).type_;
@@ -464,7 +464,7 @@ pub unsafe fn stati(ip: *mut Inode, st: *mut Stat) {
 
 //PAGEBREAK!
 // Read data from inode.
-pub unsafe fn readi(ip: *mut Inode, mut dst: *mut u8, mut off: usize, mut n: usize) -> i32 {
+pub unsafe extern "C" fn readi(ip: *mut Inode, mut dst: *mut u8, mut off: usize, mut n: usize) -> i32 {
     if ((*ip).type_ == T_DEV as i16) {
         if ((*ip).major < 0
             || (*ip).major >= NDEV as i16
@@ -502,7 +502,7 @@ pub unsafe fn readi(ip: *mut Inode, mut dst: *mut u8, mut off: usize, mut n: usi
 }
 
 // Write data to inode.
-pub unsafe fn writei(ip: *mut Inode, mut src: *mut u8, mut off: usize, n: usize) -> i32 {
+pub unsafe extern "C" fn writei(ip: *mut Inode, mut src: *mut u8, mut off: usize, n: usize) -> i32 {
     if ((*ip).type_ == T_DEV as i16) {
         if ((*ip).major < 0
             || (*ip).major >= NDEV as i16
@@ -540,13 +540,13 @@ pub unsafe fn writei(ip: *mut Inode, mut src: *mut u8, mut off: usize, n: usize)
 }
 
 // Directories
-pub unsafe fn namecmp(s: *const u8, t: *const u8) -> i32 {
+pub unsafe extern "C" fn namecmp(s: *const u8, t: *const u8) -> i32 {
     return strncmp(s, t, DIRSIZ);
 }
 
 // Look for a directory entry in a directory.
 // If found, set *poff to byte offset of entry.
-pub unsafe fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *mut Inode {
+pub unsafe extern "C" fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *mut Inode {
     if ((*dp).type_ != T_DIR as i16) {
         cpanic("dirlookup not DIR");
     }
@@ -576,7 +576,7 @@ pub unsafe fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *m
 }
 
 // Write a new directory entry (name, inum) into the directory dp.
-pub unsafe fn dirlink(dp: *mut Inode, name: *const u8, inum: usize) -> i32 {
+pub unsafe extern "C" fn dirlink(dp: *mut Inode, name: *const u8, inum: usize) -> i32 {
     let mut de: Dirent = transmute([0u8; size_of::<Dirent>()]);
 
     // Check that name is not present.
@@ -625,7 +625,7 @@ pub unsafe fn dirlink(dp: *mut Inode, name: *const u8, inum: usize) -> i32 {
 //   skipelem("a", name) = "", setting name = "a"
 //   skipelem("", name) = skipelem("////", name) = 0
 //
-unsafe fn skipelem(mut path: *const u8, name: *mut u8) -> *const u8 {
+unsafe extern "C" fn skipelem(mut path: *const u8, name: *mut u8) -> *const u8 {
     while (*path == b'/') {
         path = path.offset(1);
     }
@@ -653,7 +653,7 @@ unsafe fn skipelem(mut path: *const u8, name: *mut u8) -> *const u8 {
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
-pub unsafe fn namex(path: *const u8, nameiparent: i32, name: *mut u8) -> *mut Inode {
+pub unsafe extern "C" fn namex(path: *const u8, nameiparent: i32, name: *mut u8) -> *mut Inode {
     let mut ip: *mut Inode;
     if (*path == b'/') {
         ip = iget(ROOTDEV, ROOTINO);
@@ -692,11 +692,11 @@ pub unsafe fn namex(path: *const u8, nameiparent: i32, name: *mut u8) -> *mut In
     return ip;
 }
 
-pub unsafe fn namei(path: *const u8) -> *mut Inode {
+pub unsafe extern "C" fn namei(path: *const u8) -> *mut Inode {
     let mut name = [0u8; DIRSIZ];
     namex(path, 0, name.as_mut_ptr())
 }
 
-pub unsafe fn nameiparent(path: *const u8, name: *mut u8) -> *mut Inode {
+pub unsafe extern "C" fn nameiparent(path: *const u8, name: *mut u8) -> *mut Inode {
     return namex(path, 1, name);
 }

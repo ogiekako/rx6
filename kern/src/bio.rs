@@ -70,7 +70,7 @@ impl Bcache {
 
 static mut bcache: Bcache = unsafe { Bcache::uninit() };
 
-pub unsafe fn binit() {
+pub unsafe extern "C" fn binit() {
     initlock(&mut bcache.lock as *mut Spinlock, "bcache" as *const str);
 
     // Create linked list of buffers
@@ -89,7 +89,7 @@ pub unsafe fn binit() {
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
 // In either case, return locked buffer.
-pub unsafe fn bget(dev: usize, blockno: usize) -> *mut Buf {
+pub unsafe extern "C" fn bget(dev: usize, blockno: usize) -> *mut Buf {
     acquire(&mut bcache.lock as *mut Spinlock);
 
     let mut b = bcache.head.next;
@@ -124,7 +124,7 @@ pub unsafe fn bget(dev: usize, blockno: usize) -> *mut Buf {
 }
 
 // Return a locked buf with the contents of the indicated block.
-pub unsafe fn bread(dev: usize, blockno: usize) -> *mut Buf {
+pub unsafe extern "C" fn bread(dev: usize, blockno: usize) -> *mut Buf {
     let b = bget(dev, blockno);
     if (!((*b).flags & B_VALID)) != 0 {
         iderw(b);
@@ -133,7 +133,7 @@ pub unsafe fn bread(dev: usize, blockno: usize) -> *mut Buf {
 }
 
 // Write b's contents to disk.  Must be locked.
-pub unsafe fn bwrite(b: *mut Buf) {
+pub unsafe extern "C" fn bwrite(b: *mut Buf) {
     if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
         cpanic("bwrite");
     }
@@ -143,7 +143,7 @@ pub unsafe fn bwrite(b: *mut Buf) {
 
 // Release a locked buffer.
 // Move to the head of the MRU list.
-pub unsafe fn brelse(b: *mut Buf) {
+pub unsafe extern "C" fn brelse(b: *mut Buf) {
     if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
         cpanic("brelse");
     }

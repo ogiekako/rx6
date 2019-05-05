@@ -41,8 +41,8 @@ pub const I_VALID: i32 = 0x2;
 // table mapping major device number to
 // device functions
 pub struct Devsw {
-    pub read: Option<unsafe fn(*mut Inode, *mut u8, i32) -> i32>,
-    pub write: Option<unsafe fn(*mut Inode, *mut u8, i32) -> i32>,
+    pub read: Option<unsafe extern "C" fn(*mut Inode, *mut u8, i32) -> i32>,
+    pub write: Option<unsafe extern "C" fn(*mut Inode, *mut u8, i32) -> i32>,
 }
 
 pub const CONSOLE: usize = 1;
@@ -68,12 +68,12 @@ impl Ftable {
 
 pub static mut ftable: Ftable = unsafe { Ftable::uninit() };
 
-pub unsafe fn fileinit() {
+pub unsafe extern "C" fn fileinit() {
     initlock(&mut ftable.lock as *mut Spinlock, "ftable");
 }
 
 // Allocate a file structure.
-pub unsafe fn filealloc() -> *mut File {
+pub unsafe extern "C" fn filealloc() -> *mut File {
     acquire(&mut ftable.lock as *mut Spinlock);
     for i in 0..NFILE {
         let mut f = &mut ftable.file[i];
@@ -88,7 +88,7 @@ pub unsafe fn filealloc() -> *mut File {
 }
 
 // Increment ref count for file f.
-pub unsafe fn filedup(f: *mut File) -> *mut File {
+pub unsafe extern "C" fn filedup(f: *mut File) -> *mut File {
     acquire(&mut ftable.lock as *mut Spinlock);
     if ((*f).ref_ < 1) {
         cpanic("filedup");
@@ -99,7 +99,7 @@ pub unsafe fn filedup(f: *mut File) -> *mut File {
 }
 
 // Close file f.  (Decrement ref count, close when reaches 0.)
-pub unsafe fn fileclose(f: *mut File) {
+pub unsafe extern "C" fn fileclose(f: *mut File) {
     acquire(&mut ftable.lock as *mut Spinlock);
     if ((*f).ref_ < 1) {
         cpanic("fileclose");
@@ -124,7 +124,7 @@ pub unsafe fn fileclose(f: *mut File) {
 }
 
 // Get metadata about file f.
-pub unsafe fn filestat(f: *mut File, st: *mut Stat) -> i32 {
+pub unsafe extern "C" fn filestat(f: *mut File, st: *mut Stat) -> i32 {
     if ((*f).type_ == FD_INODE) {
         ilock((*f).ip);
         stati((*f).ip, st);
@@ -135,7 +135,7 @@ pub unsafe fn filestat(f: *mut File, st: *mut Stat) -> i32 {
 }
 
 // Read from file f.
-pub unsafe fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
+pub unsafe extern "C" fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
     if ((*f).readable == 0) {
         return -1;
     }
@@ -156,7 +156,7 @@ pub unsafe fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
 
 //PAGEBREAK!
 // Write to file f.
-pub unsafe fn filewrite(f: *mut File, addr: *mut u8, n: i32) -> i32 {
+pub unsafe extern "C" fn filewrite(f: *mut File, addr: *mut u8, n: i32) -> i32 {
     if ((*f).writable == 0) {
         return -1;
     }

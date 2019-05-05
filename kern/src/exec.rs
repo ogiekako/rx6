@@ -1,6 +1,6 @@
 use super::*;
 
-pub unsafe fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
+pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
     let mut ustack = [0usize; 3 + MAXARG + 1];
     let mut elf = core::mem::zeroed::<Elfhdr>();
     let mut ph = core::mem::zeroed::<Proghdr>();

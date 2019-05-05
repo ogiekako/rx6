@@ -8,7 +8,7 @@ use super::*;
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
-pub unsafe fn argfd(n: i32, pfd: *mut i32, pf: *mut *mut File) -> i32 {
+pub unsafe extern "C" fn argfd(n: i32, pfd: *mut i32, pf: *mut *mut File) -> i32 {
     let mut fd = 0i32;
 
     if (argint(n, &mut fd as *mut i32) < 0) {
@@ -32,7 +32,7 @@ pub unsafe fn argfd(n: i32, pfd: *mut i32, pf: *mut *mut File) -> i32 {
 
 // Allocate a file descriptor for the given file.
 // Takes over file reference from caller on success.
-unsafe fn fdalloc(f: *mut File) -> i32 {
+unsafe extern "C" fn fdalloc(f: *mut File) -> i32 {
     let curproc = myproc();
 
     for fd in 0..NOFILE {
@@ -44,7 +44,7 @@ unsafe fn fdalloc(f: *mut File) -> i32 {
     return -1;
 }
 
-pub unsafe fn sys_dup() -> i32 {
+pub unsafe extern "C" fn sys_dup() -> i32 {
     let mut f: *mut File = null_mut();
     if (argfd(0, null_mut(), &mut f as *mut *mut File) < 0) {
         return -1;
@@ -57,7 +57,7 @@ pub unsafe fn sys_dup() -> i32 {
     return fd;
 }
 
-pub unsafe fn sys_read() -> i32 {
+pub unsafe extern "C" fn sys_read() -> i32 {
     let mut f: *mut File = null_mut();
     let mut n: i32 = 0;
     let mut p: *mut u8 = null_mut();
@@ -71,7 +71,7 @@ pub unsafe fn sys_read() -> i32 {
     return fileread(f, p, n);
 }
 
-pub unsafe fn sys_write() -> i32 {
+pub unsafe extern "C" fn sys_write() -> i32 {
     let mut f: *mut File = null_mut();
     let mut n: i32 = 0;
     let mut p: *mut u8 = null_mut();
@@ -85,7 +85,7 @@ pub unsafe fn sys_write() -> i32 {
     return filewrite(f, p, n);
 }
 
-pub unsafe fn sys_close() -> i32 {
+pub unsafe extern "C" fn sys_close() -> i32 {
     let mut f: *mut File = null_mut();
     let mut fd: i32 = 0;
 
@@ -97,7 +97,7 @@ pub unsafe fn sys_close() -> i32 {
     0
 }
 
-pub unsafe fn sys_fstat() -> i32 {
+pub unsafe extern "C" fn sys_fstat() -> i32 {
     let mut f: *mut File = null_mut();
     let mut st: *mut Stat = null_mut();
 
@@ -114,7 +114,7 @@ pub unsafe fn sys_fstat() -> i32 {
 }
 
 // Create the path new as a link to the same inode as old.
-pub unsafe fn sys_link() -> i32 {
+pub unsafe extern "C" fn sys_link() -> i32 {
     let mut name = [0u8; DIRSIZ];
     let mut new: *mut u8 = null_mut();
     let mut old: *mut u8 = null_mut();
@@ -168,7 +168,7 @@ pub unsafe fn sys_link() -> i32 {
 }
 
 // Is the directory dp empty except for "." and ".." ?
-pub unsafe fn isdirempty(dp: *mut Inode) -> i32 {
+pub unsafe extern "C" fn isdirempty(dp: *mut Inode) -> i32 {
     let mut de: Dirent = core::mem::zeroed();
 
     for off in ((2 * size_of_val(&de))..((*dp).size)).step_by(size_of_val(&de)) {
@@ -184,7 +184,7 @@ pub unsafe fn isdirempty(dp: *mut Inode) -> i32 {
     return 1;
 }
 
-pub unsafe fn sys_unlink() -> i32 {
+pub unsafe extern "C" fn sys_unlink() -> i32 {
     let mut de: Dirent = core::mem::zeroed();
     let mut name = [0u8; DIRSIZ];
     let mut path: *mut u8 = null_mut();
@@ -250,7 +250,7 @@ pub unsafe fn sys_unlink() -> i32 {
     return -1;
 }
 
-unsafe fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -> *mut Inode {
+unsafe extern "C" fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -> *mut Inode {
     let mut name = [0u8; DIRSIZ];
 
     let mut dp = nameiparent(path, name.as_mut_ptr());
@@ -302,7 +302,7 @@ unsafe fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -> *mut Inod
     return ip;
 }
 
-pub unsafe fn sys_open() -> i32 {
+pub unsafe extern "C" fn sys_open() -> i32 {
     let mut path: *mut u8 = null_mut();
     let mut omode = 0i32;
 
@@ -361,7 +361,7 @@ pub unsafe fn sys_open() -> i32 {
     return fd;
 }
 
-pub unsafe fn sys_mkdir() -> i32 {
+pub unsafe extern "C" fn sys_mkdir() -> i32 {
     let mut path: *mut u8 = null_mut();
     let mut ip: *mut Inode = null_mut();
 
@@ -380,7 +380,7 @@ pub unsafe fn sys_mkdir() -> i32 {
     return 0;
 }
 
-pub unsafe fn sys_mknod() -> i32 {
+pub unsafe extern "C" fn sys_mknod() -> i32 {
     let mut ip: *mut Inode = null_mut();
     let mut path: *mut u8 = null_mut();
     let mut major = 0i32;
@@ -404,7 +404,7 @@ pub unsafe fn sys_mknod() -> i32 {
     return 0;
 }
 
-pub unsafe fn sys_chdir() -> i32 {
+pub unsafe extern "C" fn sys_chdir() -> i32 {
     let mut path: *mut u8 = null_mut();
     let curproc = myproc();
 
@@ -432,7 +432,7 @@ pub unsafe fn sys_chdir() -> i32 {
     return 0;
 }
 
-pub unsafe fn sys_exec() -> i32 {
+pub unsafe extern "C" fn sys_exec() -> i32 {
     let mut path: *mut u8 = null_mut();
     let mut uargv = 0usize;
     let mut uarg = 0usize;
@@ -463,7 +463,7 @@ pub unsafe fn sys_exec() -> i32 {
     return exec(path, argv.as_mut_ptr());
 }
 
-pub unsafe fn sys_pipe() -> i32 {
+pub unsafe extern "C" fn sys_pipe() -> i32 {
     let mut fd: *mut i32 = null_mut();
     let mut rf: *mut File = null_mut();
     let mut wf: *mut File = null_mut();

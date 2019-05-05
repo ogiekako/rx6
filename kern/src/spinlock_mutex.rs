@@ -32,7 +32,7 @@ impl<T> Mutex<T> {
             use_lock: true,
         }
     }
-    unsafe fn acquire(&self) {
+    unsafe extern "C" fn acquire(&self) {
         pushcli(); // disable interrupts to avoid deadlock.
 
         // The xchg is atomic.

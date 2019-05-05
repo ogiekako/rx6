@@ -35,17 +35,17 @@ struct Ioapic {
     data: usize,
 }
 
-pub unsafe fn ioapicread(reg: usize) -> usize {
+pub unsafe extern "C" fn ioapicread(reg: usize) -> usize {
     (*ioapic).reg = reg;
     (*ioapic).data
 }
 
-pub unsafe fn ioapicwrite(reg: usize, data: usize) {
+pub unsafe extern "C" fn ioapicwrite(reg: usize, data: usize) {
     (*ioapic).reg = reg;
     (*ioapic).data = data;
 }
 
-pub unsafe fn ioapicinit() {
+pub unsafe extern "C" fn ioapicinit() {
     if !ismp {
         return;
     }
@@ -65,7 +65,7 @@ pub unsafe fn ioapicinit() {
     }
 }
 
-pub unsafe fn ioapicenable(irq: usize, cpunum: usize) {
+pub unsafe extern "C" fn ioapicenable(irq: usize, cpunum: usize) {
     if (!ismp) {
         return;
     }

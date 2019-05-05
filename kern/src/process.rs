@@ -111,12 +111,12 @@ extern "C" {
     fn trapret();
 }
 
-pub unsafe fn pinit() {
+pub unsafe extern "C" fn pinit() {
     initlock(&mut ptable.lock as *mut Spinlock, "ptable");
 }
 
 // Must be called with interrupts disabled
-pub unsafe fn cpuid() -> usize {
+pub unsafe extern "C" fn cpuid() -> usize {
     let i = (mycpu() as *const Cpu).offset_from(cpus.as_ptr());
     assert!(i >= 0);
     i as usize
@@ -124,7 +124,7 @@ pub unsafe fn cpuid() -> usize {
 
 static mut n_mycpu: i32 = 0;
 // Must be called with interrupts disabled
-pub unsafe fn mycpu() -> *mut Cpu {
+pub unsafe extern "C" fn mycpu() -> *mut Cpu {
     // Would prefer to panic but even printing is chancy here: almost everything,
     // including cprintf and panic, calls mycpu(), often indirectly through
     // acquire and release.
@@ -145,7 +145,7 @@ pub unsafe fn mycpu() -> *mut Cpu {
 
 // Disable interrupts so that we are not rescheduled
 // while reading proc from the cpu structure
-pub unsafe fn myproc() -> *mut Proc {
+pub unsafe extern "C" fn myproc() -> *mut Proc {
     pushcli();
     let c = mycpu();
     let p = (*c).process;
@@ -157,7 +157,7 @@ pub unsafe fn myproc() -> *mut Proc {
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
 // Otherwise return 0.
-pub unsafe fn allocproc() -> *mut Proc {
+pub unsafe extern "C" fn allocproc() -> *mut Proc {
     acquire(&mut ptable.lock as *mut Spinlock);
 
     let mut p = core::ptr::null_mut();
@@ -215,7 +215,7 @@ extern "C" {
 }
 
 // Set up first user process.
-pub unsafe fn userinit() {
+pub unsafe extern "C" fn userinit() {
     let p: *mut Proc;
 
     p = allocproc();
@@ -260,7 +260,7 @@ pub unsafe fn userinit() {
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
-pub unsafe fn growproc(n: i32) -> i32 {
+pub unsafe extern "C" fn growproc(n: i32) -> i32 {
     let curproc = myproc();
 
     let mut sz = (*curproc).sz;
@@ -283,7 +283,7 @@ pub unsafe fn growproc(n: i32) -> i32 {
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
-pub unsafe fn fork() -> i32 {
+pub unsafe extern "C" fn fork() -> i32 {
     let curproc = myproc();
 
     // Allocate process.
@@ -334,7 +334,7 @@ pub unsafe fn fork() -> i32 {
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
-pub unsafe fn exit() {
+pub unsafe extern "C" fn exit() {
     let curproc = myproc();
 
     if (curproc == initproc) {
@@ -379,7 +379,7 @@ pub unsafe fn exit() {
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
-pub unsafe fn wait() -> i32 {
+pub unsafe extern "C" fn wait() -> i32 {
     let curproc = myproc();
 
     acquire(&mut ptable.lock as *mut Spinlock);
@@ -431,7 +431,7 @@ extern "C" {
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-pub unsafe fn scheduler() {
+pub unsafe extern "C" fn scheduler() {
     let c = mycpu();
     (*c).process = null_mut();
 
@@ -472,7 +472,7 @@ pub unsafe fn scheduler() {
 // be proc->intena and proc->ncli, but that would
 // break in the few places where a lock is held but
 // there's no process.
-pub unsafe fn sched() {
+pub unsafe extern "C" fn sched() {
     let p = myproc();
 
     if (!holding(&mut ptable.lock as *mut Spinlock)) {
@@ -493,7 +493,7 @@ pub unsafe fn sched() {
 }
 
 // Give up the CPU for one scheduling round.
-pub unsafe fn yield_() {
+pub unsafe extern "C" fn yield_() {
     acquire(&mut ptable.lock as *mut Spinlock);
     (*myproc()).state = RUNNABLE;
     sched();
@@ -523,7 +523,7 @@ pub unsafe extern "C" fn forkret() {
 
 // Atomically release lock and sleep on chan.
 // Reacquires lock when awakened.
-pub unsafe fn sleep(chan: *mut (), lk: *mut Spinlock) {
+pub unsafe extern "C" fn sleep(chan: *mut (), lk: *mut Spinlock) {
     let p = myproc();
 
     if (p == core::ptr::null_mut()) {
@@ -565,7 +565,7 @@ pub unsafe fn sleep(chan: *mut (), lk: *mut Spinlock) {
 //PAGEBREAK!
 // Wake up all processes sleeping on chan.
 // The ptable lock must be held.
-pub unsafe fn wakeup1(chan: *mut ()) {
+pub unsafe extern "C" fn wakeup1(chan: *mut ()) {
     for i in 0..NPROC {
         let p = &mut ptable.proc[i];
         if (p.state == SLEEPING && p.chan == chan) {
@@ -575,7 +575,7 @@ pub unsafe fn wakeup1(chan: *mut ()) {
 }
 
 // Wake up all processes sleeping on chan.
-pub unsafe fn wakeup(chan: *mut ()) {
+pub unsafe extern "C" fn wakeup(chan: *mut ()) {
     acquire(&mut ptable.lock as *mut Spinlock);
     wakeup1(chan);
     release(&mut ptable.lock as *mut Spinlock);
@@ -584,7 +584,7 @@ pub unsafe fn wakeup(chan: *mut ()) {
 // Kill the process with the given pid.
 // Process won't exit until it returns
 // to user space (see trap in trap.c).
-pub unsafe fn kill(pid: i32) -> i32 {
+pub unsafe extern "C" fn kill(pid: i32) -> i32 {
     acquire(&mut ptable.lock as *mut Spinlock);
     for i in 0..NPROC {
         let p = &mut ptable.proc[i];
@@ -605,7 +605,7 @@ pub unsafe fn kill(pid: i32) -> i32 {
 // Print a process listing to console.  For debugging.
 // Runs when user types ^P on console.
 // No lock to avoid wedging a stuck machine further.
-pub unsafe fn procdump() {
+pub unsafe extern "C" fn procdump() {
     let mut pc = [0usize; 10];
 
     for i in 0..NPROC {

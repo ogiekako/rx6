@@ -1,20 +1,20 @@
 use super::*;
 
-pub unsafe fn sys_fork() -> i32 {
+pub unsafe extern "C" fn sys_fork() -> i32 {
     return fork();
 }
 
-pub unsafe fn sys_exit() -> i32 {
+pub unsafe extern "C" fn sys_exit() -> i32 {
     exit();
     return 0; // not reached
 }
 
-pub unsafe fn sys_wait() -> i32 {
+pub unsafe extern "C" fn sys_wait() -> i32 {
     return wait();
     return 0;
 }
 
-pub unsafe fn sys_kill() -> i32 {
+pub unsafe extern "C" fn sys_kill() -> i32 {
     let mut pid = 0i32;
 
     if (argint(0, &mut pid as *mut i32) < 0) {
@@ -23,11 +23,11 @@ pub unsafe fn sys_kill() -> i32 {
     return kill(pid);
 }
 
-pub unsafe fn sys_getpid() -> i32 {
+pub unsafe extern "C" fn sys_getpid() -> i32 {
     return (*myproc()).pid;
 }
 
-pub unsafe fn sys_sbrk() -> i32 {
+pub unsafe extern "C" fn sys_sbrk() -> i32 {
     let mut n = 0i32;
 
     if (argint(0, &mut n as *mut i32) < 0) {
@@ -40,7 +40,7 @@ pub unsafe fn sys_sbrk() -> i32 {
     return addr as i32;
 }
 
-pub unsafe fn sys_sleep() -> i32 {
+pub unsafe extern "C" fn sys_sleep() -> i32 {
     let mut n = 0i32;
     if (argint(0, &mut n as *mut i32) < 0) {
         return -1;
@@ -63,7 +63,7 @@ pub unsafe fn sys_sleep() -> i32 {
 
 // return how many clock tick interrupts have occurred
 // since start.
-pub unsafe fn sys_uptime() -> i32 {
+pub unsafe extern "C" fn sys_uptime() -> i32 {
     acquire(&mut tickslock as *mut Spinlock);
     let xticks = ticks;
     release(&mut tickslock as *mut Spinlock);

@@ -42,7 +42,7 @@ pub struct Log {
 
 pub static mut log: Log = unsafe { core::mem::transmute([0u8; core::mem::size_of::<Log>()]) };
 
-pub unsafe fn initlog(dev: i32) {
+pub unsafe extern "C" fn initlog(dev: i32) {
     if (core::mem::size_of::<Logheader>() >= BSIZE) {
         cpanic("initlog: too big logheader");
     }
@@ -57,7 +57,7 @@ pub unsafe fn initlog(dev: i32) {
 }
 
 // Copy committed blocks from log to their home location
-pub unsafe fn install_trans() {
+pub unsafe extern "C" fn install_trans() {
     for tail in 0..log.lh.n {
         let lbuf = bread(log.dev as usize, (log.start + tail + 1) as usize); // read log block
         let dbuf = bread(log.dev as usize, log.lh.block[tail as usize] as usize); // read dst
@@ -69,7 +69,7 @@ pub unsafe fn install_trans() {
 }
 
 // Read the log header from disk into the in-memory log header
-pub unsafe fn read_head() {
+pub unsafe extern "C" fn read_head() {
     let mut buf = bread(log.dev as usize, log.start as usize);
     let mut lh = (*buf).data.as_mut_ptr() as *mut Logheader;
     log.lh.n = (*lh).n;
@@ -82,7 +82,7 @@ pub unsafe fn read_head() {
 // Write in-memory log header to disk.
 // This is the true point at which the
 // current transaction commits.
-pub unsafe fn write_head() {
+pub unsafe extern "C" fn write_head() {
     let buf = bread(log.dev as usize, log.start as usize);
     let hb = (*buf).data.as_mut_ptr() as *mut Logheader;
     (*hb).n = log.lh.n;
@@ -93,7 +93,7 @@ pub unsafe fn write_head() {
     brelse(buf);
 }
 
-pub unsafe fn recover_from_log() {
+pub unsafe extern "C" fn recover_from_log() {
     read_head();
     install_trans(); // if committed, copy from log to disk
     log.lh.n = 0;
@@ -101,7 +101,7 @@ pub unsafe fn recover_from_log() {
 }
 
 // called at the start of each FS system call.
-pub unsafe fn begin_op() {
+pub unsafe extern "C" fn begin_op() {
     acquire(&mut log.lock as *mut Spinlock);
     loop {
         if (log.committing != 0) {
@@ -125,7 +125,7 @@ pub unsafe fn begin_op() {
 
 // called at the end of each FS system call.
 // commits if this was the last outstanding operation.
-pub unsafe fn end_op() {
+pub unsafe extern "C" fn end_op() {
     let mut do_commit = 0i32;
 
     acquire(&mut log.lock as *mut Spinlock);
@@ -154,7 +154,7 @@ pub unsafe fn end_op() {
 }
 
 // Copy modified blocks from cache to log.
-pub unsafe fn write_log() {
+pub unsafe extern "C" fn write_log() {
     for tail in 0..log.lh.n {
         let to = bread(log.dev as usize, (log.start + tail + 1) as usize); // log block
         let from = bread(log.dev as usize, log.lh.block[tail as usize] as usize); // cache block
@@ -165,7 +165,7 @@ pub unsafe fn write_log() {
     }
 }
 
-pub unsafe fn commit() {
+pub unsafe extern "C" fn commit() {
     if (log.lh.n > 0) {
         write_log(); // Write modified blocks from cache to log
         write_head(); // Write header to disk -- the real commit
@@ -184,7 +184,7 @@ pub unsafe fn commit() {
 //   modify bp->data[]
 //   log_write(bp)
 //   brelse(bp)
-pub unsafe fn log_write(b: *mut Buf) {
+pub unsafe extern "C" fn log_write(b: *mut Buf) {
     if (log.lh.n >= LOGSIZE as i32 || log.lh.n >= log.size - 1) {
         cpanic("too big a transaction");
     }

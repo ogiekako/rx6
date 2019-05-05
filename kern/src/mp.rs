@@ -93,7 +93,7 @@ pub static mut ismp: bool = true;
 pub static mut ncpu: usize = 0;
 pub static mut ioapicid: u8 = 0;
 
-unsafe fn sum(addr: *const u8, len: usize) -> u8 {
+unsafe extern "C" fn sum(addr: *const u8, len: usize) -> u8 {
     let mut sum = 0u8;
     for i in 0..len {
         sum = sum.wrapping_add(*addr.offset(i as isize));
@@ -102,7 +102,7 @@ unsafe fn sum(addr: *const u8, len: usize) -> u8 {
 }
 
 // Look for an MP structure in the len bytes at addr.
-unsafe fn mpsearch1(a: P, len: usize) -> Option<*const Mp> {
+unsafe extern "C" fn mpsearch1(a: P, len: usize) -> Option<*const Mp> {
     let mut addr = p2v(a);
     let e = addr + len;
     while addr < e {
@@ -121,7 +121,7 @@ unsafe fn mpsearch1(a: P, len: usize) -> Option<*const Mp> {
 // 1) in the first KB of the EBDA;
 // 2) in the last KB of system base memory;
 // 3) in the BIOS ROM between 0xE0000 and 0xFFFFF.
-unsafe fn mpsearch() -> Option<*const Mp> {
+unsafe extern "C" fn mpsearch() -> Option<*const Mp> {
     let bda: *const u8 = p2v(P(0x400)).as_ptr();
 
     let mut p = (((*bda.offset(0x0F) as usize) << 8usize) | *bda.offset(0x0E) as usize) << 4usize;
@@ -145,7 +145,7 @@ unsafe fn mpsearch() -> Option<*const Mp> {
 // Check for correct signature, calculate the checksum and,
 // if correct, check the version.
 // To do: check extended table checksum.
-unsafe fn mpconfig(pmp: *mut *const Mp) -> Option<*const Mpconf> {
+unsafe extern "C" fn mpconfig(pmp: *mut *const Mp) -> Option<*const Mpconf> {
     let mp = mpsearch()?;
     if (*mp).physaddr == P(0) {
         return None;
@@ -167,7 +167,7 @@ unsafe fn mpconfig(pmp: *mut *const Mp) -> Option<*const Mpconf> {
     Some(conf)
 }
 
-pub unsafe fn mpinit() {
+pub unsafe extern "C" fn mpinit() {
     // TODO: make mpconfig return mp
     let mut mp: *const Mp = 0 as *const Mp;
 

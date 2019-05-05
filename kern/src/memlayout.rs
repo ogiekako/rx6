@@ -19,7 +19,7 @@ pub fn V2P(a: usize) -> usize {
     a - KERNBASE.0
 }
 
-pub unsafe fn P2V(a: *mut u8) -> *mut u8 {
+pub unsafe extern "C" fn P2V(a: *mut u8) -> *mut u8 {
     a.add(KERNBASE.0)
 }
 

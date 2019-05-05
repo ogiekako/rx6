@@ -2,7 +2,7 @@ use super::*;
 // main.c in xv6
 
 // main in main.c
-pub unsafe fn kernmain() {
+pub unsafe extern "C" fn kernmain() {
     kinit1(end(), p2v(P(4 * 1024 * 1024))); // phys page allocator
     kvmalloc(); // kernel page table
     mpinit(); // detect other processors
@@ -31,7 +31,7 @@ pub unsafe fn kernmain() {
 }
 
 // Other CPUs jump here from entryother.S.
-pub unsafe fn mpenter() {
+pub unsafe extern "C" fn mpenter() {
     switchkvm();
     seginit();
     lapicinit();
@@ -39,7 +39,7 @@ pub unsafe fn mpenter() {
 }
 
 // Common CPU setup code.
-pub unsafe fn mpmain() {
+pub unsafe extern "C" fn mpmain() {
     cprintf(
         "cpu%d: starting %d\n",
         &[Arg::Int(cpuid() as i32), Arg::Int(cpuid() as i32)],
@@ -56,7 +56,7 @@ extern "C" {
 }
 
 // Start the non-boot (AP) processors.
-unsafe fn startothers() {
+unsafe extern "C" fn startothers() {
     let mut stack: *mut i8;
 
     // Write entry code to unused memory at 0x7000.

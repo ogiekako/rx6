@@ -169,7 +169,7 @@ const ctlmap: [u8; 256] = [
 
 static mut shift: u8 = 0;
 const charcode: [&[u8; 256]; 4] = [&normalmap, &shiftmap, &ctlmap, &ctlmap];
-pub unsafe fn kbdgetc() -> i32 {
+pub unsafe extern "C" fn kbdgetc() -> i32 {
     let st = inb(KBSTATP as u16);
     if ((st & KBS_DIB) == 0) {
         return -1;
@@ -207,6 +207,6 @@ pub unsafe fn kbdgetc() -> i32 {
     return c as i32;
 }
 
-pub unsafe fn kbdintr() {
+pub unsafe extern "C" fn kbdintr() {
     consoleintr(kbdgetc);
 }

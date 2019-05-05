@@ -11,7 +11,7 @@ pub struct Pipe {
     writeopen: i32, // write fd is still open
 }
 
-pub unsafe fn pipealloc(f0: *mut *mut File, f1: *mut *mut File) -> i32 {
+pub unsafe extern "C" fn pipealloc(f0: *mut *mut File, f1: *mut *mut File) -> i32 {
     let mut p = null_mut();
     *f0 = null_mut();
     *f1 = null_mut();
@@ -57,7 +57,7 @@ pub unsafe fn pipealloc(f0: *mut *mut File, f1: *mut *mut File) -> i32 {
     return -1;
 }
 
-pub unsafe fn pipeclose(p: *mut Pipe, writable: i32) {
+pub unsafe extern "C" fn pipeclose(p: *mut Pipe, writable: i32) {
     acquire(&mut (*p).lock as *mut Spinlock);
     if (writable != 0) {
         (*p).writeopen = 0;
@@ -74,7 +74,7 @@ pub unsafe fn pipeclose(p: *mut Pipe, writable: i32) {
     }
 }
 
-pub unsafe fn pipewrite(p: *mut Pipe, addr: *mut u8, n: i32) -> i32 {
+pub unsafe extern "C" fn pipewrite(p: *mut Pipe, addr: *mut u8, n: i32) -> i32 {
     acquire(&mut (*p).lock as *mut Spinlock);
     for i in 0..n {
         while ((*p).nwrite == (*p).nread + PIPESIZE) {
@@ -97,7 +97,7 @@ pub unsafe fn pipewrite(p: *mut Pipe, addr: *mut u8, n: i32) -> i32 {
     return n;
 }
 
-pub unsafe fn piperead(p: *mut Pipe, addr: *mut u8, n: i32) -> i32 {
+pub unsafe extern "C" fn piperead(p: *mut Pipe, addr: *mut u8, n: i32) -> i32 {
     acquire(&mut (*p).lock as *mut Spinlock);
     while ((*p).nread == (*p).nwrite && (*p).writeopen != 0) {
         if ((*myproc()).killed) {

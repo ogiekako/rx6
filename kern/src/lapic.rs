@@ -38,17 +38,17 @@ const TDCR: usize = (0x03E0 / 4); // Timer Divide Configuration
 // volatile read/write
 pub static mut lapic: *mut usize = 0 as *mut usize; // Initialized in mp.c
 
-unsafe fn lapicw(index: usize, value: usize) {
+unsafe extern "C" fn lapicw(index: usize, value: usize) {
     core::ptr::write_volatile(lapic.offset(index as isize), value);
     lapicr(ID); // wait for write to finish, by reading
 }
 
-unsafe fn lapicr(index: usize) -> usize {
+unsafe extern "C" fn lapicr(index: usize) -> usize {
     assert!(lapic as usize != 0);
     core::ptr::read_volatile(lapic.offset(index as isize))
 }
 
-pub unsafe fn lapicinit() {
+pub unsafe extern "C" fn lapicinit() {
     if (lapic as usize == 0) {
         cpanic("lapicinit");
         return;
@@ -96,7 +96,7 @@ pub unsafe fn lapicinit() {
 
 // Should be called with interrupts disabled: the calling thread shouldn't be
 // rescheduled between reading lapic[ID] and checking against cpu array.
-pub unsafe fn lapiccpunum() -> usize {
+pub unsafe extern "C" fn lapiccpunum() -> usize {
     if (lapic as usize == 0) {
         cpanic("cpunum");
         return 0;
@@ -112,7 +112,7 @@ pub unsafe fn lapiccpunum() -> usize {
 }
 
 // Acknowledge interrupt.
-pub unsafe fn lapiceoi() {
+pub unsafe extern "C" fn lapiceoi() {
     if (!lapic.is_null()) {
         lapicw(EOI, 0);
     }
@@ -120,14 +120,14 @@ pub unsafe fn lapiceoi() {
 
 // Spin for a given number of microseconds.
 // On real hardware would want to tune this dynamically.
-pub unsafe fn microdelay(us: i32) {}
+pub unsafe extern "C" fn microdelay(us: i32) {}
 
 const CMOS_PORT: u16 = 0x70;
 const CMOS_RETURN: u16 = 0x71;
 
 // Start additional processor running entry code at addr.
 // See Appendix B of MultiProcessor Specification.
-pub unsafe fn lapicstartap(apicid: u8, addr: usize) {
+pub unsafe extern "C" fn lapicstartap(apicid: u8, addr: usize) {
     // "The BSP must initialize CMOS shutdown code to 0AH
     // and the warm reset vector (DWORD based at 40:67) to point at
     // the AP startup code prior to the [universal startup algorithm]."
@@ -168,14 +168,14 @@ const DAY: usize = 0x07;
 const MONTH: usize = 0x08;
 const YEAR: usize = 0x09;
 
-unsafe fn cmos_read(reg: usize) -> usize {
+unsafe extern "C" fn cmos_read(reg: usize) -> usize {
     outb(CMOS_PORT, reg as u8);
     microdelay(200);
 
     return inb(CMOS_RETURN) as usize;
 }
 
-unsafe fn fill_rtcdate(r: *mut Rtcdate) {
+unsafe extern "C" fn fill_rtcdate(r: *mut Rtcdate) {
     (*r).second = cmos_read(SECS);
     (*r).minute = cmos_read(MINS);
     (*r).hour = cmos_read(HOURS);
@@ -185,7 +185,7 @@ unsafe fn fill_rtcdate(r: *mut Rtcdate) {
 }
 
 // qemu seems to use 24-hour GWT and the values are BCD encoded
-pub unsafe fn cmostime(r: *mut Rtcdate) {
+pub unsafe extern "C" fn cmostime(r: *mut Rtcdate) {
     let mut t1: Rtcdate = core::mem::zeroed();
     let mut t2: Rtcdate = core::mem::zeroed();
     let sb_ = cmos_read(CMOS_STATB);

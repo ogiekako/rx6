@@ -18,18 +18,18 @@ static mut freelist: Mutex<Option<&'static mut Run>> = Mutex::new(None);
 // the pages mapped by entrypgdir on free list.
 // 2. main() calls kinit2() with the rest of the physical pages
 // after installing a full page table that maps them on all cores.
-pub unsafe fn kinit1(vstart: V, vend: V) {
+pub unsafe extern "C" fn kinit1(vstart: V, vend: V) {
     assert!(vstart < vend);
     freelist.use_lock = false;
     freerange(vstart, vend);
 }
 
-pub unsafe fn kinit2(vstart: V, vend: V) {
+pub unsafe extern "C" fn kinit2(vstart: V, vend: V) {
     freerange(vstart, vend);
     freelist.use_lock = true;
 }
 
-unsafe fn freerange(vstart: V, vend: V) {
+unsafe extern "C" fn freerange(vstart: V, vend: V) {
     let mut p = vstart.pgroundup();
     while p + PGSIZE <= vend {
         kfree(p);
@@ -41,7 +41,7 @@ unsafe fn freerange(vstart: V, vend: V) {
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
 // initializing the allocator; see kinit above.)
-pub unsafe fn kfree(v: V) {
+pub unsafe extern "C" fn kfree(v: V) {
     // TODO: do sensible check for test
     #[cfg(not(test))]
     {
@@ -62,7 +62,7 @@ pub unsafe fn kfree(v: V) {
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns None if the memory cannot be allocated.
-pub unsafe fn kalloc() -> Option<V> {
+pub unsafe extern "C" fn kalloc() -> Option<V> {
     let mut head = freelist.lock();
     let a = &mut head.take()?.next;
     let p = V(a as *const Option<&'static mut Run> as usize);

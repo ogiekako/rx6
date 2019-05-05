@@ -24,7 +24,7 @@ impl Spinlock {
 
 // Mutual exclusion spin locks.
 
-pub unsafe fn initlock(lk: *mut Spinlock, name: *const str) {
+pub unsafe extern "C" fn initlock(lk: *mut Spinlock, name: *const str) {
     (*lk).name = name;
     (*lk).locked = 0;
     (*lk).cpu = null_mut();
@@ -34,7 +34,7 @@ pub unsafe fn initlock(lk: *mut Spinlock, name: *const str) {
 // Loops (spins) until the lock is acquired.
 // Holding a lock for a long time may cause
 // other CPUs to waste time spinning to acquire it.
-pub unsafe fn acquire(lk: *mut Spinlock) {
+pub unsafe extern "C" fn acquire(lk: *mut Spinlock) {
     pushcli(); // disable interrupts to avoid deadlock.
 
     if holding(lk) {
@@ -55,7 +55,7 @@ pub unsafe fn acquire(lk: *mut Spinlock) {
 }
 
 // Release the lock.
-pub unsafe fn release(lk: *mut Spinlock) {
+pub unsafe extern "C" fn release(lk: *mut Spinlock) {
     if !holding(lk) {
         cpanic("release");
     }
@@ -79,7 +79,7 @@ pub unsafe fn release(lk: *mut Spinlock) {
 }
 
 // Record the current call stack in pcs[] by following the %ebp chain.
-pub unsafe fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
+pub unsafe extern "C" fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
     let mut ebp = (v as *const usize).offset(-2);
     let mut i = 0;
     while i < 10 {
@@ -101,7 +101,7 @@ pub unsafe fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
 }
 
 // Check whether this cpu is holding the lock.
-pub unsafe fn holding(lock: *mut Spinlock) -> bool {
+pub unsafe extern "C" fn holding(lock: *mut Spinlock) -> bool {
     (*lock).locked != 0 && (*lock).cpu == mycpu()
 }
 
@@ -109,7 +109,7 @@ pub unsafe fn holding(lock: *mut Spinlock) -> bool {
 // it takes two popcli to undo two pushcli.  Also, if interrupts
 // are off, then pushcli, popcli leaves them off.
 
-pub unsafe fn pushcli() {
+pub unsafe extern "C" fn pushcli() {
     let eflags = readeflags();
     cli();
     if ((*mycpu()).ncli == 0) {

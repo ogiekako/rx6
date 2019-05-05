@@ -6,7 +6,7 @@ pub const COM1: u16 = 0x3f8;
 
 static mut uart: bool = false; // is there a uart?
 
-pub unsafe fn uartinit() {
+pub unsafe extern "C" fn uartinit() {
     // Turn off the FIFO
     outb(COM1 + 2, 0);
 
@@ -37,7 +37,7 @@ pub unsafe fn uartinit() {
 }
 
 // Put the letter to display.
-pub unsafe fn uartputc(c: u8) {
+pub unsafe extern "C" fn uartputc(c: u8) {
     if !uart {
         return;
     }
@@ -50,7 +50,7 @@ pub unsafe fn uartputc(c: u8) {
     outb(COM1 + 0, c);
 }
 
-pub unsafe fn uartgetc() -> i32 {
+pub unsafe extern "C" fn uartgetc() -> i32 {
     if !uart {
         return -1;
     }
@@ -60,6 +60,6 @@ pub unsafe fn uartgetc() -> i32 {
     inb(COM1 + 0) as i32
 }
 
-pub unsafe fn uartintr() {
+pub unsafe extern "C" fn uartintr() {
     consoleintr(uartgetc);
 }

@@ -15,14 +15,14 @@ pub struct Sleeplock {
 
 // Sleeping locks
 
-pub unsafe fn initsleeplock(lk: *mut Sleeplock, name: *const u8) {
+pub unsafe extern "C" fn initsleeplock(lk: *mut Sleeplock, name: *const u8) {
     initlock(&mut ((*lk).lk) as *mut Spinlock, "sleep lock");
     (*lk).name = name;
     (*lk).locked = 0;
     (*lk).pid = 0;
 }
 
-pub unsafe fn acquiresleep(lk: *mut Sleeplock) {
+pub unsafe extern "C" fn acquiresleep(lk: *mut Sleeplock) {
     acquire(&mut ((*lk).lk) as *mut Spinlock);
     while (*lk).locked != 0 {
         sleep(lk as *mut (), &mut (*lk).lk as *mut Spinlock);
@@ -32,7 +32,7 @@ pub unsafe fn acquiresleep(lk: *mut Sleeplock) {
     release(&mut (*lk).lk as *mut Spinlock);
 }
 
-pub unsafe fn releasesleep(lk: *mut Sleeplock) {
+pub unsafe extern "C" fn releasesleep(lk: *mut Sleeplock) {
     acquire(&mut (*lk).lk as *mut Spinlock);
     (*lk).locked = 0;
     (*lk).pid = 0;
@@ -40,7 +40,7 @@ pub unsafe fn releasesleep(lk: *mut Sleeplock) {
     release(&mut (*lk).lk as *mut Spinlock);
 }
 
-pub unsafe fn holdingsleep(lk: *mut Sleeplock) -> i32 {
+pub unsafe extern "C" fn holdingsleep(lk: *mut Sleeplock) -> i32 {
     acquire(&mut (*lk).lk as *mut Spinlock);
     let r = (*lk).locked;
     release(&mut (*lk).lk as *mut Spinlock);
