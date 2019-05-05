@@ -21,7 +21,8 @@ pub unsafe fn kernmain() {
     assert!(ismp);
     // if(!ismp)
     //   timerinit();   // uniprocessor timer (TODO)
-    startothers(); // start other processors
+    
+   //// FIXME: startothers(); // start other processors
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
     userinit(); // first user process
     mpmain(); // finish this processor's setup
@@ -78,13 +79,13 @@ unsafe fn startothers() {
         // pgdir to use. We cannot use kpgdir yet, because the AP processor
         // is running in low  memory, so we use entrypgdir for the APs too.
         let mut stack = kalloc().unwrap();
-        core::ptr::write(code.offset(-4) as *mut usize, stack.0 + KSTACKSIZE);
+        core::ptr::write(code.sub(4) as *mut usize, stack.0 + KSTACKSIZE);
         core::ptr::write(
-            code.offset(-8) as *mut usize,
+            code.sub(8) as *mut usize,
             mpenter as *const unsafe fn() as usize,
         );
         core::ptr::write(
-            code.offset(-12) as *mut usize,
+            code.sub(12) as *mut usize,
             v2p(V(&entrypgdir as *const u8 as usize)).0 as usize,
         );
         cprintf(

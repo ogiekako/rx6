@@ -101,7 +101,7 @@ pub const SEG_UDATA: usize = 4; // user data+stack
 pub const SEG_TSS: usize = 5; // this process's task state
 
 // cpu->gdt[NSEGS] holds the above segments.
-pub const NSEGS: usize = 7;
+pub const NSEGS: usize = 6;
 
 // Segment Descriptor
 #[repr(C)]
@@ -124,6 +124,7 @@ pub struct Segdesc {
 }
 
 impl Segdesc {
+
     const fn new(
         lim_15_0: u16,
         base_15_0: u16,
@@ -180,6 +181,7 @@ mod tests {
 }
 
 // Normal segment
+#[inline(always)]
 pub const fn SEG(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     Segdesc::new(
         ((lim >> 12) & 0xffff) as u16,
@@ -198,6 +200,7 @@ pub const fn SEG(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     )
 }
 
+#[inline(always)]
 pub unsafe fn SEG16(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     Segdesc::new(
         (lim & 0xffff) as u16,

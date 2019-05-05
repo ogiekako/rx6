@@ -189,20 +189,20 @@ pub unsafe fn allocproc() -> *mut Proc {
     let mut sp = (*p).kstack.offset(KSTACKSIZE as isize);
 
     // Leave room for trap frame.
-    sp = sp.offset(-(core::mem::size_of_val(&((*p).tf)) as isize));
+    sp = sp.sub(core::mem::size_of_val(&((*p).tf)));
     (*p).tf = sp as *mut Trapframe;
 
     // Set up new context to start executing at forkret,
     // which returns to trapret.
-    sp = sp.offset(-4);
+    sp = sp.sub(4);
     core::ptr::write(sp as *mut usize, trapret as usize);
 
-    sp = sp.offset(-(core::mem::size_of_val(&((*p).context)) as isize));
+    sp = sp.sub(core::mem::size_of_val(&(*(*p).context)));
     (*p).context = sp as *mut Context;
     memset(
         (*p).context as *mut u8,
         0,
-        core::mem::size_of_val(&((*p).context)),
+        core::mem::size_of_val(&(*(*p).context)),
     );
     (*(*p).context).eip = forkret as usize;
 

@@ -1,14 +1,40 @@
 2019-05-05 8:24
 
-scheduler 内で死んでいる。
+ EAX=00000000 EBX=00000000 ECX=00000012 EDX=8dfffffc
+ ESI=00000013 EDI=8e000000 EBP=8016d6a8 ESP=8016d5c4
+ EIP=8012a5d5 EFL=00000082 [--S----] CPL=0 II=0 A20=1 SMM=0 HLT=0
+ ES =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
+ CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
+ SS =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
+ DS =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
+ FS =0000 00000000 00000000 00000000
+ GS =0000 00000000 00000000 00000000
+ LDT=0000 00000000 0000ffff 00008200 DPL=0 LDT
+ TR =0000 00000000 0000ffff 00008b00 DPL=0 TSS32-busy
+ GDT=     8016ba00 00000037
+ IDT=     00000000 000003ff
+ CR0=80010011 CR2=00000040 CR3=003ff000 CR4=00000010
+ DR0=00000000 DR1=00000000 DR2=00000000 DR3=00000000
+ DR6=ffff0ff0 DR7=00000400
+ EFER=0000000000000000
+ Triple fault.  Halting for inspection via QEMU monitor.
 
-unexpected trap 0 from cpu 1 eip 10 (cr2=0x0)
-cpu 1: panic: trap
- 656d6974 0 0 0 0 0 0 0 0 0
+stosl で死んだ。
 
+GDB, QEMU のマニュアルをちゃんと読む。
+kinit2 の kfree でスタックが壊れている？
 
+startothers をしなくても同じように死ぬ。
 
+picinit に入った段階で、stack が壊れている？
 
+その前で、gdt をロードしている。
+
+SEG の呼び出しで、stack を壊していた? -> 違ったかも。
+esp < stack になるのを watch しておいたほうがいいな。
+
+[rr] よさそう。... とおもったけど、Linux on Intel のみか。
+[rr]: https://bitshifter.github.io/rr+rust/index.html#20
 
 # 2019-05-05 0:19
 
