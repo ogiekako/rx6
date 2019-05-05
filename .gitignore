@@ -21,5 +21,6 @@ peda-session-*
 core
 .idea
 Cargo.lock
+/target
 
 memo.md

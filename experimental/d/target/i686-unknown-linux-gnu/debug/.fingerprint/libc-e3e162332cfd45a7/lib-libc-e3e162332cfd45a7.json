@@ -1,1 +1,0 @@
-{"rustc":13368698870093249521,"features":"[\"default\", \"use_std\"]","target":15220052048028810702,"profile":9935990280773120926,"path":2720966594745430211,"deps":[[12381582654552482809,"build_script_build",2388397604082605073]],"local":[{"Precalculated":"0.2.54"}],"rustflags":["--sysroot","/tmp/d/target/sysroot"],"metadata":14998826085014762512}
