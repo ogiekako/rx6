@@ -680,7 +680,7 @@ pub unsafe extern "C" fn namex(path: *const u8, nameiparent: i32, name: *mut u8)
             iunlockput(ip);
             return core::ptr::null_mut();
         }
-        if (nameiparent != 00 && *path == b'\0') {
+        if (nameiparent != 0 && *path == b'\0') {
             // Stop one level early.
             iunlock(ip);
             return ip;

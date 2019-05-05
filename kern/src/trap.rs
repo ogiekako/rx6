@@ -5,7 +5,7 @@ static mut idt: [Gatedesc; 256] = [Gatedesc::zero(); 256];
 
 extern "C" {
     // TODO: use macro-generated function pointers
-    static mut vectors: [usize; 256]; // in vectors.S: array of 256 entry pointers
+    static vectors: [usize; 256]; // in vectors.S: array of 256 entry pointers
 }
 
 pub static mut tickslock: Spinlock = unsafe { transmute([0u8; size_of::<Spinlock>()]) };
