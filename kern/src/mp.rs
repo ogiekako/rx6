@@ -197,7 +197,7 @@ pub unsafe extern "C" fn mpinit() {
             MPIOAPIC => {
                 let ioapic = p as usize as *const Mpioapic;
                 ioapicid = (*ioapic).apicno;
-                p = p.offset(core::mem::size_of::<Mpioapic>() as isize);
+                p = p.add(core::mem::size_of::<Mpioapic>());
                 continue;
             }
             MPBUS | MPIOINTR | MPLINTR => {
@@ -215,7 +215,6 @@ pub unsafe extern "C" fn mpinit() {
         ncpu = 1;
         lapic = 0 as *mut usize;
         ioapicid = 0;
-        cpanic("unexpected");
         return;
     }
 
@@ -224,7 +223,5 @@ pub unsafe extern "C" fn mpinit() {
         // But it would on real hardware.
         outb(0x22, 0x70); // Select IMCR
         outb(0x23, inb(0x23) | 1); // Mask external interrupts.
-        cpanic("unexpected");
     }
-    assert_eq!(ncpu, 2);
 }
