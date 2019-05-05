@@ -183,11 +183,13 @@ pub unsafe extern "C" fn kvmalloc() {
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
 pub unsafe extern "C" fn switchkvm() {
+    // cprintf("switchkvm\n", &[]);
     lcr3(v2p(kpgdir.pd).0 as usize); // switch to the kernel page table
 }
 
 // Switch TSS and h/w page table to correspond to process p.
 pub unsafe extern "C" fn switchuvm(p: *const Proc) {
+    // cprintf("switchuvm\n", &[]);
     if (p == null_mut()) {
         cpanic("switchuvm: no process");
     }

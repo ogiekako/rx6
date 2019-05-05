@@ -21,6 +21,7 @@
   Triple fault.  Halting for inspection via QEMU monitor.
 ```
 
+```
 8012bdd7:	8b 44 24 68          	mov    0x68(%esp),%eax
                 Arg::Int(cpuid() as i32),
 8012bddb:	89 84 24 fc 00 00 00 	mov    %eax,0xfc(%esp)
@@ -28,6 +29,7 @@
 8012bde9:	00 00 00 00 
                 Arg::Int((*tf).cs as i32),
 8012bded:	8b 4d 08             	mov    0x8(%ebp),%ecx
+```
 
 ```
 unexpected trap 14 from cpu 0 eip 80136804 (cr2=0xfee000b0)
