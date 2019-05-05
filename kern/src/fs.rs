@@ -12,6 +12,7 @@ pub const BSIZE: usize = 512; // block size
 //
 // mkfs computes the super block and builds an initial file system. The
 // super block describes the disk layout:
+#[repr(C)]
 pub struct Superblock {
     pub size: usize,       // Size of file system image (blocks)
     pub nblocks: usize,    // Number of data blocks
@@ -27,6 +28,7 @@ pub const NINDIRECT: usize = (BSIZE / core::mem::size_of::<usize>());
 pub const MAXFILE: usize = (NDIRECT + NINDIRECT);
 
 // On-disk inode structure
+#[repr(C)]
 pub struct Dinode {
     pub type_: i16,                  // File type
     pub major: i16,                  // Major device number (T_DEV only)
@@ -272,16 +274,17 @@ pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
     acquire(&mut icache.lock as *mut Spinlock);
 
     // Is the inode already cached?
-    let mut empty = core::ptr::null_mut();
+    let mut empty: *mut Inode = core::ptr::null_mut();
     let mut ip: *mut Inode;
     for i in 0..NINODE {
         ip = &mut icache.inode[i] as *mut Inode;
-        if ((*ip).ref_ > 0 && (*ip).dev == dev && (*ip).inum == inum) {
+        if (*ip).ref_ > 0 && (*ip).dev == dev && (*ip).inum == inum {
             (*ip).ref_ += 1;
             release(&mut icache.lock as *mut Spinlock);
+            cprintf("iget: a  type: %d\n", &[Arg::Int((*ip).type_ as i32)]);
             return ip;
         }
-        if (empty == null_mut() && (*ip).ref_ == 0) {
+        if empty.is_null() && (*ip).ref_ == 0 {
             // Remember empty slot.
             empty = ip;
         }
@@ -662,7 +665,7 @@ unsafe extern "C" fn skipelem(mut path: *const u8, name: *mut u8) -> *const u8 {
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
-pub unsafe extern "C" fn namex(path: *const u8, nameiparent: i32, name: *mut u8) -> *mut Inode {
+pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut u8) -> *mut Inode {
     let mut ip: *mut Inode;
     if (*path == b'/') {
         ip = iget(ROOTDEV, ROOTINO);
@@ -671,13 +674,15 @@ pub unsafe extern "C" fn namex(path: *const u8, nameiparent: i32, name: *mut u8)
     }
 
     loop {
-        let path = skipelem(path, name);
+        path = skipelem(path, name);
         if path == core::ptr::null_mut() {
             break;
         }
+        cprintf("fs loop  path: \"%s\"  name: \"%s\"\n", &[Arg::Strp(path), Arg::Strp(name)]);
         ilock(ip);
         if ((*ip).type_ != T_DIR as i16) {
             iunlockput(ip);
+            cprintf("fs: c   type: %d\n", &[Arg::Int((*ip).type_ as i32)]);
             return core::ptr::null_mut();
         }
         if (nameiparent != 0 && *path == b'\0') {

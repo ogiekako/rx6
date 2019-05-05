@@ -1,6 +1,8 @@
 use super::*;
 
 #[derive(Clone, PartialEq)]
+
+#[repr(C)]
 pub enum FileType {
     FD_NONE,
     FD_PIPE,
@@ -10,6 +12,7 @@ pub enum FileType {
 pub use FileType::*;
 
 #[derive(Clone)]
+#[repr(C)]
 pub struct File {
     pub type_: FileType,
     pub ref_: i32, // reference count
@@ -22,6 +25,7 @@ pub struct File {
 }
 
 // in-memory copy of an inode
+#[repr(C)]
 pub struct Inode {
     pub dev: usize,  // Device number
     pub inum: usize, // Inode number
@@ -154,7 +158,6 @@ pub unsafe extern "C" fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
     cpanic("fileread");
 }
 
-//PAGEBREAK!
 // Write to file f.
 pub unsafe extern "C" fn filewrite(f: *mut File, addr: *mut u8, n: i32) -> i32 {
     if ((*f).writable == 0) {

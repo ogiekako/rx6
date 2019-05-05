@@ -57,6 +57,7 @@ unsafe extern "C" fn printint(xx: i32, base: usize, sign: bool) {
 pub enum Arg<'a> {
     Int(i32),
     Str(&'a str),
+    Strp(*const u8),
 }
 
 // Print to the console. only understands %d, %x, %p, %s.
@@ -98,12 +99,24 @@ pub unsafe extern "C" fn cprintf(fmt: &str, args: &[Arg]) {
                 }
             }
             's' => {
-                if let Some(Arg::Str(s)) = argit.next() {
-                    for c in s.chars() {
-                        consputc(c as u16);
+                match argit.next() {
+                    Some(Arg::Str(s)) => {
+                        for c in s.chars() {
+                            consputc(c as u16);
+                        }
+                    },
+                    Some(Arg::Strp(s)) => {
+                        for i in 0..32 {
+                            let x = *(s.add(i));
+                            if x == 0 {
+                                break;
+                            }
+                            consputc(x as u16);
+                        }
+                    },
+                    _ =>{
+                        cpanic("cprintf [s]");
                     }
-                } else {
-                    cpanic("cprintf [s]");
                 }
             }
             '%' => {
