@@ -36,6 +36,8 @@ esp < stack になるのを watch しておいたほうがいいな。
 [rr] よさそう。... とおもったけど、Linux on Intel のみか。
 [rr]: https://bitshifter.github.io/rr+rust/index.html#20
 
+x86\_64 のときと違って、libtherad\_db library がないからうまく行かないのかもしれない。
+
 # 2019-05-05 0:19
 
 release で stack がこわれて死んでいる。
