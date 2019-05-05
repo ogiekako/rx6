@@ -64,29 +64,33 @@ impl PageDir {
     // physical addresses starting at pa. va and size might not
     // be page-aligned.
     // returns success or not.
-    pub unsafe extern "C" fn mappages(&mut self, va: V, size: usize, mut pa: P, perm: usize) -> bool {
-        {
-            assert!(size > 0);
+    pub unsafe extern "C" fn mappages(
+        &mut self,
+        va: V,
+        size: usize,
+        mut pa: P,
+        perm: usize,
+    ) -> bool {
+        assert!(size > 0);
 
-            let mut a = va.pgrounddown();
-            let last = (va + size.wrapping_sub(1)).pgrounddown();
-            loop {
-                let pte = self.walkpgdir(a, true);
-                if pte.is_none() {
-                    return false;
-                }
-                let mut pte = pte.unwrap().0 as *mut usize;
-                assert_eq!(*pte & PTE_P, 0, "remap");
-
-                *pte = pa.0 | perm as usize | PTE_P;
-                if a == last {
-                    break;
-                }
-                a += PGSIZE;
-                pa += PGSIZE;
+        let mut a = va.pgrounddown();
+        let last = (va + size.wrapping_sub(1)).pgrounddown();
+        loop {
+            let pte = self.walkpgdir(a, true);
+            if pte.is_none() {
+                return false;
             }
-            return true;
+            let mut pte = pte.unwrap().0 as *mut usize;
+            assert_eq!(*pte & PTE_P, 0, "remap");
+
+            *pte = pa.0 | perm as usize | PTE_P;
+            if a == last {
+                break;
+            }
+            a += PGSIZE;
+            pa += PGSIZE;
         }
+        return true;
     }
 }
 
@@ -418,7 +422,12 @@ pub unsafe extern "C" fn uva2ka(pgdir: *mut pde_t, uva: *mut u8) -> *mut u8 {
 // Copy len bytes from p to user address va in page table pgdir.
 // Most useful when pgdir is not the current page table.
 // uva2ka ensures this only works for PTE_U pages.
-pub unsafe extern "C" fn copyout(pgdir: *mut pde_t, mut va: usize, p: *mut (), mut len: usize) -> i32 {
+pub unsafe extern "C" fn copyout(
+    pgdir: *mut pde_t,
+    mut va: usize,
+    p: *mut (),
+    mut len: usize,
+) -> i32 {
     let mut buf = p as *mut u8;
     while (len > 0) {
         let mut va0 = PGROUNDDOWN(va) as usize;

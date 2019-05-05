@@ -1,4 +1,185 @@
-2019-05-05 8:24
+# 2019-05-05 15:58
+
+```
+qemu-system-i386 -nographic -drive file=fs.img,index=1,media=disk,format=raw -drive file=rx6.img,index=0,media=disk,format=raw -smp 2 -m 512 -S -gdb tcp::26001
+ xv6...
+  done: uartinit   Starting cpu 1  stack: 0x803be000.  cpu1: starting 1
+  cpu0: starting 0
+  sb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2inodestart 32 bmap start 58
+  unexpected trap 14 from cpu 1 eip 53e58955 (cr2=0x53e58955)
+```
+
+page fault が発生している (14 = page fault 例外). cpu 1 のほうか。
+
+[cr2] レジスタとは？ page fault linear address. When a page fault occurs, the address the program attempted to access is stored in the CR2 register. つまりこのアドレスにアクセスしようとして、page fault が起きたということ。
+
+page fault が起きた時点で止まるようにできないかな。
+
+[cr2]: https://wiki.osdev.org/CPU_Registers_x86#CR2
+
+IDT が、trap handler (%cs, %eip) を指定している。%cs は特権レベル、%eip は飛ぶ場所。
+単純には、割り込みが発生すると、CPU は、いくつかの register を push してから、CPL を変更して eip に飛ぶ。
+
+```
+            (*c).process = p;
+80124d9b:	8b 44 24 6c          	mov    0x6c(%esp),%eax
+```
+
+```
+Thread 1 hit Breakpoint 1, kern::process::scheduler () at src/process.rs:452
+452                 (*c).process = p;
+gdb-peda$ p ptable.proc[0]
+$1 = kern::process::Proc {
+  sz: 0x1000,
+  pgdir: 0x8dffe000,
+  kstack: 0x8dfff000 "\000",
+  state: kern::process::Procstate::RUNNABLE,
+  pid: 0x1,
+  parent: 0x0,
+  tf: 0x8dffffb4,
+  context: 0x8dffff9c,
+  chan: 0x0,
+  killed: 0x0,
+  ofile: [0x0 <repeats 16 times>],
+  cwd: 0x8016da10 <kern::fs::icache+56>,
+  name: [0x69, 0x6e, 0x69, 0x74, 0x63, 0x6f, 0x64, 0x65, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
+}
+```
+
+switchuvm で user process に移ったあとの、user process を見たい。
+
+QEMU で OS をデバッグする best practice がどこかにまとまってそうだから、まずはそれを読もう。今日は十分デバッグに時間を費やしたので、あとは input の時間とする。
+
+
+なんか、thread 2 が alltraps に飛んでいる。
+
+```
+gdb-peda$ thr ap 2 bt
+
+Thread 2 (Thread 2):
+#0  <T as core::convert::TryFrom<U>>::try_from (value=0x1) at /home/oka/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/libcore/convert.rs:568
+#1  0x80139593 in <usize as core::iter::range::Step>::add_usize (self=0x803be960, n=0x1) at /home/oka/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/libcore/iter/range.rs:82
+#2  0x803be918 in ?? ()
+#3  0x80140654 in kern::lapic::lapiccpunum () at src/lapic.rs:106
+#4  0x8012351d in kern::process::mycpu () at src/process.rs:143
+#5  0x8011f99b in kern::spinlock::popcli () at src/spinlock.rs:127
+#6  0x8011f53c in kern::spinlock::release (lk=0x8016b26c <kern::process::ptable>) at src/spinlock.rs:78
+#7  0x80125510 in kern::process::wakeup (chan=0x8016053c <kern::bio::bcache+56>) at src/process.rs:580
+#8  0x8012aa5d in kern::ide::ideintr () at src/ide.rs:123
+#9  0x8012ba98 in trap (tf=0x803beddc) at src/trap.rs:50
+#10 0x80146a93 in alltraps () at trapasm.S:23
+#11 0x803beddc in ?? ()
+#12 0x8011f53c in kern::spinlock::release (lk=0x8016b26c <kern::process::ptable>) at src/spinlock.rs:78
+#13 0x80124d55 in kern::process::scheduler () at src/process.rs:463
+#14 0x8011ebef in kern::kernmain::mpmain () at src/kernmain.rs:49
+#15 0x8011eab6 in kern::kernmain::mpenter () at src/kernmain.rs:38
+#16 0x0000705a in ?? ()
+```
+
+```
+gdb-peda$ print ('kern::x86::Trapframe')*0x803beddc
+$8 = {
+  edi = 0x803beea8,
+  esi = 0x803bee68,
+  ebp = 0x803bee60,
+  oesp = 0x803bedfc,
+  ebx = 0x8016ac3c,
+  edx = 0x1,
+  ecx = 0x8016ad01,
+  eax = 0x8016ad90,
+  gs = 0x0,
+  padding1 = 0x0,
+  fs = 0x0,
+  padding2 = 0x0,
+  es = 0x10,
+  padding3 = 0x0,
+  ds = 0x10,
+  padding4 = 0x0,
+  trapno = 0x2e,
+  err = 0x0,
+  eip = 0x8011fa2e,
+  cs = 0x8,
+  padding5 = 0x0,
+  eflags = 0x202,
+  esp = 0x803bee68,
+  ss = 0xac3c,
+  padding6 = 0x8016
+}
+```
+
+```
+8011fa2e:	8d 65 f8             	lea    -0x8(%ebp),%esp
+```
+
+ここで page fault が発生した。
+
+```
+gdb-peda$ list *0x8011fa2e
+0x8011fa2e is in kern::spinlock::popcli (src/spinlock.rs:134).
+129             }
+130             if ((*mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
+131                 sti();
+132             }
+133         }
+134     }
+```
+
+swtch 直後に、spinlock の部分に飛んでいる。
+やはり、swtch して、ちゃんと適切な context になっていないのかな。
+initcode に飛べているのかどうかが気になる。
+
+```
+gdb-peda$ n
+=> 0x80124dc6 <kern::process::scheduler+438>:   mov    eax,DWORD PTR [esp+0x3c]
+456                 swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
+gdb-peda$ n
+=> 0x8011fa2e <kern::spinlock::popcli+302>:     lea    esp,[ebp-0x8]
+
+Thread 2 hit Breakpoint 3, kern::spinlock::popcli () at src/spinlock.rs:134
+134     }
+```
+
+```
+8016ab58 D _binary_initcode_end
+0000002c A _binary_initcode_size
+8016ab2c D _binary_initcode_start
+```
+
+これを貼り付けているはず。
+
+
+```
+Thread 1 hit Breakpoint 1, kern::vm::inituvm (pgdir=0x8dffe000, init=0x8016ab2c "h$\000", sz=0x2c) at src/vm.rs:218
+```
+
+```
+=> 0x80128c55 <kern::vm::inituvm+213>:  mov    ecx,DWORD PTR [esp+0x3c]
+220         memset(mem, 0, PGSIZE);
+gdb-peda$ p mem
+$1 = (u8 *) 0x8dfbd000 "\000"
+```
+
+0x8dffe000 にある page table に、V(0) を phisical page 0x8dfbd000 - 0x80000000 に map すると書いてある。
+
+thread 1 が initcode に飛び、V(0x5) にあるコードを動かしている。
+しかしその時、thread 2 は、page fault で死につつある。
+
+inituvm そのものには問題がなくて、scheduler の排他制御の問題？中途半端な状態のプロセス？
+
+
+
+# 2019-05-05 15:44
+
+```
+xv6...
+  done: uartinit   Starting cpu 1  stack: 0x803be000.  cpu1: starting 1
+  cpu0: starting 0
+  sb: size 1000 nblocks 941 ninodes 200 nlog 30 logstart 2inodestart 32 bmap start 58
+  cpu 1: panic: iderw: nothing to do
+   64656b63 0 0 0 0 0 0 0 0 0
+```
+
+# 2019-05-05 8:24
 
  EAX=00000000 EBX=00000000 ECX=00000012 EDX=8dfffffc
  ESI=00000013 EDI=8e000000 EBP=8016d6a8 ESP=8016d5c4
@@ -20,6 +201,7 @@
  Triple fault.  Halting for inspection via QEMU monitor.
 
 stosl で死んだ。
+process.rs で、size\_of\_val の対象に * を付け忘れていた。解決。
 
 GDB, QEMU のマニュアルをちゃんと読む。
 kinit2 の kfree でスタックが壊れている？

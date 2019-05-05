@@ -8,7 +8,10 @@ gdb の便利コマンド集
 - watch expr [thread num]
     - e.g. `watch foo` : foo の変化で break
 
+- list  : 対応する source code 表示
+- set listsize count
 
+- disas
 
 
 

@@ -124,7 +124,6 @@ pub struct Segdesc {
 }
 
 impl Segdesc {
-
     const fn new(
         lim_15_0: u16,
         base_15_0: u16,

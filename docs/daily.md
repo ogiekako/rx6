@@ -30,6 +30,7 @@ memset 内で、stosl は使われていて、指定したアドレスを指定�
 rep stosl は 1 命令で、第三引数を decrement しながら
 
 allocproc 内の memset でダメ？
+process.rs で、size\_of\_val の対象に * を付け忘れていた。
 
 2019-05-04 22:07
 

@@ -464,7 +464,12 @@ pub unsafe extern "C" fn stati(ip: *mut Inode, st: *mut Stat) {
 
 //PAGEBREAK!
 // Read data from inode.
-pub unsafe extern "C" fn readi(ip: *mut Inode, mut dst: *mut u8, mut off: usize, mut n: usize) -> i32 {
+pub unsafe extern "C" fn readi(
+    ip: *mut Inode,
+    mut dst: *mut u8,
+    mut off: usize,
+    mut n: usize,
+) -> i32 {
     if ((*ip).type_ == T_DEV as i16) {
         if ((*ip).major < 0
             || (*ip).major >= NDEV as i16
@@ -546,7 +551,11 @@ pub unsafe extern "C" fn namecmp(s: *const u8, t: *const u8) -> i32 {
 
 // Look for a directory entry in a directory.
 // If found, set *poff to byte offset of entry.
-pub unsafe extern "C" fn dirlookup(dp: *mut Inode, name: *const u8, poff: *mut usize) -> *mut Inode {
+pub unsafe extern "C" fn dirlookup(
+    dp: *mut Inode,
+    name: *const u8,
+    poff: *mut usize,
+) -> *mut Inode {
     if ((*dp).type_ != T_DIR as i16) {
         cpanic("dirlookup not DIR");
     }

@@ -5,7 +5,6 @@
 
 - uart: universal asynchronous receiver transmitter. Serial port for I/O
 
-
 # 基礎知識
 
 - LSI - large scale integration (集積回路)
@@ -13,3 +12,8 @@
 - SMP - Symmetric multiprocessing
 
 - IDE - Integrated Drive Electronics
+
+- CPL - current priviledge level
+- IDT - interrupt descriptor table
+- DPL - descriptor priviledge level
+

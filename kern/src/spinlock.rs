@@ -127,7 +127,7 @@ pub fn popcli() {
         if ((*mycpu()).ncli < 0) {
             cpanic("popcli");
         }
-        if ((*mycpu()).ncli == 0 && (*mycpu()).intena > 0) {
+        if (*mycpu()).ncli == 0 && (*mycpu()).intena > 0 {
             sti();
         }
     }

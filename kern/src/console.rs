@@ -59,7 +59,6 @@ pub enum Arg<'a> {
     Str(&'a str),
 }
 
-
 // Print to the console. only understands %d, %x, %p, %s.
 pub unsafe extern "C" fn cprintf(fmt: &str, args: &[Arg]) {
     let locking = cons.locking;
@@ -219,8 +218,7 @@ const fn C(x: u8) -> i32 {
     (x - b'@') as i32
 }
 
-pub unsafe extern "C" fn consoleintr(getc: unsafe extern "C" fn()->i32)
-{
+pub unsafe extern "C" fn consoleintr(getc: unsafe extern "C" fn() -> i32) {
     acquire(&mut cons.lock as *mut Spinlock);
     let mut doprocdump = 0;
     loop {
@@ -238,7 +236,8 @@ pub unsafe extern "C" fn consoleintr(getc: unsafe extern "C" fn()->i32)
                 input.e -= 1;
                 consputc(BACKSPACE);
             }
-        } else if c == C(b'H') || c == b'\x7f' 
+        } else if c == C(b'H')
+            || c == b'\x7f' 
         /*Backspace */ as i32
         {
             if (input.e != input.w) {
@@ -265,51 +264,55 @@ pub unsafe extern "C" fn consoleintr(getc: unsafe extern "C" fn()->i32)
 }
 
 pub unsafe extern "C" fn consoleread(ip: *mut Inode, mut dst: *mut u8, mut n: i32) -> i32 {
-  iunlock(ip);
-  let mut target = n;
-  acquire(&mut cons.lock as *mut Spinlock);
-  while(n > 0){
-    while(input.r == input.w){
-      if( (*myproc()).killed){
-        release(&mut cons.lock as *mut Spinlock);
-        ilock(ip);
-        return -1;
-      }
-      sleep(&mut input.r as *mut usize as *mut (), &mut cons.lock as *mut Spinlock);
+    iunlock(ip);
+    let mut target = n;
+    acquire(&mut cons.lock as *mut Spinlock);
+    while (n > 0) {
+        while (input.r == input.w) {
+            if ((*myproc()).killed) {
+                release(&mut cons.lock as *mut Spinlock);
+                ilock(ip);
+                return -1;
+            }
+            sleep(
+                &mut input.r as *mut usize as *mut (),
+                &mut cons.lock as *mut Spinlock,
+            );
+        }
+        let c = input.buf[input.r % INPUT_BUF];
+        input.r += 1;
+        if (c == C(b'D') as u8) {
+            // EOF
+            if (n < target) {
+                // Save ^D for next time, to make sure
+                // caller gets a 0-byte result.
+                input.r -= 1;
+            }
+            break;
+        }
+        *dst = c;
+        dst = dst.offset(1);
+        n -= 1;
+        if (c == b'\n') {
+            break;
+        }
     }
-    let c = input.buf[input.r % INPUT_BUF];
-    input.r += 1;
-    if(c == C(b'D') as u8){  // EOF
-      if(n < target){
-        // Save ^D for next time, to make sure
-        // caller gets a 0-byte result.
-        input.r-=1;
-      }
-      break;
-    }
-    *dst = c;
-    dst = dst.offset(1);
-    n -= 1;
-    if(c == b'\n') {
-      break;
-    }
-  }
-  release(&mut cons.lock as *mut Spinlock);
-  ilock(ip);
+    release(&mut cons.lock as *mut Spinlock);
+    ilock(ip);
 
-  return target - n;
+    return target - n;
 }
 
 pub unsafe extern "C" fn consolewrite(ip: *mut Inode, buf: *mut u8, n: i32) -> i32 {
-  iunlock(ip);
-  acquire(&mut cons.lock as *mut Spinlock);
-  for i in 0..n {
-    consputc((*(buf.offset(i as isize)) & 0xff) as u16);
-  }
-  release(&mut cons.lock as *mut Spinlock);
-  ilock(ip);
+    iunlock(ip);
+    acquire(&mut cons.lock as *mut Spinlock);
+    for i in 0..n {
+        consputc((*(buf.offset(i as isize)) & 0xff) as u16);
+    }
+    release(&mut cons.lock as *mut Spinlock);
+    ilock(ip);
 
-  return n;
+    return n;
 }
 
 pub unsafe extern "C" fn consoleinit() {
