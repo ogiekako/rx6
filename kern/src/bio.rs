@@ -126,7 +126,7 @@ pub unsafe extern "C" fn bget(dev: usize, blockno: usize) -> *mut Buf {
 // Return a locked buf with the contents of the indicated block.
 pub unsafe extern "C" fn bread(dev: usize, blockno: usize) -> *mut Buf {
     let b = bget(dev, blockno);
-    if (!((*b).flags & B_VALID)) != 0 {
+    if (((*b).flags & B_VALID)) == 0 {
         iderw(b);
     }
     b
