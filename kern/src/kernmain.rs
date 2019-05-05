@@ -22,7 +22,7 @@ pub unsafe extern "C" fn kernmain() {
     // if(!ismp)
     //   timerinit();   // uniprocessor timer (TODO)
     
-   //// FIXME: startothers(); // start other processors
+    startothers(); // start other processors
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
     userinit(); // first user process
     mpmain(); // finish this processor's setup

@@ -182,14 +182,14 @@ pub unsafe extern "C" fn allocproc() -> *mut Proc {
 
     // Allocate kernel stack.
     (*p).kstack = kalloc().unwrap_or(V(0)).0 as *mut u8;
-    if (*p).kstack == core::ptr::null_mut() {
+    if (*p).kstack.is_null() {
         (*p).state = UNUSED;
         return core::ptr::null_mut();
     }
     let mut sp = (*p).kstack.offset(KSTACKSIZE as isize);
 
     // Leave room for trap frame.
-    sp = sp.sub(core::mem::size_of_val(&((*p).tf)));
+    sp = sp.sub(core::mem::size_of_val(&(*(*p).tf)));
     (*p).tf = sp as *mut Trapframe;
 
     // Set up new context to start executing at forkret,
@@ -205,7 +205,6 @@ pub unsafe extern "C" fn allocproc() -> *mut Proc {
         core::mem::size_of_val(&(*(*p).context)),
     );
     (*(*p).context).eip = forkret as usize;
-
     p
 }
 
