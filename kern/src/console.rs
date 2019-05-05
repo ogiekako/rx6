@@ -236,10 +236,7 @@ pub unsafe extern "C" fn consoleintr(getc: unsafe extern "C" fn() -> i32) {
                 input.e -= 1;
                 consputc(BACKSPACE);
             }
-        } else if c == C(b'H')
-            || c == b'\x7f' 
-        /*Backspace */ as i32
-        {
+        } else if c == C(b'H') || c == b'\x7f' /* Backspace */ as i32 {
             if (input.e != input.w) {
                 input.e -= 1;
                 consputc(BACKSPACE);

@@ -167,6 +167,15 @@ thread 1 が initcode に飛び、V(0x5) にあるコードを動かしている
 inituvm そのものには問題がなくて、scheduler の排他制御の問題？中途半端な状態のプロセス？
 
 
+```
+gdb-peda$
+=> 0x8013635d <kern::syscall::syscall+637>:     mov    ebx,DWORD PTR [esp+0x38]
+0x8013635d      132             (*(*curproc).tf).eax = (*(syscalls[num]))() as usize;
+gdb-peda$
+=> 0x80136361 <kern::syscall::syscall+641>:     call   ecx
+0x80136361      132             (*(*curproc).tf).eax = (*(syscalls[num]))() as usize;
+gdb-peda$
+```
 
 # 2019-05-05 15:44
 

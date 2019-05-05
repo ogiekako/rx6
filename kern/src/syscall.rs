@@ -98,39 +98,38 @@ pub unsafe extern "C" fn argstr(n: i32, pp: *mut *mut u8) -> i32 {
     return fetchstr(addr as usize, pp);
 }
 
-pub unsafe extern "C" fn syscall() {
-    // TODO: 1. index with SYS_* enums.
-    // 2. make it lazy_static.
-    let syscalls: [*const fn() -> i32; SYS_num] = [
-        core::ptr::null(),
-        sys_fork as (*const fn() -> i32),
-        sys_exit as (*const fn() -> i32),
-        sys_wait as (*const fn() -> i32),
-        sys_pipe as (*const fn() -> i32),
-        sys_read as (*const fn() -> i32),
-        sys_kill as (*const fn() -> i32),
-        sys_exec as (*const fn() -> i32),
-        sys_fstat as (*const fn() -> i32),
-        sys_chdir as (*const fn() -> i32),
-        sys_dup as (*const fn() -> i32),
-        sys_getpid as (*const fn() -> i32),
-        sys_sbrk as (*const fn() -> i32),
-        sys_sleep as (*const fn() -> i32),
-        sys_uptime as (*const fn() -> i32),
-        sys_open as (*const fn() -> i32),
-        sys_write as (*const fn() -> i32),
-        sys_mknod as (*const fn() -> i32),
-        sys_unlink as (*const fn() -> i32),
-        sys_link as (*const fn() -> i32),
-        sys_mkdir as (*const fn() -> i32),
-        sys_close as (*const fn() -> i32),
-    ];
+// TODO: generate this table with macro.
+const syscalls: [Option<unsafe extern "C" fn() -> i32>; SYS_num] = [
+    None,
+    Some(sys_fork),
+    Some(sys_exit),
+    Some(sys_wait),
+    Some(sys_pipe),
+    Some(sys_read),
+    Some(sys_kill),
+    Some(sys_exec),
+    Some(sys_fstat),
+    Some(sys_chdir),
+    Some(sys_dup),
+    Some(sys_getpid),
+    Some(sys_sbrk),
+    Some(sys_sleep),
+    Some(sys_uptime),
+    Some(sys_open),
+    Some(sys_write),
+    Some(sys_mknod),
+    Some(sys_unlink),
+    Some(sys_link),
+    Some(sys_mkdir),
+    Some(sys_close),
+];
 
+pub unsafe extern "C" fn syscall() {
     let curproc = myproc();
 
     let num = (*(*curproc).tf).eax as usize;
-    if (num > 0 && num < syscalls.len() && !syscalls[num].is_null()) {
-        (*(*curproc).tf).eax = (*syscalls[num])() as usize;
+    if (num > 0 && num < syscalls.len() && syscalls[num].is_some()) {
+        (*(*curproc).tf).eax = (syscalls[num].unwrap())() as usize;
     } else {
         cprintf(
             "%d %s: unknown sys call %d\n",

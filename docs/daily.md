@@ -32,6 +32,8 @@ rep stosl は 1 命令で、第三引数を decrement しながら
 allocproc 内の memset でダメ？
 process.rs で、size\_of\_val の対象に * を付け忘れていた。
 
+Rust って、関数内部で static 変数使えるのか。
+
 2019-05-04 22:07
 
 全部コンパイルまではできた。seginit で落ちている。
