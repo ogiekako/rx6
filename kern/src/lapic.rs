@@ -36,20 +36,23 @@ const TCCR: usize = (0x0390 / 4); // Timer Current Count
 const TDCR: usize = (0x03E0 / 4); // Timer Divide Configuration
 
 // volatile read/write
-pub static mut lapic: *mut usize = 0 as *mut usize; // Initialized in mp.c
+pub static mut lapic: *mut usize = null_mut(); // Initialized in mp.c
 
 unsafe extern "C" fn lapicw(index: usize, value: usize) {
+    cprintf("lapicw   lapic: %x, index: %d  value: %d\n", &[Arg::Int(lapic as usize as i32), Arg::Int(index as i32), Arg::Int(value as i32)]);
     core::ptr::write_volatile(lapic.offset(index as isize), value);
     lapicr(ID); // wait for write to finish, by reading
 }
 
 unsafe extern "C" fn lapicr(index: usize) -> usize {
-    assert!(lapic as usize != 0);
+    if lapic.is_null() {
+        cpanic("lapicr");
+    }
     core::ptr::read_volatile(lapic.offset(index as isize))
 }
 
 pub unsafe extern "C" fn lapicinit() {
-    if (lapic as usize == 0) {
+    if (lapic.is_null()) {
         cpanic("lapicinit");
         return;
     }

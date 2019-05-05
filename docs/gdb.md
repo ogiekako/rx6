@@ -14,10 +14,11 @@ gdb の便利コマンド集
 - disas
 
 
-
 メモ
 
 - rbreak regex
+- handle _signal_
+  - handle SIGTRAP nostop  など。
 
 References
 

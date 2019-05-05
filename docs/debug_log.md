@@ -1,4 +1,63 @@
-2019-05-05 19:58
+2019-05-05 21:10
+
+```
+  unexpected trap EAX=8dffe0b8 EBX=8016be18 ECX=8dffe110 EDX=8dffe0b8
+  ESI=8dffe0b8 EDI=8dffe110 EBP=8dffe068 ESP=8dffdfe8
+  EIP=80137384 EFL=00000096 [--S-AP-] CPL=0 II=0 A20=1 SMM=0 HLT=0
+  ES =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
+  CS =0008 00000000 ffffffff 00cf9a00 DPL=0 CS32 [-R-]
+  SS =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
+  DS =0010 00000000 ffffffff 00cf9300 DPL=0 DS   [-WA]
+  FS =0018 00000000 ffffffff 00cffb00 DPL=3 CS32 [-RA]
+  GS =0018 00000000 ffffffff 00cffb00 DPL=3 CS32 [-RA]
+  LDT=0000 00000000 0000ffff 00008200 DPL=0 LDT
+  TR =0028 8016bec4 00000067 00408900 DPL=0 TSS32-avl
+  GDT=     8016bf3c 0000002f
+  IDT=     8016e298 000007ff
+  CR0=80010011 CR2=8dffdfe4 CR3=0dffe000 CR4=00000010
+  DR0=00000000 DR1=00000000 DR2=00000000 DR3=00000000
+  DR6=ffff0ff0 DR7=00000400
+  EFER=0000000000000000
+  Triple fault.  Halting for inspection via QEMU monitor.
+```
+
+8012bdd7:	8b 44 24 68          	mov    0x68(%esp),%eax
+                Arg::Int(cpuid() as i32),
+8012bddb:	89 84 24 fc 00 00 00 	mov    %eax,0xfc(%esp)
+8012bde2:	c7 84 24 f8 00 00 00 	movl   $0x0,0xf8(%esp)
+8012bde9:	00 00 00 00 
+                Arg::Int((*tf).cs as i32),
+8012bded:	8b 4d 08             	mov    0x8(%ebp),%ecx
+
+```
+unexpected trap 14 from cpu 0 eip 80136804 (cr2=0xfee000b0)
+```
+
+これは、`write_volatile` のなか。
+`write_volatile` は、lapicw のみから呼ばれている。
+lapicw に渡される引数がおかしい？
+
+```
+801367f0 <_ZN4core3ptr14write_volatile17h7414ec3cfc7955c1E>:
+pub unsafe fn write_volatile<T>(dst: *mut T, src: T) {
+801367f0:	56                   	push   %esi
+801367f1:	83 ec 08             	sub    $0x8,%esp
+801367f4:	8b 44 24 14          	mov    0x14(%esp),%eax
+801367f8:	8b 4c 24 10          	mov    0x10(%esp),%ecx
+    intrinsics::volatile_store(dst, src);
+801367fc:	8b 54 24 10          	mov    0x10(%esp),%edx
+80136800:	8b 74 24 14          	mov    0x14(%esp),%esi
+80136804:	89 32                	mov    %esi,(%edx)
+80136806:	89 44 24 04          	mov    %eax,0x4(%esp)
+8013680a:	89 0c 24             	mov    %ecx,(%esp)
+}
+8013680d:	83 c4 08             	add    $0x8,%esp
+80136810:	5e                   	pop    %esi
+80136811:	c3                   	ret    
+80136812:	66 90                	xchg   %ax,%ax
+```
+
+# 2019-05-05 19:58
 
 init exiting で落ちている。
 

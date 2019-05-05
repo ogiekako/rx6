@@ -113,6 +113,8 @@ pub extern "C" fn panic(info: &core::panic::PanicInfo) -> ! {
     }
 }
 
+pub static mut hoge: bool = false;
+
 // For debug binary
 #[cfg(not(test))]
 #[no_mangle]

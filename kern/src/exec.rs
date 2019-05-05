@@ -1,6 +1,12 @@
 use super::*;
 
 pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
+    hoge = true;
+    if hoge {
+        cprintf("looping in exec for debug.", &[]);
+        loop{};
+    }
+
     let mut ustack = [0usize; 3 + MAXARG + 1];
     let mut elf = core::mem::zeroed::<Elfhdr>();
     let mut ph = core::mem::zeroed::<Proghdr>();
@@ -17,6 +23,7 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
     }
     ilock(ip);
     let mut pgdir = null_mut();
+
 
     'bad: loop {
         // Check ELF header
