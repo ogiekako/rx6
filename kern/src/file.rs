@@ -1,7 +1,6 @@
 use super::*;
 
 #[derive(Clone, PartialEq)]
-
 #[repr(C)]
 pub enum FileType {
     FD_NONE,

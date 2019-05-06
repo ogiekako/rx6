@@ -26,7 +26,7 @@ pub unsafe extern "C" fn idtinit() {
 
 #[no_mangle]
 pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
-    cprintf("trap\n", &[]);
+    // cprintf("trap\n", &[]);
     if (*tf).trapno == T_SYSCALL {
         if ((*myproc()).killed) {
             exit();

@@ -98,27 +98,25 @@ pub unsafe extern "C" fn cprintf(fmt: &str, args: &[Arg]) {
                     cpanic("cprintf [xp]");
                 }
             }
-            's' => {
-                match argit.next() {
-                    Some(Arg::Str(s)) => {
-                        for c in s.chars() {
-                            consputc(c as u16);
-                        }
-                    },
-                    Some(Arg::Strp(s)) => {
-                        for i in 0..32 {
-                            let x = *(s.add(i));
-                            if x == 0 {
-                                break;
-                            }
-                            consputc(x as u16);
-                        }
-                    },
-                    _ =>{
-                        cpanic("cprintf [s]");
+            's' => match argit.next() {
+                Some(Arg::Str(s)) => {
+                    for c in s.chars() {
+                        consputc(c as u16);
                     }
                 }
-            }
+                Some(Arg::Strp(s)) => {
+                    for i in 0..32 {
+                        let x = *(s.add(i));
+                        if x == 0 {
+                            break;
+                        }
+                        consputc(x as u16);
+                    }
+                }
+                _ => {
+                    cpanic("cprintf [s]");
+                }
+            },
             '%' => {
                 consputc('%' as u16);
             }

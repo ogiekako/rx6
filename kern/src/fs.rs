@@ -678,7 +678,10 @@ pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut
         if path == core::ptr::null_mut() {
             break;
         }
-        cprintf("fs loop  path: \"%s\"  name: \"%s\"\n", &[Arg::Strp(path), Arg::Strp(name)]);
+        cprintf(
+            "fs loop  path: \"%s\"  name: \"%s\"\n",
+            &[Arg::Strp(path), Arg::Strp(name)],
+        );
         ilock(ip);
         if ((*ip).type_ != T_DIR as i16) {
             iunlockput(ip);
