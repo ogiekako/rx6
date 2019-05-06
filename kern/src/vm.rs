@@ -19,18 +19,89 @@ pub unsafe extern "C" fn seginit() {
 }
 
 // for use in scheduler()
-static mut kpgdir: PageDir = PageDir { pd: V(0) };
+pub static mut kpgdir: PageDir = PageDir { pd: V(0) };
 
 pub struct PageDir {
     pub pd: V, // [pd, pd+PGSIZE)
 }
 
 impl PageDir {
+    unsafe fn dump(va: usize, pa: usize, sz: usize, uwp: usize) {
+        let mut s = [b'-'; 3];
+        if uwp & 4 > 0 {
+            s[0] = b'u';
+        }
+        if uwp & 2 > 0 {
+            s[2] = b'w';
+        }
+        if uwp & 1 > 0 {
+            s[1] = b'r';
+        }
+
+        cprintf(
+            "%p-%p ->  %p-%p %s\n",
+            &[
+                Arg::Int(va as i32),
+                Arg::Int((va.wrapping_add(sz)) as i32),
+                Arg::Int(pa as i32),
+                Arg::Int((pa.wrapping_add(sz)) as i32),
+                Arg::Strp(s.as_ptr()),
+            ],
+        );
+    }
+
+    pub unsafe fn dumppgdir(&self) {
+        let page_directory: &'static [usize; 1024] = transmute(self.pd.0);
+        let mut from_va = 0;
+        let mut state = None; // (va, pa, uwp)
+
+        for dir in 0..1024 {
+            let pde = page_directory[dir]; // PPN(20) | Flags(12)
+            if pde & PTE_P == 0 {
+                // No mapping
+                if let Some((va, pa, uwp)) = state {
+                    let sz = va - from_va;
+                    PageDir::dump(va - sz, pa - sz, sz, uwp);
+                }
+                state = None;
+                continue;
+            }
+            let page_table: &'static [usize; 1024] = transmute((pde & !0xFFF) + KERNBASE.0);
+            for table in 0..1024 {
+                let pte = page_table[table];
+                if pte & PTE_P == 0 {
+                    if let Some((va, pa, uwp)) = state {
+                        let sz = va - from_va;
+                        // dump(va - sz, pa - sz, sz, uwp);
+                    }
+                    state = None;
+                    continue;
+                }
+                let va = dir << 22 | table << 12;
+                let pa = pte >> 12 << 12;
+                let uwp = pde & pte & 7;
+                if state == Some((va, pa, uwp)) {
+                    // Do nothing.
+                } else {
+                    if let Some((va, pa, uwp)) = state {
+                        let sz = va - from_va;
+                        PageDir::dump(va - sz, pa - sz, sz, uwp);
+                    }
+                    from_va = va;
+                }
+                state = Some((va.wrapping_add(4096), pa.wrapping_add(4096), uwp));
+            }
+        }
+        if let Some((va, pa, uwp)) = state {
+            let sz = va.wrapping_sub(from_va);
+            PageDir::dump(va.wrapping_sub(sz), pa.wrapping_sub(sz), sz, uwp);
+        }
+    }
     // Return the address of the PTE in page table pgdir
     // that corresponds to virtual address va.  If alloc!=0,
     // create any required page table pages.
     pub unsafe extern "C" fn walkpgdir(&mut self, va: V, alloc: bool) -> Option<V> {
-        let pde = (self.pd.0 + va.pdx() * 4) as *mut PTE;
+        let pde = ((self.pd.0 as *mut pde_t).add(va.pdx())) as *mut PTE;
         let mut pgtab: V;
         if ((*pde).0 & PTE_P > 0) {
             pgtab = p2v((*pde).addr());
@@ -125,7 +196,7 @@ pub struct Kmap {
 }
 
 impl Kmap {
-    pub fn new(virt: V, phys_start: P, phys_end: P, perm: usize) -> Kmap {
+    pub const fn new(virt: V, phys_start: P, phys_end: P, perm: usize) -> Kmap {
         Kmap {
             virt,
             phys_start,
@@ -135,7 +206,7 @@ impl Kmap {
     }
 }
 
-pub fn kmap() -> [Kmap; 4] {
+fn kmap() -> [Kmap; 4] {
     [
         Kmap::new(KERNBASE, P(0), EXTMEM, PTE_W), // I/O space
         Kmap::new(KERNLINK, v2p(KERNLINK), v2p(linker::data()), 0), // kern text+rodata
