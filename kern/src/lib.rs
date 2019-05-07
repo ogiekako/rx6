@@ -94,6 +94,8 @@ pub mod uart;
 pub mod vm;
 pub mod x86;
 
+pub fn piyo() {}
+
 #[cfg(not(test))]
 #[lang = "eh_personality"]
 #[no_mangle]

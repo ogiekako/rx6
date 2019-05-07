@@ -294,6 +294,7 @@ pub const PTE_D: usize = 0x040; // Dirty
 pub const PTE_PS: usize = 0x080; // Page Size
 pub const PTE_MBZ: usize = 0x180; // Bits must be zero
 
+#[repr(C)]
 pub struct PTE(pub usize);
 
 // Address in page table or page directory entry

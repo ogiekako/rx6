@@ -21,7 +21,20 @@ pub unsafe extern "C" fn tvinit() {
 }
 
 pub unsafe extern "C" fn idtinit() {
+    if first_user_debug_pa != None {
+        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+            piyo();
+            cpanic("idtinit(1): broken pgdir");
+        }
+    }
+
     lidt(&idt as *const Gatedesc, core::mem::size_of_val(&idt) as i32);
+    if first_user_debug_pa != None {
+        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+            piyo();
+            cpanic("idtinit(2): broken pgdir");
+        }
+    }
 }
 
 #[no_mangle]

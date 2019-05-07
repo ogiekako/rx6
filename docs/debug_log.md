@@ -1,3 +1,83 @@
+冷静にメモを取りながら、デバッグしていく。
+
+まず、kvm が意図通りに設定されているかを確認する。
+
+まず、pgdir の内容。
+
+walkpgdir の引数は正しい。
+
+setupkvm 後の、page table の設定を確認してみる。
+kpgdir に、kernel が使う page table は設定されている。
+
+kpgdir のアドレスは、0x803ff000 .
+```
+(gdb) p/x kern::vm::kpgdir
+$13 = kern::vm::PageDir {pd: kern::mmu::V (0x803ff000)}
+```
+
+user process に行ってからの mem map を見てみたい。
+
+switchuvm が終了した直後の info mem は以下。
+
+```
+0000000000000000-0000000000001000 0000000000001000 urw
+0000000080000000-0000000080100000 0000000000100000 -rw
+0000000080100000-000000008015f000 000000000005f000 -r-
+000000008015f000-000000008e000000 000000000dea1000 -rw
+00000000fe000000-0000000100000000 0000000002000000 -rw
+```
+
+4K がマップされているのがわかる。
+
+exec の先頭で loop することにして、loop 前に cprintf することにしたところ、release で落ちてる。
+
+```
+=> 0x8011238e <kern::console::cprintf+2094>:    lea    -0x5c28(%eax),%ecx
+131             release(&mut cons.lock as *mut Spinlock);
+(gdb)
+```
+
+exec において、CPL が間違っているのか？
+
+https://pdos.csail.mit.edu/6.828/2010/labguide.html
+
+```
+(qemu) info mem
+0000000000000000-0000000000001000 0000000000001000 urw
+0000000080000000-0000000080100000 0000000000100000 -rw
+0000000080100000-000000008015f000 000000000005f000 -r-
+000000008015f000-000000008e000000 000000000dea1000 -rw
+00000000ff000000-00000000ff005000 0000000000005000 -r-
+00000000ff006000-00000000ff010000 000000000000a000 -r-
+00000000ff011000-00000000ff013000 0000000000002000 -r-
+...
+```
+
+info mem が異常だ。bt も多分壊れている。
+0xfe000000 以降が map されるのが正しいのだが、その領域が犯されている。これは、mappages で起こった変化ではないだろう。
+pgdir のアドレスは？なにによって上書きされている？上書きが原因のエラーなのか、それはただの現象なのか。
+アドレスをみる。
+system call 内でも割り込み起こるんだっけ？ -> 起きる。とりあえず disable してみた。
+いまは uvm の世界にいる。system call 中なので、stack は kernel stack (`proc->kstack`) を使っている。initial proc の kstack 情報を dump しておきたい。
+次の回で十分なデバッグ情報を得たい。
+
+
+```
+#0  kern::spinlock::release (lk=0x8016e934 <kern::process::ptable>) at src/spinlock.rs:59
+#1  0x8010cb80 in kern::process::wakeup (chan=0x8016c66c <kern::trap::ticks>) at src/process.rs:580
+#2  0x80102d2b in trap (tf=0x8dfff578) at src/trap.rs:46
+#3  0x801470c7 in alltraps () at trapasm.S:23
+#4  0x8dfff578 in ?? ()
+#5  0x8013d113 in kern::exec::exec (path=0x1c "/init\000", argv=0x8dfffaa4) at src/exec.rs:6
+#6  0x801382c2 in kern::sysfile::sys_exec () at src/sysfile.rs:463
+#7  0x8010946d in kern::syscall::syscall () at src/syscall.rs:132
+#8  0x80102c25 in trap (tf=0x8dffffb4) at src/trap.rs:35
+#9  0x801470c7 in alltraps () at trapasm.S:23
+```
+
+たとえば 0xfe000000 が、
+
+
 2019-05-05 21:10
 
 ```

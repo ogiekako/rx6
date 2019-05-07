@@ -198,6 +198,9 @@ pub unsafe extern "C" fn allocproc() -> *mut Proc {
     core::ptr::write(sp as *mut usize, trapret as usize);
 
     sp = sp.sub(core::mem::size_of_val(&(*(*p).context)));
+    if size_of::<Context>() != core::mem::size_of_val(&(*(*p).context)) {
+        cpanic("allocproc: hogehoge\n");
+    }
     (*p).context = sp as *mut Context;
     memset(
         (*p).context as *mut u8,
@@ -205,6 +208,15 @@ pub unsafe extern "C" fn allocproc() -> *mut Proc {
         core::mem::size_of_val(&(*(*p).context)),
     );
     (*(*p).context).eip = forkret as usize;
+    cprintf(
+        "allocproc:  p: 0x%p, pid: %d, eip: 0x%x, kstack: 0x%p\n",
+        &[
+            Arg::Int(p as usize as i32),
+            Arg::Int((*p).pid as i32),
+            Arg::Int((*(*p).context).eip as i32),
+            Arg::Int((*p).kstack as i32),
+        ],
+    );
     p
 }
 
@@ -212,6 +224,11 @@ extern "C" {
     static mut _binary_initcode_start: u8;
     static mut _binary_initcode_size: u8;
 }
+
+// For debug. FIXME
+pub static mut first_user_pgdir: *mut usize = null_mut();
+// pa for 0xfe000000 FIXME
+pub static mut first_user_debug_pa: Option<(usize, usize)> = None;
 
 // Set up first user process.
 pub unsafe extern "C" fn userinit() {
@@ -224,11 +241,15 @@ pub unsafe extern "C" fn userinit() {
     if ((*p).pgdir == core::ptr::null_mut()) {
         cpanic("userinit: out of memory?");
     }
+    if !first_user_pgdir.is_null() {
+        cpanic("userinit: is_null");
+    }
     inituvm(
         (*p).pgdir,
         &mut _binary_initcode_start,
         &_binary_initcode_size as *const u8 as usize,
     );
+    first_user_pgdir = (*p).pgdir;
     (*p).sz = PGSIZE as usize;
     memset((*p).tf as *mut u8, 0, core::mem::size_of_val(&(*(*p).tf)));
     (*(*p).tf).cs = (SEG_UCODE << 3) as u16 | DPL_USER as u16;
@@ -435,6 +456,11 @@ pub unsafe extern "C" fn scheduler() {
     (*c).process = null_mut();
 
     loop {
+        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+            piyo();
+            cpanic("scheduler (1): broken pgdir");
+        }
+
         // Enable interrupts on this processor.
         sti();
 
@@ -454,6 +480,10 @@ pub unsafe extern "C" fn scheduler() {
             p.state = RUNNING;
 
             swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
+            if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+                piyo();
+                cpanic("scheduler (2): broken pgdir");
+            }
             switchkvm();
 
             // Process is done running for now.
@@ -540,8 +570,7 @@ pub unsafe extern "C" fn sleep(chan: *mut (), lk: *mut Spinlock) {
     // (wakeup runs with ptable.lock locked),
     // so it's okay to release lk.
     if (lk != &mut ptable.lock as *mut Spinlock) {
-        //DOC: sleeplock0
-        acquire(&mut ptable.lock as *mut Spinlock); //DOC: sleeplock1
+        acquire(&mut ptable.lock as *mut Spinlock);
         release(lk);
     }
 
@@ -561,7 +590,6 @@ pub unsafe extern "C" fn sleep(chan: *mut (), lk: *mut Spinlock) {
     }
 }
 
-//PAGEBREAK!
 // Wake up all processes sleeping on chan.
 // The ptable lock must be held.
 pub unsafe extern "C" fn wakeup1(chan: *mut ()) {

@@ -13,6 +13,8 @@ gdb の便利コマンド集
 
 - disas
 
+- p/x  (print values in hex)
+
 
 メモ
 

@@ -12,7 +12,8 @@ pub unsafe extern "C" fn kernmain() {
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
-    cprintf("  done: uartinit   ", &[]);
+    cprintf("  done: uartinit   \n", &[]);
+    kpgdir.dumppgdir();
     pinit(); // process table
     tvinit(); // trap vectors
     binit(); // buffer cache
@@ -25,6 +26,14 @@ pub unsafe extern "C" fn kernmain() {
     startothers(); // start other processors
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
     userinit(); // first user process
+    cprintf("  done: userinit \n", &[]);
+    PageDir {
+        pd: V(first_user_pgdir as usize),
+    }
+    .dumppgdir();
+    first_user_debug_pa = PageDir::from(first_user_pgdir).get_pa_for_fe000000();
+    cprintf("start mpmain\n", &[]);
+
     mpmain(); // finish this processor's setup
     cprintf("looping\n", &[]);
     loop {}
@@ -45,7 +54,19 @@ pub unsafe extern "C" fn mpmain() {
         &[Arg::Int(cpuid() as i32), Arg::Int(cpuid() as i32)],
     );
     idtinit(); // load idt register
+    if first_user_debug_pa != None {
+        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+            piyo();
+            cpanic("mpmain(1): broken pgdir");
+        }
+    }
     xchg(&mut ((*mycpu()).started) as *mut usize, 1); // tell startothers() we're up
+    if first_user_debug_pa != None {
+        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+            piyo();
+            cpanic("mpmain(2): broken pgdir");
+        }
+    }
     scheduler(); // start running processes
 }
 

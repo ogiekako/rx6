@@ -26,6 +26,40 @@ pub struct PageDir {
 }
 
 impl PageDir {
+    pub fn from(ptr: *mut usize) -> PageDir {
+        PageDir {
+            pd: V(ptr as usize),
+        }
+    }
+    pub unsafe fn get_pa_for_fe000000(&self) -> Option<(usize, usize)> {
+        let res = self.get_pa(0xfe000000);
+        let x = if let Some(x) = res { x } else { (0, 0) };
+        // cprintf(
+        //     "debug  -  fe000000 -> %x %x\n",
+        //     &[Arg::Int(x.0 as i32), Arg::Int(x.1 as i32)],
+        // );
+        res
+    }
+    // (pa, uwp)
+    pub unsafe fn get_pa(&self, va: usize) -> Option<(usize, usize)> {
+        let page_directory: &'static [usize; 1024] = transmute(self.pd.0);
+        let dir = va >> 22;
+        let pde = page_directory[dir]; // PPN(20) | Flags(12)
+        if pde & PTE_P == 0 {
+            // No mapping
+            return None;
+        }
+        let page_table: &'static [usize; 1024] = transmute((pde & !0xFFF) + KERNBASE.0);
+        let table = (va >> 12) & 1023;
+        let pte = page_table[table];
+        if pte & PTE_P == 0 {
+            return None;
+        }
+        let pa = pte >> 12 << 12;
+        let uwp = pde & pte & 7;
+        Some((pa, uwp))
+    }
+
     unsafe fn dump(va: usize, pa: usize, sz: usize, uwp: usize) {
         let mut s = [b'-'; 3];
         if uwp & 4 > 0 {
@@ -55,6 +89,8 @@ impl PageDir {
         let mut from_va = 0;
         let mut state = None; // (va, pa, uwp)
 
+        cprintf("===  page_dir in 0x%x ===\n", &[Arg::Int(self.pd.0 as i32)]);
+
         for dir in 0..1024 {
             let pde = page_directory[dir]; // PPN(20) | Flags(12)
             if pde & PTE_P == 0 {
@@ -72,7 +108,7 @@ impl PageDir {
                 if pte & PTE_P == 0 {
                     if let Some((va, pa, uwp)) = state {
                         let sz = va - from_va;
-                        // dump(va - sz, pa - sz, sz, uwp);
+                        PageDir::dump(va - sz, pa - sz, sz, uwp);
                     }
                     state = None;
                     continue;
@@ -260,6 +296,11 @@ pub unsafe extern "C" fn switchkvm() {
 
 // Switch TSS and h/w page table to correspond to process p.
 pub unsafe extern "C" fn switchuvm(p: *const Proc) {
+    cprintf("switchuvm\n", &[]);
+    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+        piyo();
+        cpanic("switchuvm: broken pgdir");
+    }
     // cprintf("switchuvm\n", &[]);
     if (p == null_mut()) {
         cpanic("switchuvm: no process");

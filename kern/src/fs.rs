@@ -216,8 +216,7 @@ pub unsafe extern "C" fn iinit(dev: i32) {
 
     readsb(dev, &mut sb as *mut Superblock);
     cprintf(
-        "sb: size %d nblocks %d ninodes %d nlog %d logstart %d\
-         inodestart %d bmap start %d\n",
+        "sb: size %d nblocks %d ninodes %d nlog %d logstart %d inodestart %d bmap start %d\n",
         &[
             Arg::Int(sb.size as i32),
             Arg::Int(sb.nblocks as i32),
@@ -271,6 +270,12 @@ pub unsafe extern "C" fn iupdate(ip: *mut Inode) {
 // and return the in-memory copy. Does not lock
 // the inode and does not read it from disk.
 pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
+    if first_user_debug_pa != None {
+        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+            piyo();
+            cpanic("iget: broken pgdir");
+        }
+    }
     acquire(&mut icache.lock as *mut Spinlock);
 
     // Is the inode already cached?
@@ -282,6 +287,10 @@ pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
             (*ip).ref_ += 1;
             release(&mut icache.lock as *mut Spinlock);
             cprintf("iget: a  type: %d\n", &[Arg::Int((*ip).type_ as i32)]);
+            if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
+                piyo();
+                cpanic("iget (2): broken pgdir");
+            }
             return ip;
         }
         if empty.is_null() && (*ip).ref_ == 0 {
