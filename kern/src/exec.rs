@@ -151,8 +151,13 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
         (*curproc).sz = sz;
         (*(*curproc).tf).eip = elf.entry; // main
         (*(*curproc).tf).esp = sp;
+        cprintf("exec: switchuvm start\n", &[]);
+        enable_check = false;
         switchuvm(curproc);
+        cprintf("exec: switchuvm end\n", &[]);
+        cprintf("exec: freevm start\n", &[]);
         freevm(oldpgdir);
+        cprintf("exec: freevm end\n", &[]);
         return 0;
     }
 

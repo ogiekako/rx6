@@ -120,7 +120,6 @@ pub unsafe fn lapiccpunum() -> usize {
 
 // Acknowledge interrupt.
 pub unsafe extern "C" fn lapiceoi() {
-    cprintf("L", &[]);
     if (!lapic.is_null()) {
         lapicw(EOI, 0);
     }

@@ -352,7 +352,7 @@ pub unsafe extern "C" fn sys_open() -> i32 {
     (*f).type_ = FD_INODE;
     (*f).ip = ip;
     (*f).off = 0;
-    (*f).readable = if (omode & O_WRONLY) != 0 { 1 } else { 0 };
+    (*f).readable = if (omode & O_WRONLY) == 0 { 1 } else { 0 };
     (*f).writable = if (omode & O_WRONLY) != 0 || (omode & O_RDWR) != 0 {
         1
     } else {

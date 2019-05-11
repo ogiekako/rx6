@@ -60,16 +60,16 @@ pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
     }
     let tf_addr = &tf as *const *mut Trapframe as usize as i32;
     check_it("trap (0.7)");
-    cprintf("trap:  &tf = %p  esp0 = %p  stack = %p   tf.eip = %p  tf.trapno = %d\n", &[Arg::Int(tf_addr), Arg::Int(esp0), Arg::Int(st), Arg::Int((*tf).eip as i32), Arg::Int((*tf).trapno as i32)]);
+    // cprintf("trap:  &tf = %p  esp0 = %p  stack = %p   tf.eip = %p  tf.trapno = %d\n", &[Arg::Int(tf_addr), Arg::Int(esp0), Arg::Int(st), Arg::Int((*tf).eip as i32), Arg::Int((*tf).trapno as i32)]);
     check_it("trap (0.8)");
-    if 0 <= esp0 - tf_addr && esp0 - tf_addr < 4096 {
-        // OK.
-    } else if 0 <= st + 4096 - tf_addr && st + 4096 - tf_addr < 4096 {
-        // OK.
-    } else {
-        // cprintf("hoge:  &tf = %p  esp0 = %p  stack = %p\n", &[Arg::Int(&tf as *const *mut Trapframe as usize as i32), Arg::Int(esp0 as i32), Arg::Int(st as usize as i32)]);
-        cpanic("foo");
-    }
+    // if 0 <= esp0 - tf_addr && esp0 - tf_addr < 4096 {
+    //     // OK.
+    // } else if 0 <= st + 4096 - tf_addr && st + 4096 - tf_addr < 4096 {
+    //     // OK.
+    // } else {
+    //     // cprintf("hoge:  &tf = %p  esp0 = %p  stack = %p\n", &[Arg::Int(&tf as *const *mut Trapframe as usize as i32), Arg::Int(esp0 as i32), Arg::Int(st as usize as i32)]);
+    //     cpanic("foo");
+    // }
 
     // let ts_addr = &(*mycpu()).ts;
     // let base = (*mycpu()).gdt[SEG_TSS].base();

@@ -347,11 +347,6 @@ pub unsafe extern "C" fn switchkvm() {
 
 // Switch TSS and h/w page table to correspond to process p.
 pub unsafe extern "C" fn switchuvm(p: *const Proc) {
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("switchuvm: broken pgdir");
-    }
-    // cprintf("switchuvm\n", &[]);
     if (p == null_mut()) {
         cpanic("switchuvm: no process");
     }
@@ -365,7 +360,6 @@ pub unsafe extern "C" fn switchuvm(p: *const Proc) {
         cpanic("switchuvm: no pgdir");
     }
 
-    cprintf("u", &[]);
     pushcli();
 
     // cprintf("uvm ...\n", &[]);
@@ -424,7 +418,7 @@ pub unsafe extern "C" fn loaduvm(
             cpanic("loaduvm: address should exist");
         }
         let pte = pte.unwrap().0 as *mut pte_t;
-        let pa = PTE(pte as usize).addr().0;
+        let pa = PTE(*pte).addr().0;
         let n: usize;
         if (sz - i < PGSIZE) {
             n = sz - i;
@@ -536,20 +530,23 @@ pub unsafe extern "C" fn clearpteu(pgdir: *mut pde_t, uva: *mut u8) {
 // Given a parent process's page table, create a copy
 // of it for a child.
 pub unsafe extern "C" fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
+    let mut pgdir = PageDir::from(pgdir);
     let mut d = setupkvm();
     if (d.is_none()) {
         return null_mut();
     }
-    let mut pgdir = d.unwrap();
+    let mut d = d.unwrap();
     let mut bad = false;
     for i in (0..sz).step_by(PGSIZE) {
-        let pte = &pgdir.walkpgdir(V(i), false);
+        let pte = pgdir.walkpgdir(V(i), false);
         if pte.is_none() {
             cpanic("copyuvm: pte should exist");
         }
         let pte = pte.unwrap().0 as *mut pde_t;
         if ((*pte & PTE_P) == 0) {
-            cpanic("copyuvm: page not present");
+            if i != (*myproc()).kstackguard as usize {
+                cpanic("copyuvm: page not present");
+            }
         }
         let pa = PTE(*pte).addr();
         let flags = PTE(*pte).flags();
@@ -560,7 +557,7 @@ pub unsafe extern "C" fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
         }
         let mem = mem.unwrap();
         memmove(mem.0 as *mut u8, p2v(pa).0 as *const u8, PGSIZE);
-        if !(&mut pgdir).mappages(V(i), PGSIZE, v2p(mem), flags) {
+        if !d.mappages(V(i), PGSIZE, v2p(mem), flags) {
             bad = true;
             break;
         }

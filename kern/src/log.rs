@@ -25,11 +25,13 @@ use super::*;
 
 // Contents of the header block, used for both the on-disk header block
 // and to keep track in memory of logged block# before commit.
+#[repr(C)]
 pub struct Logheader {
     pub n: i32,
     pub block: [i32; LOGSIZE],
 }
 
+#[repr(C)]
 pub struct Log {
     pub lock: Spinlock,
     pub start: i32,

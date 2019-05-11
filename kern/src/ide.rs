@@ -161,26 +161,17 @@ pub unsafe extern "C" fn iderw(b: *mut Buf) {
     }
 
     cprintf("iderw: start sleep\n", &[]);
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("iderw: broken pgdir");
-    }
+    check_it("iderw (1)");
     // Wait for request to finish.
     while ((*b).flags & (B_VALID | B_DIRTY)) != B_VALID {
         sleep(b as *mut (), &mut idelock as *mut Spinlock);
     }
     cprintf("iderw: end sleep\n", &[]);
 
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("iderw: broken pgdir (2)");
-    }
+    check_it("iderw (2)");
 
     release(&mut idelock as *mut Spinlock);
 
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("iderw: broken pgdir (3)");
-    }
+    check_it("iderw (3)");
     cprintf("z", &[]);
 }

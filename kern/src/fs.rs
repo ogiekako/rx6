@@ -61,6 +61,7 @@ macro_rules! BBLOCK {
 // Directory is a file containing a sequence of dirent structures.
 pub const DIRSIZ: usize = 14;
 
+#[repr(C)]
 pub struct Dirent {
     pub inum: u16,
     pub name: [u8; DIRSIZ],
@@ -325,16 +326,7 @@ pub unsafe extern "C" fn ilock(ip: *mut Inode) {
         cpanic("ilock");
     }
 
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("ilock (1): broken pgdir");
-    }
-
     acquiresleep(&mut (*ip).lock as *mut Sleeplock);
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("ilock (2): broken pgdir");
-    }
 
     if (((*ip).flags & I_VALID) == 0) {
         let bp = bread((*ip).dev, IBLOCK!((*ip).inum, sb));
@@ -478,7 +470,6 @@ pub unsafe extern "C" fn stati(ip: *mut Inode, st: *mut Stat) {
     (*st).size = (*ip).size;
 }
 
-//PAGEBREAK!
 // Read data from inode.
 pub unsafe extern "C" fn readi(
     ip: *mut Inode,
@@ -516,6 +507,7 @@ pub unsafe extern "C" fn readi(
         */
         memmove(dst, (*bp).data.as_ptr().add(off % BSIZE), m);
         brelse(bp);
+        tot += m;
         off += m;
         dst = dst.offset(m as isize);
     }
@@ -728,10 +720,6 @@ pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut
 pub unsafe extern "C" fn namei(path: *const u8) -> *mut Inode {
     check_it("namei (1)");
     let mut name = [0u8; DIRSIZ];
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("namei (2): broken pgdir");
-    }
     namex(path, 0, name.as_mut_ptr())
 }
 

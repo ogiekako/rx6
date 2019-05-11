@@ -80,24 +80,7 @@ pub unsafe extern "C" fn release(lk: *mut Spinlock) {
 
 // Record the current call stack in pcs[] by following the %ebp chain.
 pub unsafe extern "C" fn getcallerpcs(v: *const (), pcs: &mut [usize]) {
-    let mut ebp = (v as *const usize).offset(-2);
-    let mut i = 0;
-    while i < 10 {
-        if ebp == core::ptr::null_mut()
-            || ebp < KERNBASE.0 as *const usize
-            || ebp == (0xffffffff as *const usize)
-        {
-            break;
-        }
-        pcs[i] = *(ebp.offset(1)) as usize; // saved %eip
-        ebp = (*ebp) as *const usize; // saved %ebp
-        i += 1;
-    }
-
-    while i < 10 {
-        pcs[i] = 0;
-        i += 1;
-    }
+    // TODO: get caller pcs for Rust programs.
 }
 
 // Check whether this cpu is holding the lock.
