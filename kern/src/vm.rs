@@ -71,7 +71,7 @@ pub unsafe fn setup_debug() {
 }
 
 impl PageDir {
-    pub fn from(ptr: *mut usize) -> PageDir {
+    pub fn from(ptr: *mut pde_t) -> PageDir {
         PageDir {
             pd: V(ptr as usize),
         }
@@ -116,7 +116,7 @@ impl PageDir {
         }
 
         cprintf(
-            "%p-%p ->  %p-%p %s\n",
+            "[%p,%p) ->  [%p,%p) %s\n",
             &[
                 Arg::Int(va as i32),
                 Arg::Int((va.wrapping_add(sz)) as i32),
@@ -212,11 +212,10 @@ impl PageDir {
     // Unmap a present page map.
     pub unsafe extern "C" fn unmap(&mut self, va: V) {
         let mut a = va.pgrounddown();
-        let pte = self.walkpgdir(a, false).unwrap();
-        let mut pte = pte.0 as *mut usize;
+        let pte = self.walkpgdir(a, false).unwrap().0 as *mut usize;
         assert_eq!(*pte & PTE_P, PTE_P, "no map");
 
-        *pte = *pte & !PTE_P;
+        *pte = 0;
     }
 
     // Create PTEs for virtual addresses starting at va that refer to
@@ -239,7 +238,7 @@ impl PageDir {
             if pte.is_none() {
                 return false;
             }
-            let mut pte = pte.unwrap().0 as *mut usize;
+            let pte = pte.unwrap().0 as *mut usize;
             assert_eq!(*pte & PTE_P, 0, "remap");
 
             *pte = pa.0 | perm as usize | PTE_P;
@@ -362,6 +361,9 @@ pub unsafe extern "C" fn switchuvm(p: *const Proc) {
     }
     if ((*p).kstack == null_mut()) {
         cpanic("switchuvm: no kstack");
+    }
+    if ((*p).kstackguard == null_mut()) {
+        cpanic("switchuvm: no kstackguard");
     }
     if ((*p).pgdir == null_mut()) {
         cpanic("switchuvm: no pgdir");

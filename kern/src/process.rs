@@ -193,17 +193,18 @@ unsafe extern "C" fn allocproc() -> *mut Proc {
     release(&mut ptable.lock as *mut Spinlock);
 
     // Allocate kernel stack.
-    (*p).kstackguard = kalloc().unwrap_or(V(0)).0 as *mut u8;
-    if (*p).kstackguard.is_null() {
-        (*p).state = UNUSED;
-        return null_mut();
-    }
     (*p).kstack = kalloc().unwrap_or(V(0)).0 as *mut u8;
     if (*p).kstack.is_null() {
         (*p).state = UNUSED;
-        kfree(V((*p).kstackguard as usize));
         return null_mut();
     }
+    (*p).kstackguard = kalloc().unwrap_or(V(0)).0 as *mut u8;
+    if (*p).kstackguard.is_null() {
+        (*p).state = UNUSED;
+        kfree(V((*p).kstack as usize));
+        return null_mut();
+    }
+
     let mut sp = (*p).kstack.add(KSTACKSIZE);
 
     // Leave room for trap frame.
@@ -261,7 +262,6 @@ pub unsafe extern "C" fn userinit() {
     if ((*p).pgdir == core::ptr::null_mut()) {
         cpanic("userinit: out of memory?");
     }
-    // unmap kstackguard.
     PageDir::from((*p).pgdir).unmap(V((*p).kstackguard as usize));
     
     if !first_user_pgdir.is_null() {
