@@ -347,10 +347,6 @@ pub unsafe extern "C" fn switchkvm() {
 
 // Switch TSS and h/w page table to correspond to process p.
 pub unsafe extern "C" fn switchuvm(p: *const Proc) {
-    // if !enable_check {
-    //     cprintf("e\n", &[]);
-    // }
-
     if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
         piyo();
         cpanic("switchuvm: broken pgdir");

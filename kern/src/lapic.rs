@@ -66,7 +66,12 @@ pub unsafe extern "C" fn lapicinit() {
     // TICR would be calibrated using an external time source.
     lapicw(TDCR, X1);
     lapicw(TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER));
-    lapicw(TICR, 10000000);
+    // 10ms
+    // lapicw(TICR, 10_000_000);
+    // 100ms
+    // lapicw(TICR, 100_000_000);
+    // 2s
+    lapicw(TICR, 2_000_000_000);
 
     // Disable logical interrupt lines.
     lapicw(LINT0, MASKED);
@@ -100,15 +105,11 @@ pub unsafe extern "C" fn lapicinit() {
 // Should be called with interrupts disabled: the calling thread shouldn't be
 // rescheduled between reading lapic[ID] and checking against cpu array.
 pub unsafe fn lapiccpunum() -> usize {
-    check_it("lapicr (0)");
     if (lapic.is_null()) {
         cpanic("cpunum");
         return 0;
     }
-
-    check_it("lapicr (1)");
     let apicid = (lapicr(ID) >> 24) as u8;
-    check_it("lapicr (2)");
     for i in 0..ncpu {
         if (cpus[i].apicid == apicid) {
             return i;

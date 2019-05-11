@@ -1,3 +1,6 @@
+release の、getcallerpcs で、例外が発生している。Rust は、C とは違う ABI になっているためと思われる。これの呼び出しは一旦中止するか。
+
+
 system call で process に対応する stack が大きくなったときに 、さらにそこで割り込みが入ると、同じスタックをつかうため、それがさらに伸びて、 stack overflow をしていたようだ。こういうバグをはやめに検知するために、`check_it` もいいけど、stack guard をいれようかな。stack guard は細かい制御もできるんだっけ
 。しかしなんでこんなに伸びるのかは気になる。lapiccpunum とか、-0x80 しているけどどこでそんなに使うんだ。
 stack がやたらのびるタイミングがある？

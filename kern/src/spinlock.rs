@@ -8,7 +8,7 @@ pub struct Spinlock {
     // For debugging:
     name: *const str, // Name of lock.
     cpu: *mut Cpu,    // The cpu holding the lock.
-    pcs: [usize; 10], // The call stack (an array of program counters)
+    // pcs: [usize; 10], // The call stack (an array of program counters)
 }
 
 impl Spinlock {
@@ -17,7 +17,7 @@ impl Spinlock {
             locked: 0,
             name: "" as *const str,
             cpu: core::ptr::null_mut(),
-            pcs: [0; 10],
+            // pcs: [0; 10],
         }
     }
 }
@@ -51,7 +51,7 @@ pub unsafe extern "C" fn acquire(lk: *mut Spinlock) {
 
     // Record info about lock acquisition for debugging.
     (*lk).cpu = mycpu();
-    getcallerpcs(lk as *const (), &mut (*lk).pcs);
+    // getcallerpcs(lk as *const (), &mut (*lk).pcs);
 }
 
 // Release the lock.
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn release(lk: *mut Spinlock) {
         cpanic("release");
     }
 
-    (*lk).pcs[0] = 0;
+    // (*lk).pcs[0] = 0;
     (*lk).cpu = null_mut();
 
     // Tell the C compiler and the processor to not move loads or stores

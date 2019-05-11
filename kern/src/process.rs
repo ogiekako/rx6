@@ -145,8 +145,6 @@ pub unsafe fn mycpu() -> *mut Cpu {
         }
     }
 
-    check_it("mycpu (0.5)");
-    // hoge();
     return &mut cpus[lapiccpunum()] as *mut Cpu;
 }
 unsafe fn hoge() -> u8 {
@@ -493,7 +491,7 @@ pub unsafe extern "C" fn scheduler() {
         // Loop over process table looking for process to run.
         acquire(&mut ptable.lock as *mut Spinlock);
         check_it("scheduler (1)");
-        cprintf("1", &[]);
+        // cprintf("1", &[]);
         for i in 0..NPROC {
             let mut p = &mut ptable.proc[i];
             if (p.state != RUNNABLE) {
@@ -506,25 +504,19 @@ pub unsafe extern "C" fn scheduler() {
             // before jumping back to us.
             (*c).process = p;
             check_it("scheduler (2)");
-            cprintf("2", &[]);
 
-            // switch ltr(
             switchuvm(p as *const Proc);
-
-            cprintf("3", &[]);
-
-            // cprintf("3\n", &[]);
+            cprintf("done switchuvm\n", &[]);
 
             p.state = RUNNING;
 
-            cprintf("4 `%d", &[Arg::Int((*c).ncli)]);
+            cprintf("start swtch\n", &[]);
             swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
-            cprintf("4.5", &[]);
+            cprintf("done swtch\n", &[]);
             check_it("scheduler (2)");
 
-            cprintf("5", &[]);
             switchkvm();
-            cprintf("6", &[]);
+            cprintf("done switchkvm\n", &[]);
 
             check_it("scheduler (3)");
 
@@ -697,6 +689,7 @@ pub unsafe extern "C" fn procdump() {
             ],
         );
         if p.state == SLEEPING {
+            cprintf("state: sleeping\n", &[]);
             getcallerpcs(
                 ((*p.context).ebp as *const usize).add(2) as *const (),
                 &mut pc,

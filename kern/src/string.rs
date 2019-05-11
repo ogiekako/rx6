@@ -1,4 +1,4 @@
-use x86::*;
+use super::*;
 
 pub unsafe extern "C" fn memset(dst: *mut u8, mut c: i32, n: usize) {
     if dst as usize % 4 == 0 && n % 4 == 0 {

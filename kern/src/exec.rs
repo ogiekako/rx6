@@ -2,7 +2,7 @@ use super::*;
 
 pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
     cprintf("exec start.\n", &[]);
-    loop {}
+
     check_it("exec (1)");
 
     let mut ustack = [0usize; 3 + MAXARG + 1];

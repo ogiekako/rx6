@@ -20,9 +20,6 @@ pub unsafe extern "C" fn kernmain() {
     binit(); // buffer cache
     fileinit(); // file table
     ideinit(); // disk
-    if (!ismp) {
-        timerinit(); // uniprocessor timer
-    }
 
     startothers(); // start other processors
     kinit2(p2v(P(4 * 1024 * 1024)), p2v(PHYSTOP)); // must come after startothers()
