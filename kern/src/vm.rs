@@ -25,6 +25,51 @@ pub struct PageDir {
     pub pd: V, // [pd, pd+PGSIZE)
 }
 
+pub static mut enable_check:bool = false;
+pub unsafe fn check_it(msg: &'static str) {
+    if !enable_check {
+        return
+    }
+    let addr = &msg as *const &'static str as usize as i32;
+    let st = &stack as *const u8 as usize as i32;
+    // process stack
+    static mut esp0: i32 = -1;
+    if (readeflags() & FL_IF == 0) {
+        enable_check = false;
+        esp0 = (*mycpu()).ts.esp0 as i32;
+        enable_check = true;
+    }
+    if 0 <= esp0 - addr && esp0 - addr < 4096 {
+        // OK.
+    } else if 0 <= st + 4096 - addr && st + 4096 - addr < 4096 {
+        // OK.
+    } else {
+        piyo();
+        cpanic("foo");
+    }
+
+    let pd = PageDir::from(first_user_pgdir);
+    let va = 0xff3ffc00;
+    if first_user_debug_pa2 != pd.get_pa(va) {
+        piyo();
+        let pde = pd.get_pde(va);
+        let pte_addr = (pde & !0xFFF) + KERNBASE.0;
+        piyo2(pte_addr);
+        // cprintf("&pte: 0x%p", &[Arg::Int(pte_addr as i32)]);
+        
+        cpanic(msg);
+    }
+    if first_user_debug_pa != pd.get_pa(0xfe000000) {
+        piyo();
+        cpanic(msg);
+    }
+}
+pub unsafe fn setup_debug() {
+    let pd = PageDir::from(first_user_pgdir);
+    first_user_debug_pa = pd.get_pa(0xfe000000);
+    first_user_debug_pa2 = pd.get_pa(0xff3ffc00);
+}
+
 impl PageDir {
     pub fn from(ptr: *mut usize) -> PageDir {
         PageDir {
@@ -32,19 +77,17 @@ impl PageDir {
         }
     }
     pub unsafe fn get_pa_for_fe000000(&self) -> Option<(usize, usize)> {
-        let res = self.get_pa(0xfe000000);
-        let x = if let Some(x) = res { x } else { (0, 0) };
-        // cprintf(
-        //     "debug  -  fe000000 -> %x %x\n",
-        //     &[Arg::Int(x.0 as i32), Arg::Int(x.1 as i32)],
-        // );
-        res
+        self.get_pa(0xfe000000)
+    }
+    #[inline(always)]
+    pub unsafe fn get_pde(&self, va: usize) -> usize {
+        let page_directory: &'static [usize; 1024] = transmute(self.pd.0);
+        let dir = va >> 22;
+        page_directory[dir] // PPN(20) | Flags(12)
     }
     // (pa, uwp)
     pub unsafe fn get_pa(&self, va: usize) -> Option<(usize, usize)> {
-        let page_directory: &'static [usize; 1024] = transmute(self.pd.0);
-        let dir = va >> 22;
-        let pde = page_directory[dir]; // PPN(20) | Flags(12)
+        let pde = self.get_pde(va); // PPN(20) | Flags(12)
         if pde & PTE_P == 0 {
             // No mapping
             return None;
@@ -305,7 +348,10 @@ pub unsafe extern "C" fn switchkvm() {
 
 // Switch TSS and h/w page table to correspond to process p.
 pub unsafe extern "C" fn switchuvm(p: *const Proc) {
-    cprintf("switchuvm\n", &[]);
+    // if !enable_check {
+    //     cprintf("e\n", &[]);
+    // }
+
     if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
         piyo();
         cpanic("switchuvm: broken pgdir");
@@ -321,7 +367,10 @@ pub unsafe extern "C" fn switchuvm(p: *const Proc) {
         cpanic("switchuvm: no pgdir");
     }
 
+    cprintf("u", &[]);
     pushcli();
+
+    // cprintf("uvm ...\n", &[]);
     ((*mycpu()).gdt)[SEG_TSS] = SEG16(
         STS_T32A,
         (&(*mycpu()).ts as *const Taskstate) as usize,
@@ -336,6 +385,7 @@ pub unsafe extern "C" fn switchuvm(p: *const Proc) {
     (*mycpu()).ts.iomb = 0xFFFFu16;
     ltr((SEG_TSS << 3) as u16);
     lcr3(V2P((*p).pgdir as usize)); // switch to process's address space
+    // cprintf("uvm start\n", &[]);
     popcli();
 }
 

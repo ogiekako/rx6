@@ -2,15 +2,8 @@ use super::*;
 
 pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
     cprintf("exec start.\n", &[]);
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("exec: broken pgdir");
-    }
-    //    hoge = true;
-    //    if hoge {
-    //        cprintf("looping in exec for debug.\n", &[]);
-    //        loop {}
-    //    }
+    loop {}
+    check_it("exec (1)");
 
     let mut ustack = [0usize; 3 + MAXARG + 1];
     let mut elf = core::mem::zeroed::<Elfhdr>();
@@ -19,6 +12,8 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
     let curproc = myproc();
 
     begin_op();
+
+    check_it("exec (2)");
 
     let mut ip = namei(path);
     if (ip.is_null()) {

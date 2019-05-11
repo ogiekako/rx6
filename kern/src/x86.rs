@@ -74,7 +74,7 @@ pub unsafe extern "C" fn ltr(sel: u16) {
 }
 
 pub unsafe extern "C" fn readeflags() -> usize {
-    let mut eflags = 0usize;
+    let eflags;
     asm!("pushfl; popl $0" : "=r" (eflags)::::"volatile");
     eflags
 }

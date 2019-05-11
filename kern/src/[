@@ -216,7 +216,8 @@ pub unsafe extern "C" fn iinit(dev: i32) {
 
     readsb(dev, &mut sb as *mut Superblock);
     cprintf(
-        "sb: size %d nblocks %d ninodes %d nlog %d logstart %d inodestart %d bmap start %d\n",
+        "sb: size %d nblocks %d ninodes %d nlog %d logstart %d\
+         inodestart %d bmap start %d\n",
         &[
             Arg::Int(sb.size as i32),
             Arg::Int(sb.nblocks as i32),
@@ -270,9 +271,7 @@ pub unsafe extern "C" fn iupdate(ip: *mut Inode) {
 // and return the in-memory copy. Does not lock
 // the inode and does not read it from disk.
 pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
-    check_it("iget (1)");
     acquire(&mut icache.lock as *mut Spinlock);
-    check_it("iget (2)");
 
     // Is the inode already cached?
     let mut empty: *mut Inode = core::ptr::null_mut();
@@ -283,14 +282,12 @@ pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
             (*ip).ref_ += 1;
             release(&mut icache.lock as *mut Spinlock);
             cprintf("iget: a  type: %d\n", &[Arg::Int((*ip).type_ as i32)]);
-            check_it("iget (3)");
             return ip;
         }
         if empty.is_null() && (*ip).ref_ == 0 {
             // Remember empty slot.
             empty = ip;
         }
-        check_it("iget (4)");
     }
 
     // Recycle an inode cache entry.
@@ -304,7 +301,6 @@ pub unsafe extern "C" fn iget(dev: usize, inum: usize) -> *mut Inode {
     (*ip).ref_ = 1;
     (*ip).flags = 0;
     release(&mut icache.lock as *mut Spinlock);
-    check_it("iget (5)");
 
     ip
 }
@@ -325,16 +321,7 @@ pub unsafe extern "C" fn ilock(ip: *mut Inode) {
         cpanic("ilock");
     }
 
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("ilock (1): broken pgdir");
-    }
-
     acquiresleep(&mut (*ip).lock as *mut Sleeplock);
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("ilock (2): broken pgdir");
-    }
 
     if (((*ip).flags & I_VALID) == 0) {
         let bp = bread((*ip).dev, IBLOCK!((*ip).inum, sb));
@@ -681,9 +668,7 @@ unsafe extern "C" fn skipelem(mut path: *const u8, name: *mut u8) -> *const u8 {
 pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut u8) -> *mut Inode {
     let mut ip: *mut Inode;
     if (*path == b'/') {
-        check_it("namex (0)");
         ip = iget(ROOTDEV, ROOTINO);
-        check_it("namex (0.1)");
     } else {
         ip = idup((*myproc()).cwd);
     }
@@ -693,11 +678,7 @@ pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut
         if path == core::ptr::null_mut() {
             break;
         }
-        cprintf(
-            "fs loop  path: \"%s\"  name: \"%s\"\n",
-            &[Arg::Strp(path), Arg::Strp(name)],
-        );
-        check_it("namex (1)");
+        cprintf("fs loop  path: \"%s\"  name: \"%s\"\n", &[Arg::Strp(path), Arg::Strp(name)]);
         ilock(ip);
         if ((*ip).type_ != T_DIR as i16) {
             iunlockput(ip);
@@ -726,12 +707,7 @@ pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut
 }
 
 pub unsafe extern "C" fn namei(path: *const u8) -> *mut Inode {
-    check_it("namei (1)");
     let mut name = [0u8; DIRSIZ];
-    if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-        piyo();
-        cpanic("namei (2): broken pgdir");
-    }
     namex(path, 0, name.as_mut_ptr())
 }
 

@@ -110,7 +110,7 @@ initcode: initcode.S
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
-kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld entryother initcode
+kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld entryother initcode mmu.h
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o entrypgdir.o $(KERN) $(OBJS) -b binary initcode entryother 2>&1 | tee /tmp/rx6-ld.log
 	if grep "warning" /tmp/rx6-ld.log > /dev/null; then rm kernel; exit 1; fi
 	# -S: Display source code intermixed with disassembly. Implies -d (= --disassemble).
@@ -118,6 +118,7 @@ kernel: entry.o entrypgdir.o $(KERN) $(OBJS) kernel.ld entryother initcode
 	# -t: Print the symbol table entries of the file.
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
+# trapasm.o: trapasm.S mmu.h
 
 kern: $(KERN)
 

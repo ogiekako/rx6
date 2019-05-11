@@ -12,6 +12,7 @@ pub unsafe extern "C" fn kernmain() {
     ioapicinit(); // another interrupt controller
     consoleinit(); // console hardware
     uartinit(); // serial port (Outputs "xv6...")
+
     cprintf("  done: uartinit   \n", &[]);
     kpgdir.dumppgdir();
     pinit(); // process table
@@ -32,6 +33,7 @@ pub unsafe extern "C" fn kernmain() {
     }
     .dumppgdir();
     first_user_debug_pa = PageDir::from(first_user_pgdir).get_pa_for_fe000000();
+    enable_check = true;
     cprintf("start mpmain\n", &[]);
 
     mpmain(); // finish this processor's setup
@@ -78,7 +80,7 @@ extern "C" {
 
 // Start the non-boot (AP) processors.
 unsafe extern "C" fn startothers() {
-    let mut stack: *mut i8;
+    let mut stack_: *mut i8;
 
     // Write entry code to unused memory at 0x7000.
     // The linker has placed the image of entryother.S in
@@ -99,8 +101,8 @@ unsafe extern "C" fn startothers() {
         // Tell entryother.S what stack to use, where to enter, and what
         // pgdir to use. We cannot use kpgdir yet, because the AP processor
         // is running in low  memory, so we use entrypgdir for the APs too.
-        let mut stack = kalloc().unwrap();
-        core::ptr::write(code.sub(4) as *mut usize, stack.0 + KSTACKSIZE);
+        let mut stack_ = kalloc().unwrap();
+        core::ptr::write(code.sub(4) as *mut usize, stack_.0 + KSTACKSIZE);
         core::ptr::write(
             code.sub(8) as *mut usize,
             mpenter as *const unsafe fn() as usize,
@@ -111,7 +113,7 @@ unsafe extern "C" fn startothers() {
         );
         cprintf(
             "Starting cpu %d  stack: 0x%x.  ",
-            &[Arg::Int(i as i32), Arg::Int(stack.0 as i32)],
+            &[Arg::Int(i as i32), Arg::Int(stack_.0 as i32)],
         );
 
         lapicstartap((*c).apicid, v2p(V(code as usize)).0 as usize);

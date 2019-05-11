@@ -182,4 +182,5 @@ pub unsafe extern "C" fn iderw(b: *mut Buf) {
         piyo();
         cpanic("iderw: broken pgdir (3)");
     }
+    cprintf("z", &[]);
 }

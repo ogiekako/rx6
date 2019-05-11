@@ -120,14 +120,14 @@ pub unsafe extern "C" fn pushcli() {
 
 pub fn popcli() {
     unsafe {
-        if (readeflags() & FL_IF > 0) {
+        if (readeflags() & FL_IF != 0) {
             cpanic("popcli - interruptible");
         }
         (*mycpu()).ncli -= 1;
         if ((*mycpu()).ncli < 0) {
             cpanic("popcli");
         }
-        if (*mycpu()).ncli == 0 && (*mycpu()).intena > 0 {
+        if (*mycpu()).ncli == 0 && (*mycpu()).intena != 0 {
             sti();
         }
     }

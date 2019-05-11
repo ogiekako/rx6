@@ -124,7 +124,10 @@ pub struct Segdesc {
 }
 
 impl Segdesc {
-    const fn new(
+    pub fn base(&self) -> usize {
+        (self.base_31_24 as usize) << 24 | (self.base_23_16 as usize) << 16 | self.base_15_0 as usize
+    }
+    fn new(
         lim_15_0: u16,
         base_15_0: u16,
         base_23_16: u8,
@@ -139,16 +142,24 @@ impl Segdesc {
         g: u8,
         base_31_24: u8,
     ) -> Segdesc {
+
+        fn assert(b: bool) {
+            if ! b {
+                unsafe {
+                    cpanic("hoge");
+                }
+            }
+        }
         // TODO: fix
-        // assert!(typ < 1<<4);
-        // assert!(s   < 1<<1);
-        // assert!(dpl < 1<<2);
-        // assert!(p < 1<<1);
-        // assert!(lim_19_16 < 1<<4);
-        // assert!(avl < 1<<1);
-        // assert!(rsv1 < 1<<1);
-        // assert!(db < 1<<1);
-        // assert!(g < 1<<1);
+        assert(typ < 1<<4);
+        assert(s   < 1<<1);
+        assert(dpl < 1<<2);
+        assert(p < 1<<1);
+        assert(lim_19_16 < 1<<4);
+        assert(avl < 1<<1);
+        assert(rsv1 < 1<<1);
+        assert(db < 1<<1);
+        assert(g < 1<<1);
 
         Segdesc {
             lim_15_0,
@@ -181,7 +192,7 @@ mod tests {
 
 // Normal segment
 #[inline(always)]
-pub const fn SEG(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
+pub fn SEG(typ: u8, base: usize, lim: usize, dpl: u8) -> Segdesc {
     Segdesc::new(
         ((lim >> 12) & 0xffff) as u16,
         (base & 0xffff) as u16,
@@ -322,7 +333,7 @@ pub struct Taskstate {
     pub esp2: *mut usize,
     pub ss2: u16,
     pub padding3: u16,
-    pub cr3: *mut (),    // Page directory base
+    pub cr3: *mut u8,    // Page directory base
     pub eip: *mut usize, // Saved state from last task switch
     pub eflags: usize,
     pub eax: usize, // More saved state (registers)
@@ -351,7 +362,7 @@ pub struct Taskstate {
     pub iomb: u16, // I/O map base address
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[repr(C)]
 pub struct Gatedesc {
     off_15_0: u16, // low 16 bits of offset in segment

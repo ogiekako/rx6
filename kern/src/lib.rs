@@ -95,6 +95,7 @@ pub mod vm;
 pub mod x86;
 
 pub fn piyo() {}
+pub fn piyo2(x: usize) {}
 
 #[cfg(not(test))]
 #[lang = "eh_personality"]

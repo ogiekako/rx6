@@ -54,6 +54,7 @@ pub unsafe extern "C" fn initlog(dev: i32) {
     log.size = sb.nlog as i32;
     log.dev = dev;
     recover_from_log();
+    cprintf("il ", &[]);
 }
 
 // Copy committed blocks from log to their home location
@@ -89,8 +90,11 @@ pub unsafe extern "C" fn write_head() {
     for i in 0..log.lh.n {
         (*hb).block[i as usize] = log.lh.block[i as usize];
     }
+    cprintf("wh ", &[]);
     bwrite(buf);
+    cprintf("wh1", &[]);
     brelse(buf);
+    cprintf("wh2", &[]);
 }
 
 pub unsafe extern "C" fn recover_from_log() {
@@ -98,6 +102,7 @@ pub unsafe extern "C" fn recover_from_log() {
     install_trans(); // if committed, copy from log to disk
     log.lh.n = 0;
     write_head(); // clear the log
+    cprintf("rl ", &[]);
 }
 
 // called at the start of each FS system call.

@@ -5,6 +5,7 @@ use super::*;
 use core;
 
 // Per-CPU state
+#[repr(C)]
 pub struct Cpu {
     pub apicid: u8,              // Local APIC ID
     pub scheduler: *mut Context, // swtch() here to enter scheduler
@@ -44,6 +45,7 @@ pub struct Context {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[repr(C)]
 pub enum Procstate {
     UNUSED,
     EMBRYO,
@@ -126,7 +128,7 @@ pub unsafe extern "C" fn cpuid() -> usize {
 
 static mut n_mycpu: i32 = 0;
 // Must be called with interrupts disabled
-pub unsafe extern "C" fn mycpu() -> *mut Cpu {
+pub unsafe fn mycpu() -> *mut Cpu {
     // Would prefer to panic but even printing is chancy here: almost everything,
     // including cprintf and panic, calls mycpu(), often indirectly through
     // acquire and release.
@@ -134,6 +136,7 @@ pub unsafe extern "C" fn mycpu() -> *mut Cpu {
         let nn = n_mycpu;
         n_mycpu += 1;
         if (nn == 0) {
+            piyo();
             cpanic("mycpu called with interrupts enabled\n");
             // , __builtin_return_address(0));
 
@@ -142,7 +145,14 @@ pub unsafe extern "C" fn mycpu() -> *mut Cpu {
         }
     }
 
+    check_it("mycpu (0.5)");
+    // hoge();
     return &mut cpus[lapiccpunum()] as *mut Cpu;
+}
+unsafe fn hoge() -> u8 {
+    let a = [0u8; 100];
+    check_it("hoge (0.5)");
+    a[0]
 }
 
 // Disable interrupts so that we are not rescheduled
@@ -159,7 +169,7 @@ pub unsafe extern "C" fn myproc() -> *mut Proc {
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
 // Otherwise return 0.
-pub unsafe extern "C" fn allocproc() -> *mut Proc {
+unsafe extern "C" fn allocproc() -> *mut Proc {
     acquire(&mut ptable.lock as *mut Spinlock);
 
     let mut p = core::ptr::null_mut();
@@ -237,6 +247,8 @@ extern "C" {
 pub static mut first_user_pgdir: *mut usize = null_mut();
 // pa for 0xfe000000 FIXME
 pub static mut first_user_debug_pa: Option<(usize, usize)> = None;
+// pa for 0xffc00000 FIXME
+pub static mut first_user_debug_pa2: Option<(usize, usize)> = None;
 
 // Set up first user process.
 pub unsafe extern "C" fn userinit() {
@@ -261,6 +273,8 @@ pub unsafe extern "C" fn userinit() {
         &_binary_initcode_size as *const u8 as usize,
     );
     first_user_pgdir = (*p).pgdir;
+    setup_debug();
+
     (*p).sz = PGSIZE as usize;
     memset((*p).tf as *mut u8, 0, core::mem::size_of_val(&(*(*p).tf)));
     (*(*p).tf).cs = (SEG_UCODE << 3) as u16 | DPL_USER as u16;
@@ -471,41 +485,56 @@ pub unsafe extern "C" fn scheduler() {
     (*c).process = null_mut();
 
     loop {
-        if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-            piyo();
-            cpanic("scheduler (1): broken pgdir");
-        }
+        check_it("scheduler (0)");
 
         // Enable interrupts on this processor.
         sti();
 
         // Loop over process table looking for process to run.
         acquire(&mut ptable.lock as *mut Spinlock);
+        check_it("scheduler (1)");
+        cprintf("1", &[]);
         for i in 0..NPROC {
             let mut p = &mut ptable.proc[i];
             if (p.state != RUNNABLE) {
                 continue;
             }
+            check_it("scheduler (1.5)");
 
             // Switch to chosen process.  It is the process's job
             // to release ptable.lock and then reacquire it
             // before jumping back to us.
             (*c).process = p;
+            check_it("scheduler (2)");
+            cprintf("2", &[]);
+
+            // switch ltr(
             switchuvm(p as *const Proc);
+
+            cprintf("3", &[]);
+
+            // cprintf("3\n", &[]);
+
             p.state = RUNNING;
 
+            cprintf("4 `%d", &[Arg::Int((*c).ncli)]);
             swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
-            if PageDir::from(first_user_pgdir).get_pa_for_fe000000() != first_user_debug_pa {
-                piyo();
-                cpanic("scheduler (2): broken pgdir");
-            }
+            cprintf("4.5", &[]);
+            check_it("scheduler (2)");
+
+            cprintf("5", &[]);
             switchkvm();
+            cprintf("6", &[]);
+
+            check_it("scheduler (3)");
 
             // Process is done running for now.
             // It should have changed its p->state before coming back.
             (*c).process = null_mut();
         }
+        check_it("scheduler (4)");
         release(&mut ptable.lock as *mut Spinlock);
+        check_it("scheduler (5)");
     }
 }
 
@@ -540,7 +569,9 @@ pub unsafe extern "C" fn sched() {
 pub unsafe extern "C" fn yield_() {
     acquire(&mut ptable.lock as *mut Spinlock);
     (*myproc()).state = RUNNABLE;
+    check_it("yeild (1)");
     sched();
+    check_it("yeild (2)");
     release(&mut ptable.lock as *mut Spinlock);
 }
 
@@ -561,6 +592,7 @@ pub unsafe extern "C" fn forkret() {
         iinit(ROOTDEV as i32);
         initlog(ROOTDEV as i32);
     }
+    cprintf("fr ", &[]);
 
     // Return to "caller", actually trapret (see allocproc).
 }

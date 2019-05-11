@@ -45,6 +45,7 @@ unsafe extern "C" fn lapicw(index: usize, value: usize) {
 
 unsafe extern "C" fn lapicr(index: usize) -> usize {
     if lapic.is_null() {
+        piyo();
         cpanic("lapicr");
     }
     core::ptr::read_volatile(lapic.offset(index as isize))
@@ -98,13 +99,16 @@ pub unsafe extern "C" fn lapicinit() {
 
 // Should be called with interrupts disabled: the calling thread shouldn't be
 // rescheduled between reading lapic[ID] and checking against cpu array.
-pub unsafe extern "C" fn lapiccpunum() -> usize {
-    if (lapic as usize == 0) {
+pub unsafe fn lapiccpunum() -> usize {
+    check_it("lapicr (0)");
+    if (lapic.is_null()) {
         cpanic("cpunum");
         return 0;
     }
 
+    check_it("lapicr (1)");
     let apicid = (lapicr(ID) >> 24) as u8;
+    check_it("lapicr (2)");
     for i in 0..ncpu {
         if (cpus[i].apicid == apicid) {
             return i;
@@ -115,7 +119,7 @@ pub unsafe extern "C" fn lapiccpunum() -> usize {
 
 // Acknowledge interrupt.
 pub unsafe extern "C" fn lapiceoi() {
-    // cprintf("lapiceoi\n", &[]);
+    cprintf("L", &[]);
     if (!lapic.is_null()) {
         lapicw(EOI, 0);
     }

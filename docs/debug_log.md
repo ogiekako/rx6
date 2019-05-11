@@ -1,3 +1,57 @@
+system call で process に対応する stack が大きくなったときに 、さらにそこで割り込みが入ると、同じスタックをつかうため、それがさらに伸びて、 stack overflow をしていたようだ。こういうバグをはやめに検知するために、`check_it` もいいけど、stack guard をいれようかな。stack guard は細かい制御もできるんだっけ
+。しかしなんでこんなに伸びるのかは気になる。lapiccpunum とか、-0x80 しているけどどこでそんなに使うんだ。
+stack がやたらのびるタイミングがある？
+
+#0  kern::piyo () at src/lib.rs:97
+#1  0x801289bb in kern::vm::check_it (msg=<error reading variable: Remote connection closed>) at src/vm.rs:54
+#2  0x80123e4b in kern::process::hoge () at src/process.rs:153
+#3  0x00000064 in ?? ()
+#4  0x8011fdf7 in kern::spinlock::pushcli () at src/spinlock.rs:115
+#5  0x8011f8fa in kern::spinlock::acquire (lk=<error reading variable: Cannot access memory at address 0x8dfff3a8>) at src/spinlock.rs:38
+#6  0x8011c93e in kern::console::cprintf (fmt=<error reading variable: Cannot access memory at address 0x8dfff408>, args=<error reading variable: Cannot access memory at address 0x8dfff408>) at src/console.rs:67
+#7  0x80143973 in kern::lapic::lapiceoi () at src/lapic.rs:122
+#8  0x8012e037 in trap (tf=<error reading variable: Cannot access memory at address 0x8dfff5d8>) at src/trap.rs:103
+#9  0x80148d6b in alltraps () at trapasm.S:20
+#10 0x8dfff99c in ?? ()
+#11 0x8011facc in kern::spinlock::release (lk=<error reading variable: Cannot access memory at address 0x8dfffa20>) at src/spinlock.rs:78
+#12 0x8011d10f in kern::console::cprintf (fmt=<error reading variable: Cannot access memory at address 0x8dfffa60>, args=<error reading variable: Cannot access memory at address 0x8dfffa60>)
+    at src/console.rs:131
+    #13 0x8012dbd1 in trap (tf=<error reading variable: Cannot access memory at address 0x8dfffbf0>) at src/trap.rs:63
+    #14 0x80148d6b in alltraps () at trapasm.S:20
+
+trap:
+8012d909:	81 ec a0 03 00 00    	sub    $0x3a0,%esp
+cprintf:
+8011c8d9:	81 ec 78 01 00 00    	sub    $0x178,%esp
+release:
+8011fa08:	83 ec 30             	sub    $0x30,%esp
+lapiceoi:
+80143918:	83 ec 30             	sub    $0x30,%esp
+
+
+system call のときのみ、interrupt は enabled のまま、hanlder が呼ばれる。
+
+Ttrap:  &tf = 8dfffc58  esp0 = 8e000000  stack = 80173bf0   tf.eip = 8011ffcd
+5612u34 `1zTcpu 0: panic: mycpu called with interrupts enabled
+
+ 776f6c66 0 0 0 0 0 0 0 0 0
+
+
+```
+Breakpoint 1, kern::ide::iderw (b=0x8016475c <kern::bio::bcache+664>) at src/ide.rs:137
+137         if holdingsleep(&mut (*b).lock as *mut Sleeplock) == 0 {
+gdb-peda$ bt
+#0  kern::ide::iderw (b=0x8016475c <kern::bio::bcache+664>) at src/ide.rs:137
+#1  0x80121a0e in kern::bio::bwrite (b=0x8016475c <kern::bio::bcache+664>) at src/bio.rs:141
+#2  0x8013b93e in kern::log::write_head () at src/log.rs:92
+#3  0x8013ba47 in kern::log::recover_from_log () at src/log.rs:100
+#4  0x8013b339 in kern::log::initlog (dev=0x1) at src/log.rs:56
+#5  0x80125f8e in forkret () at src/process.rs:566
+#6  0x8014a2fe in alltraps () at trapasm.S:21
+gdb-peda$ c
+Continuing.
+```
+
 冷静にメモを取りながら、デバッグしていく。
 
 まず、kvm が意図通りに設定されているかを確認する。
