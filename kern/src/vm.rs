@@ -166,6 +166,15 @@ impl PageDir {
         pgtab += va.ptx() * 4;
         return Some(pgtab);
     }
+    // Unmap a present page map.
+    pub unsafe extern "C" fn unmap(&mut self, va: V) {
+        let mut a = va.pgrounddown();
+        let pte = self.walkpgdir(a, false).unwrap();
+        let mut pte = pte.0 as *mut usize;
+        assert_eq!(*pte & PTE_P, PTE_P, "no map");
+
+        *pte = *pte & !PTE_P;
+    }
 
     // Create PTEs for virtual addresses starting at va that refer to
     // physical addresses starting at pa. va and size might not

@@ -72,10 +72,12 @@ impl Procstate {
 use self::Procstate::*;
 
 // Per-process state
+#[repr(C)]
 pub struct Proc {
     pub sz: usize,                  // Size of process memory (bytes)
     pub pgdir: *mut pde_t,          // Page table
     pub kstack: *mut u8,            // Bottom of kernel stack for this process
+    pub kstackguard: *mut u8,       // kernel stack guard which is unmapped.
     pub state: Procstate,           // Process state
     pub pid: i32,                   // Process ID
     pub parent: *mut Proc,          // Parent process
@@ -181,12 +183,18 @@ pub unsafe extern "C" fn allocproc() -> *mut Proc {
     release(&mut ptable.lock as *mut Spinlock);
 
     // Allocate kernel stack.
+    (*p).kstackguard = kalloc().unwrap_or(V(0)).0 as *mut u8;
+    if (*p).kstackguard.is_null() {
+        (*p).state = UNUSED;
+        return null_mut();
+    }
     (*p).kstack = kalloc().unwrap_or(V(0)).0 as *mut u8;
     if (*p).kstack.is_null() {
         (*p).state = UNUSED;
-        return core::ptr::null_mut();
+        kfree(V((*p).kstackguard as usize));
+        return null_mut();
     }
-    let mut sp = (*p).kstack.offset(KSTACKSIZE as isize);
+    let mut sp = (*p).kstack.add(KSTACKSIZE);
 
     // Leave room for trap frame.
     sp = sp.sub(core::mem::size_of_val(&(*(*p).tf)));
@@ -241,6 +249,9 @@ pub unsafe extern "C" fn userinit() {
     if ((*p).pgdir == core::ptr::null_mut()) {
         cpanic("userinit: out of memory?");
     }
+    // unmap kstackguard.
+    PageDir::from((*p).pgdir).unmap(V((*p).kstackguard as usize));
+    
     if !first_user_pgdir.is_null() {
         cpanic("userinit: is_null");
     }
@@ -316,7 +327,9 @@ pub unsafe extern "C" fn fork() -> i32 {
     (*np).pgdir = copyuvm((*curproc).pgdir, (*curproc).sz);
     if ((*np).pgdir == null_mut()) {
         kfree(V((*np).kstack as usize));
+        kfree(V((*np).kstackguard as usize));
         (*np).kstack = null_mut();
+        (*np).kstackguard = null_mut();
         (*np).state = UNUSED;
         return -1;
     }
@@ -416,7 +429,9 @@ pub unsafe extern "C" fn wait() -> i32 {
                 // Found one.
                 let pid = p.pid;
                 kfree(V(p.kstack as usize));
+                kfree(V(p.kstackguard as usize));
                 p.kstack = null_mut();
+                p.kstackguard = null_mut();
                 freevm(p.pgdir);
                 p.pid = 0;
                 p.parent = null_mut();
