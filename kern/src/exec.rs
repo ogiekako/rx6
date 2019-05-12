@@ -15,27 +15,36 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
 
     check_it("exec (2)");
 
+    cprintf("exec:  namei start\n", &[]);
     let mut ip = namei(path);
     if (ip.is_null()) {
         end_op();
         cprintf("exec: fail\n", &[]);
         return -1;
     }
+    cprintf("exec:  namei end\n", &[]);
+
+    cprintf("exec:  ilock start\n", &[]);
     ilock(ip);
+    cprintf("exec:  ilock end\n", &[]);
     let mut pgdir = null_mut();
 
     'bad: loop {
+        cprintf("exec:  readi start\n", &[]);
         // Check ELF header
         if (readi(ip, &mut elf as *mut Elfhdr as *mut u8, 0, size_of_val(&elf))
             != size_of_val(&elf) as i32)
         {
             break 'bad;
         }
+        cprintf("exec:  readi end\n", &[]);
         if (elf.magic != ELF_MAGIC) {
             break 'bad;
         }
 
+        cprintf("exec:  setupkvm start\n", &[]);
         let pgdir2 = setupkvm();
+        cprintf("exec:  setupkvm end\n", &[]);
         if pgdir2.is_none() {
             break 'bad;
         }
@@ -46,6 +55,7 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
         let mut i = 0;
         let mut off = elf.phoff;
         while i < elf.phnum {
+            cprintf("exec: readi(2) start\n", &[]);
             if (readi(
                 ip,
                 &mut ph as *mut Proghdr as *mut u8,
@@ -55,6 +65,7 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
             {
                 break 'bad;
             }
+            cprintf("exec: readi(2) end\n", &[]);
             if (ph.type_ != ELF_PROG_LOAD) {
                 i += 1;
                 off += size_of_val(&ph);
@@ -66,31 +77,41 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
             if (ph.vaddr + ph.memsz < ph.vaddr) {
                 break 'bad;
             }
+            cprintf("exec: allocuvm start\n", &[]);
             sz = allocuvm(pgdir, sz, ph.vaddr + ph.memsz);
             if sz == 0 {
                 break 'bad;
             }
+            cprintf("exec: allocuvm end\n", &[]);
             if (ph.vaddr % PGSIZE != 0) {
                 break 'bad;
             }
+            cprintf("exec: loaduvm start\n", &[]);
             if (loaduvm(pgdir, ph.vaddr as *mut u8, ip, ph.off, ph.filesz) < 0) {
                 break 'bad;
             }
+            cprintf("exec: loaduvm end\n", &[]);
             i += 1;
             off += size_of_val(&ph);
         }
+        cprintf("exec: iunlockput start\n", &[]);
         iunlockput(ip);
+        cprintf("exec: iunlockput end\n", &[]);
         end_op();
         ip = null_mut();
 
         // Allocate two pages at the next page boundary.
         // Make the first inaccessible.  Use the second as the user stack.
         sz = PGROUNDUP(sz);
+        cprintf("exec: allocuvm start\n", &[]);
         sz = allocuvm(pgdir, sz, sz + 2 * PGSIZE);
+        cprintf("exec: allocuvm end\n", &[]);
         if sz == 0 {
             break 'bad;
         }
+        cprintf("exec: clearpteu start\n", &[]);
         clearpteu(pgdir, (sz - 2 * PGSIZE) as *mut u8);
+        cprintf("exec: clearpteu end\n", &[]);
         let mut sp = sz;
 
         // Push argument strings, prepare rest of stack in ustack.
@@ -120,6 +141,7 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
         ustack[2] = sp - (argc + 1) * 4; // argv pointer
 
         sp -= ((3 + argc + 1) * 4);
+        cprintf("exec: copyout start\n", &[]);
         if (copyout(
             pgdir,
             sp,
@@ -129,6 +151,7 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
         {
             break 'bad;
         }
+        cprintf("exec: copyout end\n", &[]);
 
         let mut last = path;
         let mut s = path;
@@ -139,11 +162,13 @@ pub unsafe extern "C" fn exec(path: *mut u8, argv: *mut *mut u8) -> i32 {
             }
             s = s.add(1);
         }
+        cprintf("exec: safestrcpy start\n", &[]);
         safestrcpy(
             (*curproc).name.as_mut_ptr(),
             last,
             size_of_val(&(*curproc).name) as i32,
         );
+        cprintf("exec: safestrcpy end\n", &[]);
 
         // Commit to the user image.
         let oldpgdir = (*curproc).pgdir;

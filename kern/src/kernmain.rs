@@ -27,8 +27,7 @@ pub unsafe extern "C" fn kernmain() {
     cprintf("  done: userinit \n", &[]);
     PageDir {
         pd: V(first_user_pgdir as usize),
-    }
-    .dumppgdir();
+    }.dumppgdir();
     first_user_debug_pa = PageDir::from(first_user_pgdir).get_pa_for_fe000000();
     enable_check = true;
     cprintf("start mpmain\n", &[]);

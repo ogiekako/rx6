@@ -117,6 +117,8 @@ pub unsafe extern "C" fn balloc(dev: usize) -> usize {
                 log_write(bp);
                 brelse(bp);
                 bzero(dev as i32, (b + bi) as i32);
+
+                cprintf("balloc returning\n", &[]);
                 return b + bi;
             }
             bi += 1;
@@ -200,6 +202,7 @@ pub unsafe extern "C" fn bfree(dev: usize, b: usize) {
 // have locked the inodes involved; this lets callers create
 // multi-step atomic operations.
 
+#[repr(C)]
 struct Icache {
     lock: Spinlock,
     inode: [Inode; NINODE],
@@ -496,7 +499,9 @@ pub unsafe extern "C" fn readi(
 
     let mut tot = 0;
     while tot < n {
+        cprintf("readi: bread start (tot,n)=()\n", &[]);
         let bp = bread((*ip).dev, bmap(ip, off / BSIZE));
+        cprintf("readi: bread end\n", &[]);
         let m = core::cmp::min(n - tot, BSIZE - off % BSIZE);
         /*
         cprintf("data off %d:\n", off);
@@ -505,8 +510,12 @@ pub unsafe extern "C" fn readi(
         }
         cprintf("\n");
         */
+        cprintf("readi: memmove start\n", &[]);
         memmove(dst, (*bp).data.as_ptr().add(off % BSIZE), m);
+        cprintf("readi: memmove end\n", &[]);
+        cprintf("readi: brelse start\n", &[]);
         brelse(bp);
+        cprintf("readi: brelse end\n", &[]);
         tot += m;
         off += m;
         dst = dst.offset(m as isize);
@@ -571,11 +580,13 @@ pub unsafe extern "C" fn dirlookup(
     let mut de: Dirent = core::mem::transmute([0u8; core::mem::size_of::<Dirent>()]);
 
     for off in (0..(*dp).size).step_by(core::mem::size_of_val(&de)) {
+        cprintf("dirlookup: readi start\n", &[]);
         if (readi(dp, &mut de as *mut Dirent as *mut u8, off, size_of_val(&de))
             != size_of_val(&de) as i32)
         {
             cpanic("dirlink read");
         }
+        cprintf("dirlookup: readi end\n", &[]);
         if (de.inum == 0) {
             continue;
         }
@@ -585,7 +596,10 @@ pub unsafe extern "C" fn dirlookup(
                 *poff = off;
             }
             let inum = de.inum;
-            return iget((*dp).dev, inum as usize);
+            cprintf("dirlookup: iget start\n", &[]);
+            let res = iget((*dp).dev, inum as usize);
+            cprintf("dirlookup: iget end\n", &[]);
+            return res;
         }
     }
 
@@ -702,7 +716,9 @@ pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut
             return ip;
         }
 
+        cprintf("namex: dirlookup start\n", &[]);
         let next = dirlookup(ip, name, null_mut());
+        cprintf("namex: dirlookup end\n", &[]);
         if next == core::ptr::null_mut() {
             iunlockput(ip);
             return core::ptr::null_mut();
@@ -720,7 +736,10 @@ pub unsafe extern "C" fn namex(mut path: *const u8, nameiparent: i32, name: *mut
 pub unsafe extern "C" fn namei(path: *const u8) -> *mut Inode {
     check_it("namei (1)");
     let mut name = [0u8; DIRSIZ];
-    namex(path, 0, name.as_mut_ptr())
+    cprintf("namei: namex start\n", &[]);
+    let res = namex(path, 0, name.as_mut_ptr());
+    cprintf("namei:  namex end\n", &[]);
+    res
 }
 
 pub unsafe extern "C" fn nameiparent(path: *const u8, name: *mut u8) -> *mut Inode {

@@ -140,10 +140,14 @@ pub unsafe extern "C" fn filestat(f: *mut File, st: *mut Stat) -> i32 {
 // Read from file f.
 pub unsafe extern "C" fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
     if ((*f).readable == 0) {
+        cprintf("fileread: not readable\n", &[]);
         return -1;
     }
     if ((*f).type_ == FD_PIPE) {
-        return piperead((*f).pipe, addr, n);
+        cprintf("fileread: piperead start\n", &[]);
+        let res = piperead((*f).pipe, addr, n);
+        cprintf("fileread: piperead end\n", &[]);
+        return res;
     }
     if ((*f).type_ == FD_INODE) {
         ilock((*f).ip);

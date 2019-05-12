@@ -154,7 +154,7 @@ pub unsafe extern "C" fn syscall() {
 
     let num = (*(*curproc).tf).eax as usize;
     if (num > 0 && num < syscalls.len() && syscalls[num].is_some()) {
-        cprintf("syscall %d start\n", &[Arg::Int(num as i32)]);
+        cprintf("syscall %s start\n", &[Arg::Str(SYSNAME[num])]);
         (*(*curproc).tf).eax = (syscalls[num].unwrap())() as usize;
     } else {
         cprintf(

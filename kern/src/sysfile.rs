@@ -47,13 +47,19 @@ unsafe extern "C" fn fdalloc(f: *mut File) -> i32 {
 pub unsafe extern "C" fn sys_dup() -> i32 {
     let mut f: *mut File = null_mut();
     if (argfd(0, null_mut(), &mut f as *mut *mut File) < 0) {
+        cprintf("sys_dup: fail (1)\n", &[]);
         return -1;
     }
+    cprintf("sys_dup: fdalloc start\n", &[]);
     let fd = fdalloc(f);
+    cprintf("sys_dup: fdalloc end\n", &[]);
     if (fd < 0) {
+        cprintf("sys_dup: fail (2)\n", &[]);
         return -1;
     }
+    cprintf("sys_dup: filedup start\n", &[]);
     filedup(f);
+    cprintf("sys_dup: filedup end\n", &[]);
     return fd;
 }
 
@@ -68,7 +74,10 @@ pub unsafe extern "C" fn sys_read() -> i32 {
     {
         return -1;
     }
-    return fileread(f, p, n);
+    cprintf("sys_read: fileread start\n", &[]);
+    let res = fileread(f, p, n);
+    cprintf("sys_read: fileread end  p = %s  res = %d\n", &[Arg::Strp(p), Arg::Int(res)]);
+    res
 }
 
 pub unsafe extern "C" fn sys_write() -> i32 {
@@ -303,6 +312,7 @@ unsafe extern "C" fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -
 }
 
 pub unsafe extern "C" fn sys_open() -> i32 {
+    cprintf("sys_open start\n", &[]);
     let mut path: *mut u8 = null_mut();
     let mut omode = 0i32;
 
@@ -320,7 +330,9 @@ pub unsafe extern "C" fn sys_open() -> i32 {
             return -1;
         }
     } else {
+        cprintf("sys_open: namei start\n", &[]);
         ip = namei(path);
+        cprintf("sys_open: namei end\n", &[]);
         if ip.is_null() {
             end_op();
             return -1;
@@ -392,11 +404,15 @@ pub unsafe extern "C" fn sys_mknod() -> i32 {
         || argint(2, &mut minor as *mut i32) < 0)
     {
         end_op();
+        cprintf("sys_mknod: fail (1)\n", &[]);
         return -1;
     }
+    cprintf("sys_mknod: create start\n", &[]);
     let ip = create(path, T_DEV, major as i16, minor as i16);
+    cprintf("sys_mknod: create end\n", &[]);
     if ip.is_null() {
         end_op();
+        cprintf("sys_mknod: fail (2)\n", &[]);
         return -1;
     }
     iunlockput(ip);

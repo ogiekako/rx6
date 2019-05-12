@@ -337,6 +337,7 @@ pub unsafe extern "C" fn fork() -> i32 {
 
     // Copy process state from proc.
     (*np).pgdir = copyuvm((*curproc).pgdir, (*curproc).sz);
+    cprintf("fork: copyuvm done  %p -> %p\n", &[Arg::Int((*curproc).pgdir as usize as i32), Arg::Int((*np).pgdir as usize as i32)]);
     // TODO: do something sensible when pgdir was not allocated (np->pgdir == curproc->pgdir).
    
     if ((*np).pgdir == null_mut()) {
@@ -388,6 +389,8 @@ pub unsafe extern "C" fn exit() {
         cpanic("init exiting");
     }
 
+    procdump();
+
     // Close all open files.
     for fd in 0..NOFILE {
         if (*curproc).ofile[fd] != null_mut() {
@@ -405,7 +408,9 @@ pub unsafe extern "C" fn exit() {
 
     // Parent might be sleeping in wait().
 
+    cprintf("exit: wakeup1 start\n", &[]);
     wakeup1((*curproc).parent as *mut ());
+    cprintf("exit: wakeup1 end\n", &[]);
 
     // Pass abandoned children to init.
     for i in 0..NPROC {
@@ -413,13 +418,16 @@ pub unsafe extern "C" fn exit() {
         if (p.parent == curproc) {
             p.parent = initproc;
             if (p.state == ZOMBIE) {
+                cprintf("exit: wakeup1(2) start\n", &[]);
                 wakeup1(initproc as *mut ());
+                cprintf("exit: wakeup1(2) end\n", &[]);
             }
         }
     }
 
     // Jump into the scheduler, never to return.
     (*curproc).state = ZOMBIE;
+    cprintf("exit: sched start\n", &[]);
     sched();
     cpanic("zombie exit");
 }
@@ -507,18 +515,20 @@ pub unsafe extern "C" fn scheduler() {
             (*c).process = p;
             check_it("scheduler (2)");
 
+            cprintf("scheduler: switchuvm start\n", &[]);
             switchuvm(p as *const Proc);
-            cprintf("done switchuvm\n", &[]);
+            cprintf("scheduler: switchuvm done\n", &[]);
 
             p.state = RUNNING;
 
-            cprintf("start swtch\n", &[]);
+            cprintf("scheduler: swtch start\n", &[]);
             swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
-            cprintf("done swtch\n", &[]);
+            cprintf("scheduler: swtch done\n", &[]);
             check_it("scheduler (2)");
 
+            cprintf("scheduler: switchkvm start\n", &[]);
             switchkvm();
-            cprintf("done switchkvm\n", &[]);
+            cprintf("scheduler: switchkvm end\n", &[]);
 
             check_it("scheduler (3)");
 
