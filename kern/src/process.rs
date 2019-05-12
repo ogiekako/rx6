@@ -337,6 +337,8 @@ pub unsafe extern "C" fn fork() -> i32 {
 
     // Copy process state from proc.
     (*np).pgdir = copyuvm((*curproc).pgdir, (*curproc).sz);
+    // TODO: do something sensible when pgdir was not allocated (np->pgdir == curproc->pgdir).
+   
     if ((*np).pgdir == null_mut()) {
         kfree(V((*np).kstack as usize));
         kfree(V((*np).kstackguard as usize));
@@ -681,11 +683,12 @@ pub unsafe extern "C" fn procdump() {
         }
         let state = p.state.to_str();
         cprintf(
-            "%d %s %s",
+            "%d %s %s  %s",
             &[
                 Arg::Int(p.pid),
                 Arg::Str(state),
-                Arg::Str(core::str::from_utf8(&p.name).unwrap()),
+                Arg::Strp(p.name.as_ptr()),
+                Arg::Strp((*p.parent).name.as_ptr()),
             ],
         );
         if p.state == SLEEPING {

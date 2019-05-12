@@ -1,3 +1,9 @@
+`p 0x8dfba000` -> init 用の pagedir. これがどこかで free されてしまっているようだ。
+つまり、init が ZOMBIE でもないのに free されている？これは、fork 時の問題だろうか。
+
+kstackguard 用のメモリを割り当てるべきではないのでは？
+
+
 release の、getcallerpcs で、例外が発生している。Rust は、C とは違う ABI になっているためと思われる。これの呼び出しは一旦中止するか。
 
 

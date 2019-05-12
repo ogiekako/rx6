@@ -547,26 +547,29 @@ pub unsafe extern "C" fn copyuvm(pgdir: *mut pde_t, sz: usize) -> *mut pde_t {
             if i != (*myproc()).kstackguard as usize {
                 cpanic("copyuvm: page not present");
             }
+            continue;
         }
         let pa = PTE(*pte).addr();
         let flags = PTE(*pte).flags();
         let mem = kalloc();
         if (mem.is_none()) {
+            cprintf("error: copyuvm: mem is none\n", &[]);
             bad = true;
             break;
         }
         let mem = mem.unwrap();
         memmove(mem.0 as *mut u8, p2v(pa).0 as *const u8, PGSIZE);
         if !d.mappages(V(i), PGSIZE, v2p(mem), flags) {
+            cprintf("error: copyuvm: mappages fail\n", &[]);
             bad = true;
             break;
         }
     }
     if !bad {
-        return pgdir.pd.0 as *mut pde_t;
+        return d.pd.0 as *mut pde_t;
     }
 
-    freevm(pgdir.pd.0 as *mut pde_t);
+    freevm(d.pd.0 as *mut pde_t);
     return null_mut();
 }
 
