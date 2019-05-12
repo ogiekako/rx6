@@ -1,3 +1,15 @@
+2019-05-12 18:58
+
+ほとんど動いている。あと、usertests の sbrk test が落ちていて、stressfs の動作がおかしい。
+
+sbrk test、pid 97 以降が 例外を踏んで、kill されてしまう。
+allocuvm out of memory となる。これは、stackguard のせいか？
+unlink test が fail.
+mkdir failed.
+
+
+# 2019-05-12 17:00
+
 そうか、wait には、ZOMBIE に割り当てられていたリソースを開放する意味もあるのか。
 
 forkret 時の proc の context の eip が違っているかどうかを見る。

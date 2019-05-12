@@ -160,18 +160,17 @@ pub unsafe extern "C" fn iderw(b: *mut Buf) {
         idestart(b);
     }
 
-    cprintf("iderw: start sleep\n", &[]);
+    // cprintf("iderw: start sleep\n", &[]);
     check_it("iderw (1)");
     // Wait for request to finish.
     while ((*b).flags & (B_VALID | B_DIRTY)) != B_VALID {
         sleep(b as *mut (), &mut idelock as *mut Spinlock);
     }
-    cprintf("iderw: end sleep\n", &[]);
+    // cprintf("iderw: end sleep\n", &[]);
 
     check_it("iderw (2)");
 
     release(&mut idelock as *mut Spinlock);
 
     check_it("iderw (3)");
-    cprintf("z", &[]);
 }

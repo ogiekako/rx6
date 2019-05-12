@@ -222,15 +222,15 @@ unsafe extern "C" fn allocproc() -> *mut Proc {
         core::mem::size_of_val(&(*(*p).context)),
     );
     (*(*p).context).eip = forkret as usize;
-    cprintf(
-        "allocproc:  p: 0x%p, pid: %d, eip: 0x%x, kstack: 0x%p\n",
-        &[
-            Arg::Int(p as usize as i32),
-            Arg::Int((*p).pid as i32),
-            Arg::Int((*(*p).context).eip as i32),
-            Arg::Int((*p).kstack as i32),
-        ],
-    );
+    // cprintf(
+    //     "allocproc:  p: 0x%p, pid: %d, eip: 0x%x, kstack: 0x%p\n",
+    //     &[
+    //         Arg::Int(p as usize as i32),
+    //         Arg::Int((*p).pid as i32),
+    //         Arg::Int((*(*p).context).eip as i32),
+    //         Arg::Int((*p).kstack as i32),
+    //     ],
+    // );
     p
 }
 
@@ -310,7 +310,7 @@ pub unsafe extern "C" fn growproc(n: i32) -> i32 {
             return -1;
         }
     } else if (n < 0) {
-        sz = deallocuvm((*curproc).pgdir, sz, sz + n as usize);
+        sz = deallocuvm((*curproc).pgdir, sz, (sz as i32 + n) as usize);
         if sz == 0 {
             return -1;
         }
@@ -334,7 +334,7 @@ pub unsafe extern "C" fn fork() -> i32 {
 
     // Copy process state from proc.
     (*np).pgdir = copyuvm((*curproc).pgdir, (*curproc).sz);
-    cprintf("fork: copyuvm done  %p -> %p\n", &[Arg::Int((*curproc).pgdir as usize as i32), Arg::Int((*np).pgdir as usize as i32)]);
+    // cprintf("fork: copyuvm done  %p -> %p\n", &[Arg::Int((*curproc).pgdir as usize as i32), Arg::Int((*np).pgdir as usize as i32)]);
     // TODO: do something sensible when pgdir was not allocated (np->pgdir == curproc->pgdir).
    
     if ((*np).pgdir == null_mut()) {
@@ -386,9 +386,9 @@ pub unsafe extern "C" fn exit() {
         cpanic("init exiting");
     }
 
-    cprintf("exit: procdump start\n", &[]);
-    procdump();
-    cprintf("exit: procdump end\n", &[]);
+    // cprintf("exit: procdump start\n", &[]);
+    // procdump();
+    // cprintf("exit: procdump end\n", &[]);
 
     // Close all open files.
     for fd in 0..NOFILE {
@@ -407,9 +407,9 @@ pub unsafe extern "C" fn exit() {
 
     // Parent might be sleeping in wait().
 
-    cprintf("exit: wakeup1 start\n", &[]);
+    // cprintf("exit: wakeup1 start\n", &[]);
     wakeup1((*curproc).parent as *mut ());
-    cprintf("exit: wakeup1 end\n", &[]);
+    // cprintf("exit: wakeup1 end\n", &[]);
 
     // Pass abandoned children to init.
     for i in 0..NPROC {
@@ -417,16 +417,16 @@ pub unsafe extern "C" fn exit() {
         if (p.parent == curproc) {
             p.parent = initproc;
             if (p.state == ZOMBIE) {
-                cprintf("exit: wakeup1(2) start\n", &[]);
+                // cprintf("exit: wakeup1(2) start\n", &[]);
                 wakeup1(initproc as *mut ());
-                cprintf("exit: wakeup1(2) end\n", &[]);
+                // cprintf("exit: wakeup1(2) end\n", &[]);
             }
         }
     }
 
     // Jump into the scheduler, never to return.
     (*curproc).state = ZOMBIE;
-    cprintf("exit: sched start\n", &[]);
+    // cprintf("exit: sched start\n", &[]);
     sched();
     cpanic("zombie exit");
 }
@@ -500,7 +500,6 @@ pub unsafe extern "C" fn scheduler() {
         // Loop over process table looking for process to run.
         acquire(&mut ptable.lock as *mut Spinlock);
         check_it("scheduler (1)");
-        // cprintf("1", &[]);
         for i in 0..NPROC {
             let mut p = &mut ptable.proc[i];
             if (p.state != RUNNABLE) {
@@ -514,20 +513,20 @@ pub unsafe extern "C" fn scheduler() {
             (*c).process = p;
             check_it("scheduler (2)");
 
-            cprintf("scheduler: switchuvm start\n", &[]);
+            // cprintf("scheduler: switchuvm start\n", &[]);
             switchuvm(p as *const Proc);
-            cprintf("scheduler: switchuvm done\n", &[]);
+            // cprintf("scheduler: switchuvm done\n", &[]);
 
             p.state = RUNNING;
 
-            cprintf("scheduler: swtch start\n", &[]);
+            // cprintf("scheduler: swtch start\n", &[]);
             swtch(&mut ((*c).scheduler) as *mut *mut Context, (*p).context);
-            cprintf("scheduler: swtch done\n", &[]);
+            // cprintf("scheduler: swtch done\n", &[]);
             check_it("scheduler (2)");
 
-            cprintf("scheduler: switchkvm start\n", &[]);
+            // cprintf("scheduler: switchkvm start\n", &[]);
             switchkvm();
-            cprintf("scheduler: switchkvm end\n", &[]);
+            // cprintf("scheduler: switchkvm end\n", &[]);
 
             check_it("scheduler (3)");
 
@@ -595,7 +594,6 @@ pub unsafe extern "C" fn forkret() {
         iinit(ROOTDEV as i32);
         initlog(ROOTDEV as i32);
     }
-    cprintf("forkret returning\n", &[]);
 
     // Return to "caller", actually trapret (see allocproc).
 }
@@ -666,7 +664,7 @@ pub unsafe extern "C" fn kill(pid: i32) -> i32 {
     for i in 0..NPROC {
         let p = &mut ptable.proc[i];
         if (p.pid == pid) {
-            cprintf("kill: setting killed to proc %d\n", &[Arg::Int(pid)]);
+            // cprintf("kill: setting killed to proc %d\n", &[Arg::Int(pid)]);
             p.killed = true;
             // Wake process from sleep if necessary.
             if p.state == SLEEPING {
@@ -693,16 +691,14 @@ pub unsafe extern "C" fn procdump() {
         }
         let state = p.state.to_str();
         cprintf(
-            "%d %s %s  %s",
+            "%d %s %s",
             &[
                 Arg::Int(p.pid),
                 Arg::Str(state),
                 Arg::Strp(p.name.as_ptr()),
-                Arg::Strp((*p.parent).name.as_ptr()),
             ],
         );
         if p.state == SLEEPING {
-            cprintf("state: sleeping\n", &[]);
             getcallerpcs(
                 ((*p.context).ebp as *const usize).add(2) as *const (),
                 &mut pc,

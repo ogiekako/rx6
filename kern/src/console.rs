@@ -67,6 +67,12 @@ pub unsafe extern "C" fn cprintf(fmt: &str, args: &[Arg]) {
         acquire(&mut cons.lock as *mut Spinlock);
     }
 
+    consputc(b' ' as u16);
+    consputc(b' ' as u16);
+    consputc(b' ' as u16);
+    consputc(b' ' as u16);
+    consputc(b' ' as u16);
+
     let mut fmtit = fmt.chars();
     let mut argit = args.iter();
     loop {
@@ -207,7 +213,7 @@ unsafe extern "C" fn consputc(c: u16) {
         uartputc('\x08' as u8);
         uartputc(' ' as u8);
         uartputc('\x08' as u8);
-    } else if c < 0xff {
+    } else if c <= 0xff {
         uartputc(c as u8);
     } else {
         cpanic("consputc");

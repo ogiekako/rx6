@@ -129,7 +129,6 @@ pub unsafe extern "C" fn bread(dev: usize, blockno: usize) -> *mut Buf {
     if ((*b).flags & B_VALID) == 0 {
         iderw(b);
     }
-    cprintf("bread returning\n", &[]);
     b
 }
 
@@ -140,7 +139,7 @@ pub unsafe extern "C" fn bwrite(b: *mut Buf) {
     }
     (*b).flags |= B_DIRTY;
     iderw(b);
-    cprintf("bwrite returning\n", &[]);
+    // cprintf("bwrite returning\n", &[]);
 }
 
 // Release a locked buffer.

@@ -63,7 +63,7 @@ QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=rx6.img,
 qemu-nox: rx6.img fs.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
-qemu-nox-gdb: rx6.img .gdbinit
+qemu-nox-gdb: rx6.img fs.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 

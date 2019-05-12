@@ -67,18 +67,14 @@ runcmd(struct cmd *cmd)
   if(cmd == 0)
     exit();
 
-  printf(2, "sh: runcmd  type = %d\n", cmd->type);
-
   switch(cmd->type){
   default:
     panic("runcmd");
 
   case EXEC:
-    printf(2, "sh: exec\n");
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit();
-    printf(2, "sh: exec start\n");
     exec(ecmd->argv[0], ecmd->argv);
     printf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
@@ -168,8 +164,6 @@ main(void)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
-    printf(1, "!\n");
-    printf(2, "#\n");
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait();

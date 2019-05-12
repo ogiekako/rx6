@@ -50,16 +50,16 @@ pub unsafe extern "C" fn sys_dup() -> i32 {
         cprintf("sys_dup: fail (1)\n", &[]);
         return -1;
     }
-    cprintf("sys_dup: fdalloc start\n", &[]);
+    // cprintf("sys_dup: fdalloc start\n", &[]);
     let fd = fdalloc(f);
-    cprintf("sys_dup: fdalloc end\n", &[]);
+    // cprintf("sys_dup: fdalloc end\n", &[]);
     if (fd < 0) {
         cprintf("sys_dup: fail (2)\n", &[]);
         return -1;
     }
-    cprintf("sys_dup: filedup start\n", &[]);
+    // cprintf("sys_dup: filedup start\n", &[]);
     filedup(f);
-    cprintf("sys_dup: filedup end\n", &[]);
+    // cprintf("sys_dup: filedup end\n", &[]);
     return fd;
 }
 
@@ -74,9 +74,9 @@ pub unsafe extern "C" fn sys_read() -> i32 {
     {
         return -1;
     }
-    cprintf("sys_read: fileread start\n", &[]);
+    // cprintf("sys_read: fileread start\n", &[]);
     let res = fileread(f, p, n);
-    cprintf("sys_read: fileread end  p = %s  res = %d\n", &[Arg::Strp(p), Arg::Int(res)]);
+    // cprintf("sys_read: fileread end  p = %s  res = %d\n", &[Arg::Strp(p), Arg::Int(res)]);
     res
 }
 
@@ -213,7 +213,7 @@ pub unsafe extern "C" fn sys_unlink() -> i32 {
 
     'bad: loop {
         // Cannot unlink "." or "..".
-        if (namecmp(name.as_ptr(), ".".as_ptr()) == 0 || namecmp(name.as_ptr(), "..".as_ptr()) == 0)
+        if (namecmp(name.as_ptr(), ".\0".as_ptr()) == 0 || namecmp(name.as_ptr(), "..\0".as_ptr()) == 0)
         {
             break 'bad;
         }
@@ -296,7 +296,7 @@ unsafe extern "C" fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -
         (*dp).nlink += 1; // for ".."
         iupdate(dp);
         // No ip->nlink++ for ".": avoid cyclic ref count.
-        if (dirlink(ip, ".".as_ptr(), (*ip).inum) < 0 || dirlink(ip, "..".as_ptr(), (*dp).inum) < 0)
+        if (dirlink(ip, ".\0".as_ptr(), (*ip).inum) < 0 || dirlink(ip, "..\0".as_ptr(), (*dp).inum) < 0)
         {
             cpanic("create dots");
         }
@@ -312,7 +312,7 @@ unsafe extern "C" fn create(path: *mut u8, type_: i16, major: i16, minor: i16) -
 }
 
 pub unsafe extern "C" fn sys_open() -> i32 {
-    cprintf("sys_open start\n", &[]);
+    // cprintf("sys_open start\n", &[]);
     let mut path: *mut u8 = null_mut();
     let mut omode = 0i32;
 
@@ -330,9 +330,9 @@ pub unsafe extern "C" fn sys_open() -> i32 {
             return -1;
         }
     } else {
-        cprintf("sys_open: namei start\n", &[]);
+        // cprintf("sys_open: namei start\n", &[]);
         ip = namei(path);
-        cprintf("sys_open: namei end\n", &[]);
+        // cprintf("sys_open: namei end\n", &[]);
         if ip.is_null() {
             end_op();
             return -1;
@@ -407,9 +407,9 @@ pub unsafe extern "C" fn sys_mknod() -> i32 {
         cprintf("sys_mknod: fail (1)\n", &[]);
         return -1;
     }
-    cprintf("sys_mknod: create start\n", &[]);
+    // cprintf("sys_mknod: create start\n", &[]);
     let ip = create(path, T_DEV, major as i16, minor as i16);
-    cprintf("sys_mknod: create end\n", &[]);
+    // cprintf("sys_mknod: create end\n", &[]);
     if ip.is_null() {
         end_op();
         cprintf("sys_mknod: fail (2)\n", &[]);

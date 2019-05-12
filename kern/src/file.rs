@@ -144,9 +144,9 @@ pub unsafe extern "C" fn fileread(f: *mut File, addr: *mut u8, n: i32) -> i32 {
         return -1;
     }
     if ((*f).type_ == FD_PIPE) {
-        cprintf("fileread: piperead start\n", &[]);
+        // cprintf("fileread: piperead start\n", &[]);
         let res = piperead((*f).pipe, addr, n);
-        cprintf("fileread: piperead end\n", &[]);
+        // cprintf("fileread: piperead end\n", &[]);
         return res;
     }
     if ((*f).type_ == FD_INODE) {
