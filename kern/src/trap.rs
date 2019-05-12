@@ -76,11 +76,13 @@ pub unsafe extern "C" fn trap(tf: *mut Trapframe) {
     // cprintf("trap:  &tf = %p  esp0 = %p  ts_addr = %p   base = %p  stack = %p\n", &[Arg::Int(&tf as *const *mut Trapframe as usize as i32), Arg::Int(esp0 as i32), Arg::Int(ts_addr as *const Taskstate as usize as i32), Arg::Int(base as i32), Arg::Int(st as usize as i32)]);
     if (*tf).trapno == T_SYSCALL {
         if ((*myproc()).killed) {
+            cprintf("trap: exit proc %d (1)\n", &[Arg::Int((*myproc()).pid)]);
             exit();
         }
         (*myproc()).tf = tf;
         syscall();
         if (*myproc()).killed {
+            cprintf("trap: exit proc %d (2)\n", &[Arg::Int((*myproc()).pid)]);
             exit();
         }
         return;

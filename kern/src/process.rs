@@ -107,7 +107,7 @@ pub struct Ptable {
 pub static mut ptable: Ptable =
     unsafe { core::mem::transmute([0u8; core::mem::size_of::<Ptable>()]) };
 
-pub static mut initproc: *mut Proc = unsafe { core::ptr::null_mut() };
+pub static mut initproc: *mut Proc = unsafe { null_mut() };
 
 pub static mut nextpid: i32 = 1;
 
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn myproc() -> *mut Proc {
 unsafe extern "C" fn allocproc() -> *mut Proc {
     acquire(&mut ptable.lock as *mut Spinlock);
 
-    let mut p = core::ptr::null_mut();
+    let mut p = null_mut();
     let mut found = false;
     for i in 0..NPROC {
         p = &mut ptable.proc[i] as *mut Proc;
@@ -182,7 +182,7 @@ unsafe extern "C" fn allocproc() -> *mut Proc {
     }
     if !found {
         release(&mut ptable.lock as *mut Spinlock);
-        return core::ptr::null_mut();
+        return null_mut();
     }
     (*p).state = EMBRYO;
     (*p).pid = nextpid;
@@ -214,10 +214,7 @@ unsafe extern "C" fn allocproc() -> *mut Proc {
     sp = sp.sub(4);
     core::ptr::write(sp as *mut usize, trapret as usize);
 
-    sp = sp.sub(core::mem::size_of_val(&(*(*p).context)));
-    if size_of::<Context>() != core::mem::size_of_val(&(*(*p).context)) {
-        cpanic("allocproc: hogehoge\n");
-    }
+    sp = sp.sub(core::mem::size_of::<Context>());
     (*p).context = sp as *mut Context;
     memset(
         (*p).context as *mut u8,
@@ -257,7 +254,7 @@ pub unsafe extern "C" fn userinit() {
 
     initproc = p;
     (*p).pgdir = setupkvm().map(|p| p.pd.0).unwrap_or(0) as *mut pde_t;
-    if ((*p).pgdir == core::ptr::null_mut()) {
+    if ((*p).pgdir == null_mut()) {
         cpanic("userinit: out of memory?");
     }
     PageDir::from((*p).pgdir).unmap(V((*p).kstackguard as usize));
@@ -389,7 +386,9 @@ pub unsafe extern "C" fn exit() {
         cpanic("init exiting");
     }
 
+    cprintf("exit: procdump start\n", &[]);
     procdump();
+    cprintf("exit: procdump end\n", &[]);
 
     // Close all open files.
     for fd in 0..NOFILE {
@@ -458,7 +457,7 @@ pub unsafe extern "C" fn wait() -> i32 {
                 p.pid = 0;
                 p.parent = null_mut();
                 p.name[0] = 0;
-                p.killed = true;
+                p.killed = false;
                 p.state = UNUSED;
                 release(&mut ptable.lock as *mut Spinlock);
                 return pid;
@@ -596,7 +595,7 @@ pub unsafe extern "C" fn forkret() {
         iinit(ROOTDEV as i32);
         initlog(ROOTDEV as i32);
     }
-    cprintf("fr ", &[]);
+    cprintf("forkret returning\n", &[]);
 
     // Return to "caller", actually trapret (see allocproc).
 }
@@ -606,11 +605,11 @@ pub unsafe extern "C" fn forkret() {
 pub unsafe extern "C" fn sleep(chan: *mut (), lk: *mut Spinlock) {
     let p = myproc();
 
-    if (p == core::ptr::null_mut()) {
+    if (p == null_mut()) {
         cpanic("sleep");
     }
 
-    if (lk == core::ptr::null_mut()) {
+    if (lk == null_mut()) {
         cpanic("sleep without lk");
     }
 
@@ -632,7 +631,7 @@ pub unsafe extern "C" fn sleep(chan: *mut (), lk: *mut Spinlock) {
     sched();
 
     // Tidy up.
-    (*p).chan = core::ptr::null_mut();
+    (*p).chan = null_mut();
 
     // Reacquire original lock.
     if (lk != &mut ptable.lock as *mut Spinlock) {
@@ -667,6 +666,7 @@ pub unsafe extern "C" fn kill(pid: i32) -> i32 {
     for i in 0..NPROC {
         let p = &mut ptable.proc[i];
         if (p.pid == pid) {
+            cprintf("kill: setting killed to proc %d\n", &[Arg::Int(pid)]);
             p.killed = true;
             // Wake process from sleep if necessary.
             if p.state == SLEEPING {
